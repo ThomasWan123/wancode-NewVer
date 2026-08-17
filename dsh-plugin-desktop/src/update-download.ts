@@ -172,8 +172,8 @@ function validatedPlatform(platform: DesktopDownloadPlatform): DesktopDownloadPl
 
 function validatedVersion(version: string): string {
   const parsed = parseSemVer(version)
-  if (parsed === null || parsed.prerelease.length > 0 || parsed.version !== version) {
-    throw new UpdateDownloadError('invalid-options', 'The update version must be stable Semantic Versioning.')
+  if (parsed === null || parsed.version !== version) {
+    throw new UpdateDownloadError('invalid-options', 'The update version must be canonical Semantic Versioning.')
   }
   return version
 }

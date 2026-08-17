@@ -31,6 +31,8 @@ provides:
 - **Trusted updates** sourced from
   [`ThomasWan123/wancode-NewVer`](https://github.com/ThomasWan123/wancode-NewVer/releases);
   Windows installers must pass PE and Authenticode trust validation.
+- **Stable and beta channels** selectable through desktop settings, with an
+  orderly restart and persisted prompted-version history.
 - **Signed release gates** that require an explicit certificate and expected
   publisher, then verify that the application and NSIS installer use the same
   signing certificate.

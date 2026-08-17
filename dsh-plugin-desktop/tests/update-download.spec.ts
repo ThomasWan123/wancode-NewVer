@@ -147,6 +147,23 @@ describe('desktop update installer download', () => {
     ))
   })
 
+  it('accepts a canonical beta release selected by the update channel', async () => {
+    const userDataPath = await temporaryUserData()
+    const result = await downloadDesktopUpdate({
+      platform: 'darwin',
+      version: '2.9.0-beta.2',
+      userDataPath,
+      request: async () => chunkedResponse([dmgArtifact()]),
+    })
+
+    expect(result).toBe(join(
+      userDataPath,
+      'updates',
+      '2.9.0-beta.2',
+      'Wan-Code-2.9.0-beta.2-mac.dmg',
+    ))
+  })
+
   it.each([
     ['darwin', new Uint8Array(1024)],
     ['win32', Object.assign(windowsArtifact(), { 0: 0 })],
@@ -238,8 +255,8 @@ describe('desktop update installer download', () => {
   it.each([
     ['linux', '2.8.0'],
     ['darwin', '../2.8.0'],
+    ['win32', '2.8.0-beta.01'],
     ['win32', 'v2.8.0'],
-    ['win32', '2.8.0-rc.1'],
   ])('rejects platform %s and version %s before requesting', async (platform, version) => {
     const userDataPath = await temporaryUserData()
     let requested = false

@@ -12,6 +12,7 @@ import type { UpdateCheckResult } from '../src/update-checker.ts'
 import { apply, Config, inject, type Config as UpdateConfig } from '../src/updates.ts'
 
 const testConfig: UpdateConfig = {
+  channel: 'stable',
   enabled: true,
   initialDelayMs: 10,
   intervalMs: 1000,
@@ -111,6 +112,7 @@ describe('desktop update Host plugin', () => {
   it('exposes the packaged 60-second and six-hour background policy', () => {
     expect(inject).toEqual(['desktopRuntime'])
     expect(Config({} as UpdateConfig)).toEqual({
+      channel: 'stable',
       enabled: true,
       initialDelayMs: 60_000,
       intervalMs: 21_600_000,
@@ -146,6 +148,57 @@ describe('desktop update Host plugin', () => {
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.notifications).toEqual([])
     expect(harness.warnings).toEqual([])
+  })
+
+  it('uses the beta release stream for manual checks and offers prerelease assets', async () => {
+    const requested: string[] = []
+    const harness = await createHarness({
+      packaged: false,
+      config: { ...testConfig, channel: 'beta' },
+      request: async (url) => {
+        requested.push(url)
+        return Response.json([
+          { tag_name: 'v2.1.0-beta.1', draft: false, prerelease: true },
+          { tag_name: 'v2.0.1', draft: false, prerelease: false },
+        ])
+      },
+    })
+
+    await harness.tray.invoke()
+
+    expect(requested).toEqual([
+      'https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases?per_page=100&page=1',
+    ])
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0-beta.1')
+    expect(harness.tray.label()).toBe('Wan Code 2.1.0-beta.1 Available')
+  })
+
+  it('preserves beta prompt history across restarts', async () => {
+    const request = vi.fn(async () => Response.json([
+      { tag_name: 'v2.1.0-beta.1', draft: false, prerelease: true },
+    ]))
+    const harness = await createHarness({
+      config: {
+        ...testConfig,
+        channel: 'beta',
+        initialDelayMs: 1,
+        intervalMs: 10,
+      },
+      state: JSON.stringify({
+        version: 2,
+        lastPromptedVersion: '2.1.0-beta.1',
+      }),
+      request,
+    })
+
+    await vi.waitFor(() => { expect(request.mock.calls.length).toBeGreaterThanOrEqual(2) })
+
+    expect(harness.confirmDownload).not.toHaveBeenCalled()
+    expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
+      version: 2,
+      lastPromptedVersion: '2.1.0-beta.1',
+    })
+    await harness.dispose()
   })
 
   it('prompts once for a background update and persists only state v2 prompt history', async () => {

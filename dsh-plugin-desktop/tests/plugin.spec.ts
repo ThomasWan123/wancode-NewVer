@@ -20,6 +20,7 @@ import { RENDERER_BOOT_REPORT_PATH, type RendererBootReport } from '../src/rende
 
 const config: DesktopConfig = {
   mode: 'compatibility',
+  updateChannel: 'stable',
   width: 1280,
   height: 840,
   minWidth: 900,
@@ -82,7 +83,7 @@ function createHarness(platform: DesktopRuntime['platform'] = 'darwin'): PluginH
       ? { preference: themePreference }
       : undefined),
     register: vi.fn(() => ({
-      get: () => ({ mode: config.mode }),
+      get: () => ({ mode: config.mode, updateChannel: config.updateChannel }),
       watch: (callback: typeof watcher) => {
         watcher = callback
         return () => { watcher = undefined }
@@ -131,7 +132,10 @@ describe('desktop Host plugin', () => {
   it('defaults to compatibility mode and validates both schemas', () => {
     expect(Config({} as DesktopConfig)).toEqual(config)
     expect(Config({ mode: 'advanced' } as DesktopConfig)).toEqual({ ...config, mode: 'advanced' })
-    expect(DesktopSettingsSchema({} as DesktopSettings)).toEqual({ mode: 'compatibility' })
+    expect(DesktopSettingsSchema({} as DesktopSettings)).toEqual({
+      mode: 'compatibility',
+      updateChannel: 'stable',
+    })
     expect(() => Config({ mode: 'custom' } as never)).toThrow()
     expect(String(DESKTOP_SETTINGS_NAMESPACE)).toBe('dsh-desktop')
   })
@@ -243,12 +247,32 @@ describe('desktop Host plugin', () => {
     const harness = createHarness()
     apply(harness.ctx, config)
 
-    await harness.notify({ mode: 'compatibility' }, { mode: 'compatibility' })
+    await harness.notify(
+      { mode: 'compatibility', updateChannel: 'stable' },
+      { mode: 'compatibility', updateChannel: 'stable' },
+    )
     expect(harness.restart).not.toHaveBeenCalled()
 
     harness.restart.mockImplementation(() => new Promise<void>(() => {}))
-    await harness.notify({ mode: 'advanced' }, { mode: 'compatibility' })
+    await harness.notify(
+      { mode: 'advanced', updateChannel: 'stable' },
+      { mode: 'compatibility', updateChannel: 'stable' },
+    )
     await vi.runAllTimersAsync()
+    expect(harness.restart).toHaveBeenCalledOnce()
+  })
+
+  it('requests an orderly restart after the update channel changes', async () => {
+    vi.useFakeTimers()
+    const harness = createHarness()
+    apply(harness.ctx, config)
+
+    await harness.notify(
+      { mode: 'compatibility', updateChannel: 'beta' },
+      { mode: 'compatibility', updateChannel: 'stable' },
+    )
+    await vi.runAllTimersAsync()
+
     expect(harness.restart).toHaveBeenCalledOnce()
   })
 

@@ -7,6 +7,7 @@ import { composeEntries, initProfile, PROFILE_TEMPLATES } from '@deepseek-ai/dsh
 import {
   DESKTOP_PACKAGE_NAME,
   desktopShellModeFromSettings,
+  desktopUpdateChannelFromSettings,
   desktopBundleList,
   ensureDesktopProfile,
   prepareDesktopProfile,
@@ -202,7 +203,10 @@ describe('desktop profile composition', () => {
 
   it('projects advanced YAML settings into the Host and client Loader rows', () => {
     const home = temporaryHome()
-    writeFileSync(join(home, 'settings.yaml'), 'dsh-desktop:\n  mode: advanced\n')
+    writeFileSync(
+      join(home, 'settings.yaml'),
+      'dsh-desktop:\n  mode: advanced\n  updateChannel: beta\n',
+    )
 
     const prepared = prepareDesktopProfile(undefined, home, 'darwin')
     const rows = composeEntries([prepared.patches])
@@ -214,6 +218,9 @@ describe('desktop profile composition', () => {
     }))
     expect(rows.find(row => row.id === 'settings')).toEqual(expect.objectContaining({
       config: expect.objectContaining({ dshHome: home }),
+    }))
+    expect(rows.find(row => row.id === 'desktop-updates')).toEqual(expect.objectContaining({
+      config: expect.objectContaining({ channel: 'beta' }),
     }))
     expect(rows.find(row => row.id === 'ui-layout')?.disabled).toBe(true)
     expect(rows.find(row => row.id === 'ui-sidebar')?.disabled).toBe(false)
@@ -227,6 +234,16 @@ describe('desktop profile composition', () => {
 
     expect(readDesktopShellMode({ path })).toBe('advanced')
     expect(desktopShellModeFromSettings({ unrelated: { enabled: true } })).toBe('compatibility')
+  })
+
+  it('reads the selected update channel from desktop settings', () => {
+    expect(desktopUpdateChannelFromSettings({})).toBe('stable')
+    expect(desktopUpdateChannelFromSettings({
+      'dsh-desktop': { updateChannel: 'beta' },
+    })).toBe('beta')
+    expect(() => desktopUpdateChannelFromSettings({
+      'dsh-desktop': { updateChannel: 'nightly' },
+    })).toThrow('must be "stable" or "beta"')
   })
 
   it('rejects invalid settings roots, sections, modes, and YAML', () => {

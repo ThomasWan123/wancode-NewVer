@@ -6,8 +6,9 @@ import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import z from '@deepseek-ai/schemastery'
 import type {} from './runtime.ts'
 import {
-  checkForStableUpdate,
+  checkForUpdate,
   parseSemVer,
+  type UpdateChannel,
   type UpdateCheckResult,
 } from './update-checker.ts'
 
@@ -22,6 +23,8 @@ const MAX_STATE_BYTES = 4 * 1024
 
 /** Scheduled update policy. */
 export interface Config {
+  /** Release stream selected for automatic and manual checks. */
+  channel: UpdateChannel
   /** Enable background checks in packaged applications. */
   enabled: boolean
   /** Delay before the first background check after plugin activation. */
@@ -34,6 +37,7 @@ export interface Config {
 
 /** Validated scheduled update policy. */
 export const Config: z<Config> = z.object({
+  channel: z.union(['stable', 'beta'] as const).default('stable'),
   enabled: z.boolean().default(true),
   initialDelayMs: z.number().step(1).min(0).max(MAX_TIMER_DELAY_MS).default(60_000),
   intervalMs: z.number().step(1).min(1).max(MAX_TIMER_DELAY_MS).default(6 * 60 * 60 * 1000),
@@ -107,7 +111,8 @@ export function apply(ctx: Context, config: Config): void {
       const task = (async () => {
         requestTimer = setTimeout(() => { controller.abort() }, config.requestTimeoutMs)
         try {
-          return await checkForStableUpdate({
+          return await checkForUpdate({
+            channel: config.channel,
             currentVersion: adapter.currentVersion,
             signal: controller.signal,
             request: adapter.request,
@@ -248,7 +253,7 @@ function parseState(text: string): UpdateStateV2 {
   const value: unknown = JSON.parse(text)
   if (!isRecord(value)
     || value.version !== 2
-    || (value.lastPromptedVersion !== undefined && !isStableVersion(value.lastPromptedVersion))
+    || (value.lastPromptedVersion !== undefined && !isReleaseVersion(value.lastPromptedVersion))
     || Object.keys(value).some(key => !['version', 'lastPromptedVersion'].includes(key))) {
     throw new Error('invalid v2 update state')
   }
@@ -273,10 +278,10 @@ function renderState(state: UpdateStateV2): string {
   return `${JSON.stringify(state, null, 2)}\n`
 }
 
-function isStableVersion(value: unknown): value is string {
+function isReleaseVersion(value: unknown): value is string {
   if (typeof value !== 'string') return false
   const parsed = parseSemVer(value)
-  return parsed !== null && parsed.prerelease.length === 0 && parsed.version === value
+  return parsed !== null && parsed.version === value
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

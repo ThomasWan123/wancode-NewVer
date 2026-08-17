@@ -28,6 +28,8 @@ Agent 运行时，并由 Wan Code 自己负责桌面体验、安全边界、更�
 - **安全更新**：从
   [`ThomasWan123/wancode-NewVer`](https://github.com/ThomasWan123/wancode-NewVer/releases)
   获取版本和安装包，Windows 安装器必须通过 PE 与 Authenticode 信任校验。
+- **Stable / Beta 通道**：在桌面设置中选择更新流；切换后有序重启，并保留
+  已提示版本记录。
 - **签名发布门禁**：正式 Windows 构建要求证书和预期发布者，并验证应用与
   NSIS 安装器由同一证书签名。
 - **插件化桌面能力**：窗口、托盘、Profile、终端和更新仍通过 Cordis/DSH

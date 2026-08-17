@@ -173,7 +173,8 @@ requires an explicit certificate source and expected publisher, builds both the
 application and NSIS installer with Electron Builder, and verifies that both
 artifacts are trusted and use the same publisher certificate.
 
-The Windows package gate currently passes 133 focused tests plus the runtime
-closure verifier. Producing a distributable signed artifact still requires the
-project's code-signing certificate and publisher value; lifecycle automation,
-beta channels, and update rollback remain active M1 work.
+The desktop settings now expose stable and beta GitHub release streams; changing
+the stream restarts into a generation whose update checker, prompt history, and
+asset download all accept the selected SemVer class. Producing a distributable
+signed artifact still requires the project's code-signing certificate and
+publisher value; lifecycle automation and update rollback remain active M1 work.

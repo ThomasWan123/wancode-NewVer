@@ -17,6 +17,7 @@ import {
 import { WANCODE_PRODUCT_NAME, WANCODE_WINDOW_TITLE } from './product.ts'
 import type { DesktopShellMode } from './runtime.ts'
 import type {} from './runtime.ts'
+import type { UpdateChannel } from './update-checker.ts'
 
 /** Stable Cordis plugin name. */
 export const name = 'desktop-shell'
@@ -34,17 +35,22 @@ const UI_THEME_SETTINGS_NAMESPACE = settingsNamespace(THEME_SETTINGS_NAMESPACE)
 export interface DesktopSettings {
   /** Native presentation selected for the next application generation. */
   mode: DesktopShellMode
+  /** GitHub release stream selected for update checks after restart. */
+  updateChannel: UpdateChannel
 }
 
 /** Schema registered with the standard settings service. */
 export const DesktopSettingsSchema: z<DesktopSettings> = z.object({
   mode: z.union(['compatibility', 'advanced'] as const).default('compatibility'),
+  updateChannel: z.union(['stable', 'beta'] as const).default('stable'),
 })
 
 /** Native window configuration. */
 export interface Config {
   /** Native presentation mode selected before BrowserWindow construction. */
   mode: DesktopShellMode
+  /** Update channel active for this application generation. */
+  updateChannel: UpdateChannel
   /** Initial window width in CSS pixels. */
   width: number
   /** Initial window height in CSS pixels. */
@@ -58,6 +64,7 @@ export interface Config {
 /** Validated native window configuration. */
 export const Config: z<Config> = z.object({
   mode: z.union(['compatibility', 'advanced'] as const).default('compatibility'),
+  updateChannel: z.union(['stable', 'beta'] as const).default('stable'),
   width: z.number().step(1).min(800).default(1280),
   height: z.number().step(1).min(600).default(840),
   minWidth: z.number().step(1).min(640).default(900),
@@ -141,7 +148,7 @@ export function apply(ctx: Context, config: Config): void {
   ctx.effect(() => {
     let pending: ReturnType<typeof setImmediate> | undefined
     const stopWatching = settings.watch((next) => {
-      if (next.mode === config.mode) {
+      if (next.mode === config.mode && next.updateChannel === config.updateChannel) {
         if (pending !== undefined) clearImmediate(pending)
         pending = undefined
         return
@@ -158,7 +165,7 @@ export function apply(ctx: Context, config: Config): void {
       stopWatching()
       if (pending !== undefined) clearImmediate(pending)
     }
-  }, 'dsh-plugin-desktop: restart after mode change')
+  }, 'dsh-plugin-desktop: restart after desktop settings change')
   if (config.mode === 'advanced') {
     ctx.on('settings/updated', (namespace, next) => {
       if (namespace !== UI_THEME_SETTINGS_NAMESPACE) return

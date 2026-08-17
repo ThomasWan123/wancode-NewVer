@@ -4,8 +4,18 @@
 export const DESKTOP_VERSION_ENDPOINT =
   'https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases/latest'
 
+/** Public endpoint used to select stable or prerelease builds for beta users. */
+export const DESKTOP_BETA_VERSION_ENDPOINT =
+  'https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases?per_page=100&page=1'
+
 /** Maximum response body bytes accepted from the version service. */
-export const MAX_VERSION_RESPONSE_BYTES = 4 * 1024
+export const MAX_VERSION_RESPONSE_BYTES = 64 * 1024
+const MAX_BETA_VERSION_RESPONSE_BYTES = 2 * 1024 * 1024
+const BETA_RELEASES_PER_PAGE = 100
+const MAX_BETA_RELEASE_PAGES = 5
+
+/** User-selected release stream. */
+export type UpdateChannel = 'stable' | 'beta'
 
 /** Strictly parsed SemVer components. Numeric components remain strings to avoid overflow. */
 export interface ParsedSemVer {
@@ -34,6 +44,11 @@ export interface UpdateCheckOptions {
   readonly signal?: AbortSignal
   /** Optional fetch implementation for a host adapter or test. */
   readonly request?: UpdateRequest
+}
+
+/** Inputs for a stable or beta version check. */
+export interface ChannelUpdateCheckOptions extends UpdateCheckOptions {
+  readonly channel: UpdateChannel
 }
 
 /** Successful comparison returned by the stable version service. */
@@ -93,7 +108,14 @@ export function compareSemVerVersions(left: string, right: string): number | nul
 export async function checkForStableUpdate(
   options: UpdateCheckOptions,
 ): Promise<UpdateCheckResult | null> {
-  const current = parseCanonicalStableVersion(options.currentVersion)
+  return checkForUpdate({ ...options, channel: 'stable' })
+}
+
+/** Check the fixed GitHub endpoint for the selected release channel. */
+export async function checkForUpdate(
+  options: ChannelUpdateCheckOptions,
+): Promise<UpdateCheckResult | null> {
+  const current = parseCanonicalVersion(options.currentVersion)
   if (current === null) return null
 
   const init: RequestInit = {
@@ -104,6 +126,9 @@ export async function checkForStableUpdate(
     ...(options.signal === undefined ? {} : { signal: options.signal }),
   }
   const request = options.request ?? defaultRequest
+  if (options.channel === 'beta') {
+    return checkBetaUpdatePages(current, init, request)
+  }
 
   let response: Response
   try {
@@ -115,7 +140,7 @@ export async function checkForStableUpdate(
 
   let body: string
   try {
-    body = await readLimitedBody(response)
+    body = await readLimitedBody(response, MAX_VERSION_RESPONSE_BYTES)
   } catch {
     return null
   }
@@ -129,15 +154,58 @@ export async function checkForStableUpdate(
   }
 }
 
+async function checkBetaUpdatePages(
+  current: ParsedSemVer,
+  init: RequestInit,
+  request: UpdateRequest,
+): Promise<UpdateCheckResult | null> {
+  let latest: ParsedSemVer | null = null
+  for (let page = 1; page <= MAX_BETA_RELEASE_PAGES; page += 1) {
+    const url = page === 1
+      ? DESKTOP_BETA_VERSION_ENDPOINT
+      : `https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases?per_page=${String(BETA_RELEASES_PER_PAGE)}&page=${String(page)}`
+    let response: Response
+    try {
+      response = await request(url, init)
+    } catch {
+      return null
+    }
+    if (response.status !== 200) return null
+
+    let body: string
+    try {
+      body = await readLimitedBody(response, MAX_BETA_VERSION_RESPONSE_BYTES)
+    } catch {
+      return null
+    }
+    const releasePage = parseBetaVersionResponse(body)
+    if (releasePage === null) return null
+    if (releasePage.latest !== null
+      && (latest === null || compareParsedSemVer(releasePage.latest, latest) > 0)) {
+      latest = releasePage.latest
+    }
+    if (releasePage.count < BETA_RELEASES_PER_PAGE) {
+      if (latest === null) return null
+      return {
+        status: compareParsedSemVer(latest, current) > 0 ? 'update-available' : 'up-to-date',
+        currentVersion: current.version,
+        latestVersion: latest.version,
+      }
+    }
+  }
+  // Never report a potentially stale result when the bounded scan was exhausted.
+  return null
+}
+
 async function defaultRequest(url: string, init: RequestInit): Promise<Response> {
   return globalThis.fetch(url, init)
 }
 
-async function readLimitedBody(response: Response): Promise<string> {
+async function readLimitedBody(response: Response, maximumBytes: number): Promise<string> {
   const declaredLength = response.headers.get('content-length')
   if (declaredLength !== null
     && /^[0-9]+$/u.test(declaredLength)
-    && BigInt(declaredLength) > BigInt(MAX_VERSION_RESPONSE_BYTES)) {
+    && BigInt(declaredLength) > BigInt(maximumBytes)) {
     throw new Error('version response is too large')
   }
 
@@ -151,7 +219,7 @@ async function readLimitedBody(response: Response): Promise<string> {
       const chunk = await reader.read()
       if (chunk.done) break
       bytesRead += chunk.value.byteLength
-      if (bytesRead > MAX_VERSION_RESPONSE_BYTES) {
+      if (bytesRead > maximumBytes) {
         await reader.cancel().catch(() => undefined)
         throw new Error('version response is too large')
       }
@@ -177,11 +245,35 @@ function parseVersionResponse(body: string): ParsedSemVer | null {
   return parsed !== null && parsed.prerelease.length === 0 ? parsed : null
 }
 
-function parseCanonicalStableVersion(input: string): ParsedSemVer | null {
+function parseBetaVersionResponse(
+  body: string,
+): { readonly count: number, readonly latest: ParsedSemVer | null } | null {
+  let value: unknown
+  try {
+    value = JSON.parse(body)
+  } catch {
+    return null
+  }
+  if (!Array.isArray(value)) return null
+  let latest: ParsedSemVer | null = null
+  for (const release of value) {
+    if (!isRecord(release)
+      || release.draft !== false
+      || typeof release.prerelease !== 'boolean'
+      || typeof release.tag_name !== 'string'
+      || !release.tag_name.startsWith('v')) {
+      continue
+    }
+    const parsed = parseSemVer(release.tag_name)
+    if (parsed === null || (parsed.prerelease.length > 0) !== release.prerelease) continue
+    if (latest === null || compareParsedSemVer(parsed, latest) > 0) latest = parsed
+  }
+  return { count: value.length, latest }
+}
+
+function parseCanonicalVersion(input: string): ParsedSemVer | null {
   const parsed = parseSemVer(input)
-  return parsed !== null && parsed.prerelease.length === 0 && parsed.version === input
-    ? parsed
-    : null
+  return parsed !== null && parsed.version === input ? parsed : null
 }
 
 function compareParsedSemVer(left: ParsedSemVer, right: ParsedSemVer): number {

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  DESKTOP_BETA_VERSION_ENDPOINT,
   DESKTOP_VERSION_ENDPOINT,
   MAX_VERSION_RESPONSE_BYTES,
+  checkForUpdate,
   checkForStableUpdate,
   compareSemVerVersions,
   parseSemVer,
@@ -52,6 +54,71 @@ describe('strict SemVer parsing', () => {
 })
 
 describe('public Desktop version check', () => {
+  it('selects the newest non-draft prerelease for the beta channel', async () => {
+    const calls: string[] = []
+    const result = await checkForUpdate({
+      channel: 'beta',
+      currentVersion: '2.0.0',
+      request: async (url) => {
+        calls.push(url)
+        return Response.json([
+          { tag_name: 'v2.1.0-beta.1', draft: false, prerelease: true },
+          { tag_name: 'v2.0.1', draft: false, prerelease: false },
+          { tag_name: 'v9.0.0-beta.1', draft: true, prerelease: true },
+        ])
+      },
+    })
+
+    expect(calls).toEqual([DESKTOP_BETA_VERSION_ENDPOINT])
+    expect(result).toEqual({
+      status: 'update-available',
+      currentVersion: '2.0.0',
+      latestVersion: '2.1.0-beta.1',
+    })
+  })
+
+  it('paginates beta releases before selecting the highest SemVer', async () => {
+    const calls: string[] = []
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      tag_name: `v1.0.${String(index)}`,
+      draft: false,
+      prerelease: false,
+    }))
+    const result = await checkForUpdate({
+      channel: 'beta',
+      currentVersion: '2.0.0',
+      request: async (url) => {
+        calls.push(url)
+        return Response.json(calls.length === 1
+          ? firstPage
+          : [{ tag_name: 'v3.0.0-beta.1', draft: false, prerelease: true }])
+      },
+    })
+
+    expect(calls).toEqual([
+      DESKTOP_BETA_VERSION_ENDPOINT,
+      'https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases?per_page=100&page=2',
+    ])
+    expect(result?.latestVersion).toBe('3.0.0-beta.1')
+  })
+
+  it('fails closed when the bounded beta release scan is exhausted', async () => {
+    const request = vi.fn(async () => Response.json(
+      Array.from({ length: 100 }, () => ({
+        tag_name: 'v2.1.0-beta.1',
+        draft: false,
+        prerelease: true,
+      })),
+    ))
+
+    await expect(checkForUpdate({
+      channel: 'beta',
+      currentVersion: '2.0.0',
+      request,
+    })).resolves.toBeNull()
+    expect(request).toHaveBeenCalledTimes(5)
+  })
+
   it('uses only the fixed no-cache version endpoint and reports a newer stable version', async () => {
     const controller = new AbortController()
     const calls: Array<{ url: string, init: RequestInit }> = []
@@ -108,6 +175,17 @@ describe('public Desktop version check', () => {
       currentVersion: '9007199254740992.0.0',
       request: async () => versionResponse('10000000000000000.0.0'),
     })).resolves.toMatchObject({ status: 'update-available' })
+  })
+
+  it('offers the stable release when leaving beta on the same version line', async () => {
+    await expect(checkForStableUpdate({
+      currentVersion: '2.1.0-beta.2',
+      request: async () => versionResponse('2.1.0'),
+    })).resolves.toEqual({
+      status: 'update-available',
+      currentVersion: '2.1.0-beta.2',
+      latestVersion: '2.1.0',
+    })
   })
 
   it.each([
@@ -167,7 +245,7 @@ describe('public Desktop version check', () => {
     })).resolves.toBeNull()
   })
 
-  it.each(['2.0', 'v2.0.0', '2.0.0-rc.1'])('skips invalid installed version %s before requesting', async currentVersion => {
+  it.each(['2.0', 'v2.0.0'])('skips invalid installed version %s before requesting', async currentVersion => {
     const request = vi.fn(async () => versionResponse('2.1.0'))
 
     await expect(checkForStableUpdate({ currentVersion, request })).resolves.toBeNull()

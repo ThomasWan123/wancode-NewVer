@@ -29,6 +29,7 @@ import FileSettingsProvider, {
 import { parseDocument } from 'yaml'
 import { unpackedAsarPath } from './packaged-runtime-path.ts'
 import type { DesktopShellMode } from './runtime.ts'
+import type { UpdateChannel } from './update-checker.ts'
 
 /** Persistent profile managed by the desktop launcher and the ordinary dsh plugin command. */
 export const DESKTOP_PROFILE_NAME = 'desktop'
@@ -57,11 +58,13 @@ const UPSTREAM_LOCAL_CREDENTIALS_PACKAGE = '@deepseek-ai/dsh-credentials-local'
 const DESKTOP_WINDOWS_CREDENTIALS_ROW_ID = 'desktop-windows-credentials'
 const DESKTOP_WINDOWS_CREDENTIALS_PACKAGE = 'dsh-plugin-desktop/credentials-win'
 const DEFAULT_DESKTOP_SHELL_MODE: DesktopShellMode = 'compatibility'
+const DEFAULT_UPDATE_CHANNEL: UpdateChannel = 'stable'
 const SETTINGS_FILE_PACKAGE = '@deepseek-ai/dsh-settings-file'
 const DESKTOP_SETTINGS_NAMESPACE = 'dsh-desktop'
 const UI_LAYOUT_PACKAGE = '@deepseek-ai/dsh-client-ui-layout'
 const UI_SIDEBAR_PACKAGE = '@deepseek-ai/dsh-client-ui-sidebar'
 const UI_CONVERSATION_PACKAGE = '@deepseek-ai/dsh-client-ui-conversation'
+const DESKTOP_UPDATES_ROW_ID = 'desktop-updates'
 
 /**
  * Parse desktop presentation state and reject corrupted values.
@@ -91,31 +94,54 @@ export function desktopShellModeFromSettings(document: unknown): DesktopShellMod
   return parseDesktopShellMode((section as Record<string, unknown>).mode)
 }
 
+/** Read the selected GitHub release stream from parsed desktop settings. */
+export function desktopUpdateChannelFromSettings(document: unknown): UpdateChannel {
+  if (typeof document !== 'object' || document === null || Array.isArray(document)) {
+    throw new Error(`${BIN_NAME}: settings document must be a map of namespace sections`)
+  }
+  const section = (document as Record<string, unknown>)[DESKTOP_SETTINGS_NAMESPACE]
+  if (section === undefined) return DEFAULT_UPDATE_CHANNEL
+  if (typeof section !== 'object' || section === null || Array.isArray(section)) {
+    throw new Error(`${BIN_NAME}: ${DESKTOP_SETTINGS_NAMESPACE} settings must be a map`)
+  }
+  const channel = (section as Record<string, unknown>).updateChannel
+  if (channel === undefined) return DEFAULT_UPDATE_CHANNEL
+  if (channel === 'stable' || channel === 'beta') return channel
+  throw new Error(`${BIN_NAME}: ${DESKTOP_SETTINGS_NAMESPACE}.updateChannel must be "stable" or "beta"`)
+}
+
 /**
  * Read startup mode from the same file resolved by the settings provider.
  * @param config - validated settings-file row config.
  * @returns the mode projected into the startup Loader graph.
  */
 export function readDesktopShellMode(config: SettingsFileConfig): DesktopShellMode {
+  return desktopShellModeFromSettings(readDesktopSettingsDocument(config))
+}
+
+/** Read the startup update channel from the same settings-provider document. */
+export function readDesktopUpdateChannel(config: SettingsFileConfig): UpdateChannel {
+  return desktopUpdateChannelFromSettings(readDesktopSettingsDocument(config))
+}
+
+/** Parse the settings provider's resolved document once for startup projections. */
+function readDesktopSettingsDocument(config: SettingsFileConfig): unknown {
   const spec = resolveSettingsFileSpec(config)
   let text: string
   try {
     text = readFileSync(spec.filename, 'utf8')
   } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return DEFAULT_DESKTOP_SHELL_MODE
+    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return {}
     throw cause
   }
-  let document: unknown
   if (spec.format === 'yaml') {
     const parsed = parseDocument(text, { prettyErrors: true })
     if (parsed.errors.length > 0) {
       throw new Error(`${BIN_NAME}: invalid settings document at ${spec.filename}: ${parsed.errors.map(error => error.message).join('; ')}`)
     }
-    document = parsed.toJS() ?? {}
-  } else {
-    document = text.trim().length === 0 ? {} : JSON.parse(text)
+    return parsed.toJS() ?? {}
   }
-  return desktopShellModeFromSettings(document)
+  return text.trim().length === 0 ? {} : JSON.parse(text)
 }
 
 /** Resolve the public Web template once and reject an incompatible DSH release. */
@@ -343,10 +369,22 @@ export function prepareDesktopProfile(
     dshHome: home,
     ...rowConfig(settings),
   } as SettingsFileConfig)
-  const mode = readDesktopShellMode(settingsConfig)
+  const desktopSettingsDocument = readDesktopSettingsDocument(settingsConfig)
+  const mode = desktopShellModeFromSettings(desktopSettingsDocument)
+  const updateChannel = desktopUpdateChannelFromSettings(desktopSettingsDocument)
   patches.push({
     id: 'settings',
     config: settingsConfig,
+  })
+  if (!rows.has(DESKTOP_UPDATES_ROW_ID)) {
+    throw new Error(`${BIN_NAME}: desktop profile has no ${DESKTOP_UPDATES_ROW_ID} row`)
+  }
+  patches.push({
+    id: DESKTOP_UPDATES_ROW_ID,
+    config: {
+      ...rowConfig(rows.get(DESKTOP_UPDATES_ROW_ID)!),
+      channel: updateChannel,
+    },
   })
   if (mode === 'advanced') {
     for (const [id, packageName] of [
@@ -461,6 +499,7 @@ export function prepareDesktopProfile(
     config: {
       ...rowConfig(desktopShell),
       mode,
+      updateChannel,
     },
   })
   return {
