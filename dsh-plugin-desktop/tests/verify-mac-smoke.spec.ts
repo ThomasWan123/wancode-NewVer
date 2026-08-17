@@ -20,13 +20,13 @@ interface AppFixture {
 function fixture(): AppFixture {
   const root = mkdtempSync(join(tmpdir(), 'dsh-mac-smoke-'))
   temporaryRoots.push(root)
-  const contents = join(root, 'DSH Desktop.app', 'Contents')
+  const contents = join(root, 'Wancode NewVer.app', 'Contents')
   const macos = join(contents, 'MacOS')
   const resources = join(contents, 'Resources')
   mkdirSync(macos, { recursive: true })
   mkdirSync(resources, { recursive: true })
   const infoPlist = join(contents, 'Info.plist')
-  const executable = join(macos, 'DSH Desktop')
+  const executable = join(macos, 'Wancode NewVer')
   const appAsar = join(resources, 'app.asar')
   writeFileSync(infoPlist, '<?xml version="1.0" encoding="UTF-8"?>')
   writeFileSync(executable, 'binary')
@@ -46,8 +46,8 @@ function options(overrides: Partial<MacSmokeVerificationOptions> = {}) {
   const removeMountPoint = vi.fn()
   const value: MacSmokeVerificationOptions = {
     distDir: '/release/dist',
-    productName: 'DSH Desktop',
-    listDmgs: () => ['/release/dist/DSH Desktop-2.0.1.dmg'],
+    productName: 'Wancode NewVer',
+    listDmgs: () => ['/release/dist/Wancode NewVer-2.0.1.dmg'],
     makeMountPoint: () => '/private/tmp/dsh-desktop-dmg-smoke-test',
     run: (command, args) => { calls.push({ command, args: [...args] }) },
     removeMountPoint,
@@ -85,18 +85,18 @@ describe('macOS DMG smoke artifact verification', () => {
   it('mounts one DMG and accepts a well-formed unsigned application bundle', () => {
     const value = fixture()
     const harness = options({ makeMountPoint: () => value.root })
-    const appPath = join(value.root, 'DSH Desktop.app')
+    const appPath = join(value.root, 'Wancode NewVer.app')
 
     expect(verifyMacSmoke(harness.value)).toEqual({
       appPath,
-      dmgPath: '/release/dist/DSH Desktop-2.0.1.dmg',
+      dmgPath: '/release/dist/Wancode NewVer-2.0.1.dmg',
     })
 
     expect(harness.calls).toEqual([
       {
         command: 'hdiutil',
         args: [
-          'attach', '/release/dist/DSH Desktop-2.0.1.dmg',
+          'attach', '/release/dist/Wancode NewVer-2.0.1.dmg',
           '-mountpoint', value.root, '-nobrowse', '-readonly',
         ],
       },
@@ -132,7 +132,7 @@ describe('macOS DMG smoke artifact verification', () => {
     expect(harness.calls).toEqual([
       {
         command: 'hdiutil',
-        args: ['attach', '/release/dist/DSH Desktop-2.0.1.dmg', '-mountpoint', value.root, '-nobrowse', '-readonly'],
+        args: ['attach', '/release/dist/Wancode NewVer-2.0.1.dmg', '-mountpoint', value.root, '-nobrowse', '-readonly'],
       },
       { command: 'hdiutil', args: ['detach', value.root] },
     ])

@@ -9,7 +9,7 @@ import {
 } from '../src/update-checker.ts'
 
 function versionResponse(version: unknown, init: ResponseInit = {}): Response {
-  return Response.json({ version }, init)
+  return Response.json({ tag_name: typeof version === 'string' ? `v${version}` : version }, init)
 }
 
 describe('strict SemVer parsing', () => {
@@ -72,6 +72,9 @@ describe('public Desktop version check', () => {
 
     expect(calls).toHaveLength(1)
     expect(calls[0]?.url).toBe(DESKTOP_VERSION_ENDPOINT)
+    expect(calls[0]?.url).toBe(
+      'https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases/latest',
+    )
     expect(calls[0]?.url).not.toContain('/api/downloads/')
     expect(calls[0]?.init).toMatchObject({
       method: 'GET',
@@ -108,11 +111,11 @@ describe('public Desktop version check', () => {
   })
 
   it.each([
-    ['leading v', { version: 'v2.1.0' }],
-    ['prerelease', { version: '2.1.0-rc.1' }],
-    ['invalid SemVer', { version: '2.01.0' }],
+    ['missing v prefix', { tag_name: '2.1.0' }],
+    ['prerelease', { tag_name: 'v2.1.0-rc.1' }],
+    ['invalid SemVer', { tag_name: 'v2.01.0' }],
     ['missing version', {}],
-    ['non-string version', { version: 2 }],
+    ['non-string version', { tag_name: 2 }],
     ['array response', ['2.1.0']],
   ])('silently ignores a service response with %s', async (_case, value) => {
     await expect(checkForStableUpdate({

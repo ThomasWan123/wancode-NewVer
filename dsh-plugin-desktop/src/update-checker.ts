@@ -1,7 +1,8 @@
-/** Headless version checks against the public DSH Desktop release service. */
+/** Headless version checks against the Wancode GitHub release feed. */
 
-/** Public endpoint returning the latest stable DSH Desktop version. */
-export const DESKTOP_VERSION_ENDPOINT = 'https://www.dshdesktop.cn/api/desktop/version'
+/** Public endpoint returning the latest Wancode release. */
+export const DESKTOP_VERSION_ENDPOINT =
+  'https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases/latest'
 
 /** Maximum response body bytes accepted from the version service. */
 export const MAX_VERSION_RESPONSE_BYTES = 4 * 1024
@@ -85,7 +86,7 @@ export function compareSemVerVersions(left: string, right: string): number | nul
 }
 
 /**
- * Check the fixed DSH Desktop version endpoint for a newer stable release.
+ * Check the fixed Wancode GitHub release endpoint for a newer stable release.
  * @param options - installed version, caller-owned signal, and optional request adapter.
  * @returns a successful comparison, or null when any request or validation step fails.
  */
@@ -169,8 +170,11 @@ function parseVersionResponse(body: string): ParsedSemVer | null {
   } catch {
     return null
   }
-  if (!isRecord(value) || typeof value.version !== 'string') return null
-  return parseCanonicalStableVersion(value.version)
+  if (!isRecord(value) || typeof value.tag_name !== 'string' || !value.tag_name.startsWith('v')) {
+    return null
+  }
+  const parsed = parseSemVer(value.tag_name)
+  return parsed !== null && parsed.prerelease.length === 0 ? parsed : null
 }
 
 function parseCanonicalStableVersion(input: string): ParsedSemVer | null {

@@ -1,4 +1,4 @@
-/** DSH Desktop executable: minimal Electron bootstrap around the Host Cordis root. */
+/** Wancode executable: minimal Electron bootstrap around the Host Cordis root. */
 
 import { app } from 'electron'
 import type { Context } from '@deepseek-ai/cordis'
@@ -20,6 +20,12 @@ import {
 import { ElectronDesktopRuntime } from './electron-runtime.ts'
 import { installProfilePackageResolver } from './module-resolution.ts'
 import { packagedDependencyPath } from './packaged-runtime-path.ts'
+import {
+  configureWancodeHarnessHome,
+  configureWancodeTelemetry,
+  WANCODE_APP_ID,
+  WANCODE_PRODUCT_NAME,
+} from './product.ts'
 import {
   beginDesktopProfileStartup,
   listDesktopProfiles,
@@ -44,7 +50,6 @@ import {
 } from './windows-volume-diagnostics.ts'
 
 const BIN_NAME = 'dsh-plugin-desktop'
-const PRODUCT_NAME = 'DSH Desktop'
 
 /** Report profile recovery without changing startup or rollback outcomes. */
 function notifyProfileRecovery(runtime: ElectronDesktopRuntime, body: string): void {
@@ -104,7 +109,7 @@ function notifyWindowsVolumeConcerns(
 
 /** Start one Electron process and leave lifetime to the mounted desktop plugin. */
 async function start(): Promise<void> {
-  app.setName(PRODUCT_NAME)
+  app.setName(WANCODE_PRODUCT_NAME)
   if (!app.requestSingleInstanceLock()) {
     app.quit()
     return
@@ -162,8 +167,10 @@ async function start(): Promise<void> {
 
   app.on('second-instance', () => { runtime.show() })
   await app.whenReady()
-  if (process.platform === 'win32') app.setAppUserModelId('ai.deepseek.dsh.desktop')
+  if (process.platform === 'win32') app.setAppUserModelId(WANCODE_APP_ID)
   if (app.isPackaged && process.cwd() === '/') process.chdir(app.getPath('home'))
+  configureWancodeHarnessHome(app.getPath('userData'), process.env)
+  configureWancodeTelemetry(process.env)
   const homeDir = resolveDshHome()
   const windowsVolumeConcerns = diagnoseWindowsVolumes(process.platform, [
     { label: 'application install', path: process.execPath },

@@ -288,6 +288,15 @@ describe('desktop profile composition', () => {
       disabled: { __jsExpr: "process.platform !== 'win32'" },
       config: { cwd: 'C:\\workspace' },
     }))
+    expect(rows.find(row => row.id === 'credentials')).toEqual(expect.objectContaining({
+      name: '@deepseek-ai/dsh-credentials-local',
+      disabled: true,
+    }))
+    expect(rows).toContainEqual(expect.objectContaining({
+      id: 'desktop-windows-credentials',
+      name: 'dsh-plugin-desktop/credentials-win',
+      config: { dshHome: home },
+    }))
   })
 
   it('keeps a Web Client in its owning profile and omits it from desktop', () => {

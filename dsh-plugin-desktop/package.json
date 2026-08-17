@@ -1,14 +1,14 @@
 {
   "name": "dsh-plugin-desktop",
   "version": "2.0.1",
-  "description": "DSH Desktop: an Electron shell composed as a DeepSeek Harness Cordis plugin",
+  "description": "Wancode NewVer: an Electron coding-agent shell composed with DeepSeek Harness",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anywhere-labs/deepseek-harness-desktop.git",
+    "url": "git+https://github.com/ThomasWan123/wancode-NewVer.git",
     "directory": "dsh-plugin-desktop"
   },
   "type": "module",
@@ -34,6 +34,10 @@
     "./windows-pwsh-sandbox": {
       "types": "./lib/types/windows-pwsh-sandbox.d.ts",
       "default": "./lib/windows-pwsh-sandbox.js"
+    },
+    "./credentials-win": {
+      "types": "./lib/types/credentials-win.d.ts",
+      "default": "./lib/credentials-win.js"
     },
     "./terminal": {
       "types": "./lib/types/terminal.d.ts",
@@ -97,15 +101,17 @@
     "verify:profile": "node scripts/verify-profile-boot.mjs",
     "verify:licenses": "node scripts/verify-licenses.mjs",
     "verify:notices": "node scripts/verify-licenses.mjs --notices THIRD_PARTY_NOTICES.md",
+    "verify:win-release": "node scripts/verify-win-release.ts",
     "check": "yarn run build && yarn run typecheck && yarn run test && yarn run verify:closure && yarn run verify:cli && yarn run verify:loader && yarn run verify:profile && yarn run verify:licenses",
-    "check:win-package": "yarn run build && yarn run typecheck && vitest run tests/package.spec.ts tests/package-win.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/verify-win-installer.spec.ts tests/verify-packaged-runtime.spec.ts tests/windows-pwsh-sandbox.spec.ts tests/windows-volume-diagnostics.spec.ts tests/window-options.spec.ts && yarn run verify:closure",
-    "check:mac-package": "yarn run build && yarn run typecheck && vitest run tests/mac-universal.spec.ts tests/package.spec.ts tests/package-mac.spec.ts tests/package-win.spec.ts tests/release-mac.spec.ts tests/release-preflight.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/verify-mac-release.spec.ts tests/verify-mac-smoke.spec.ts tests/verify-packaged-runtime.spec.ts tests/verify-win-installer.spec.ts tests/window-options.spec.ts && yarn run verify:closure",
+    "check:win-package": "yarn run build && yarn run typecheck && vitest run tests/product.spec.ts tests/credentials-win.spec.ts tests/package.spec.ts tests/package-win.spec.ts tests/release-win.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/windows-signature.spec.ts tests/verify-win-installer.spec.ts tests/verify-win-release.spec.ts tests/verify-packaged-runtime.spec.ts tests/windows-pwsh-sandbox.spec.ts tests/windows-volume-diagnostics.spec.ts tests/window-options.spec.ts && yarn run verify:closure",
+    "check:mac-package": "yarn run build && yarn run typecheck && vitest run tests/product.spec.ts tests/mac-universal.spec.ts tests/package.spec.ts tests/package-mac.spec.ts tests/package-win.spec.ts tests/release-mac.spec.ts tests/release-preflight.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/verify-mac-release.spec.ts tests/verify-mac-smoke.spec.ts tests/verify-packaged-runtime.spec.ts tests/verify-win-installer.spec.ts tests/window-options.spec.ts && yarn run verify:closure",
     "start": "node lib/bin.js",
     "dev": "yarn run build && node lib/bin.js",
     "package:dir": "yarn run build && node scripts/package-dir.mjs",
     "dist:mac": "node scripts/release-mac.ts",
     "dist:mac-smoke": "node scripts/package-mac.ts",
     "dist:win": "node scripts/package-win.ts",
+    "dist:win-release": "node scripts/release-win.ts",
     "prepack": "yarn run check"
   },
   "dependencies": {
@@ -155,6 +161,7 @@
     "@deepseek-ai/dsh-cordis-client-runner": "0.1.0-rc.6",
     "@deepseek-ai/dsh-cordis-host-runner": "0.1.0-rc.6",
     "@deepseek-ai/dsh-credentials": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-credentials-local": "0.1.0-rc.6",
     "@deepseek-ai/dsh-fs": "0.1.0-rc.6",
     "@deepseek-ai/dsh-fs-local": "0.1.0-rc.6",
     "@deepseek-ai/dsh-goal": "0.1.0-rc.6",
@@ -233,8 +240,8 @@
     "vitest": "4.1.8"
   },
   "build": {
-    "appId": "ai.deepseek.dsh.desktop",
-    "productName": "DSH Desktop",
+    "appId": "com.wancode.newver.desktop",
+    "productName": "Wancode NewVer",
     "asar": true,
     "asarUnpack": [
       "package.json",
@@ -292,9 +299,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "differentialPackage": false,
-      "shortcutName": "DSH Desktop",
+      "shortcutName": "Wancode NewVer",
       "useZip": true,
-      "artifactName": "DSH-Desktop-${version}-${arch}-Setup.${ext}"
+      "artifactName": "Wancode-NewVer-${version}-${arch}-Setup.${ext}"
     },
     "linux": {
       "target": [

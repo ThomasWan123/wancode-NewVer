@@ -1,8 +1,8 @@
 {
-  "name": "deepseek-harness-desktop",
+  "name": "wancode-newver",
   "version": "2.0.1",
   "private": true,
-  "description": "DSH Desktop product workspace",
+  "description": "Wancode NewVer product workspace built on DeepSeek Harness",
   "license": "MIT",
   "packageManager": "yarn@4.18.0",
   "engines": {

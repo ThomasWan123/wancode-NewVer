@@ -1,4 +1,4 @@
-/** Cordis Host plugin for scheduled and interactive DSH Desktop updates. */
+/** Cordis Host plugin for scheduled and interactive Wancode updates. */
 
 import { open } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
@@ -221,8 +221,8 @@ export function apply(ctx: Context, config: Config): void {
       label: () => downloadingVersion === undefined
         ? availableVersion === undefined
           ? checking ? 'Checking for Updates…' : 'Check for Updates…'
-          : `DSH Desktop ${availableVersion} Available`
-        : `Downloading DSH Desktop ${downloadingVersion}…`,
+          : `Wancode NewVer ${availableVersion} Available`
+        : `Downloading Wancode NewVer ${downloadingVersion}…`,
       invoke: runManualCheck,
     })
     refreshTray = registration.refresh

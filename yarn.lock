@@ -1830,7 +1830,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deepseek-ai/dsh-credentials-local@npm:^0.1.0-rc.6":
+"@deepseek-ai/dsh-credentials-local@npm:0.1.0-rc.6, @deepseek-ai/dsh-credentials-local@npm:^0.1.0-rc.6":
   version: 0.1.0-rc.6
   resolution: "@deepseek-ai/dsh-credentials-local@npm:0.1.0-rc.6"
   dependencies:
@@ -2432,9 +2432,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deepseek-ai/dsh-sandbox-windows-acl@patch:@deepseek-ai/dsh-sandbox-windows-acl@npm%3A0.1.0-rc.6#./patches/dsh-sandbox-windows-acl@0.1.0-rc.6.patch::locator=deepseek-harness-desktop%40workspace%3A.":
+"@deepseek-ai/dsh-sandbox-windows-acl@patch:@deepseek-ai/dsh-sandbox-windows-acl@npm%3A0.1.0-rc.6#./patches/dsh-sandbox-windows-acl@0.1.0-rc.6.patch::locator=wancode-newver%40workspace%3A.":
   version: 0.1.0-rc.6
-  resolution: "@deepseek-ai/dsh-sandbox-windows-acl@patch:@deepseek-ai/dsh-sandbox-windows-acl@npm%3A0.1.0-rc.6#./patches/dsh-sandbox-windows-acl@0.1.0-rc.6.patch::version=0.1.0-rc.6&hash=1987f3&locator=deepseek-harness-desktop%40workspace%3A."
+  resolution: "@deepseek-ai/dsh-sandbox-windows-acl@patch:@deepseek-ai/dsh-sandbox-windows-acl@npm%3A0.1.0-rc.6#./patches/dsh-sandbox-windows-acl@0.1.0-rc.6.patch::version=0.1.0-rc.6&hash=1987f3&locator=wancode-newver%40workspace%3A."
   dependencies:
     koffi: "npm:^3.1.0"
   peerDependencies:
@@ -5837,9 +5837,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"app-builder-lib@patch:app-builder-lib@npm%3A26.15.3#./patches/app-builder-lib@26.15.3.patch::locator=deepseek-harness-desktop%40workspace%3A.":
+"app-builder-lib@patch:app-builder-lib@npm%3A26.15.3#./patches/app-builder-lib@26.15.3.patch::locator=wancode-newver%40workspace%3A.":
   version: 26.15.3
-  resolution: "app-builder-lib@patch:app-builder-lib@npm%3A26.15.3#./patches/app-builder-lib@26.15.3.patch::version=26.15.3&hash=17e0f0&locator=deepseek-harness-desktop%40workspace%3A."
+  resolution: "app-builder-lib@patch:app-builder-lib@npm%3A26.15.3#./patches/app-builder-lib@26.15.3.patch::version=26.15.3&hash=17e0f0&locator=wancode-newver%40workspace%3A."
   dependencies:
     "@electron/asar": "npm:3.4.1"
     "@electron/fuses": "npm:^1.8.0"
@@ -6483,29 +6483,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"deepseek-harness-desktop@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "deepseek-harness-desktop@workspace:."
-  dependenciesMeta:
-    "@deepseek-ai/dsh-subprocess-local":
-      built: true
-    "@google/genai":
-      built: false
-    electron:
-      built: true
-    electron-winstaller:
-      built: false
-    esbuild:
-      built: true
-    koffi:
-      built: true
-    node-pty:
-      built: true
-    protobufjs:
-      built: false
-  languageName: unknown
-  linkType: soft
-
 "defer-to-connect@npm:^2.0.0":
   version: 2.0.1
   resolution: "defer-to-connect@npm:2.0.1"
@@ -6696,6 +6673,7 @@ __metadata:
     "@deepseek-ai/dsh-cordis-client-runner": "npm:0.1.0-rc.6"
     "@deepseek-ai/dsh-cordis-host-runner": "npm:0.1.0-rc.6"
     "@deepseek-ai/dsh-credentials": "npm:0.1.0-rc.6"
+    "@deepseek-ai/dsh-credentials-local": "npm:0.1.0-rc.6"
     "@deepseek-ai/dsh-fs": "npm:0.1.0-rc.6"
     "@deepseek-ai/dsh-fs-local": "npm:0.1.0-rc.6"
     "@deepseek-ai/dsh-goal": "npm:0.1.0-rc.6"
@@ -10804,6 +10782,29 @@ __metadata:
   checksum: 10c0/f459c500f8818c7a2318cd23228b4e5c0b5efb25bf8e5cb7f116c6d26e51482b2f800a8bb19837c0b5f0d05c51519edbf502bc8ceb5bd86868e8facf1d2c498e
   languageName: node
   linkType: hard
+
+"wancode-newver@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "wancode-newver@workspace:."
+  dependenciesMeta:
+    "@deepseek-ai/dsh-subprocess-local":
+      built: true
+    "@google/genai":
+      built: false
+    electron:
+      built: true
+    electron-winstaller:
+      built: false
+    esbuild:
+      built: true
+    koffi:
+      built: true
+    node-pty:
+      built: true
+    protobufjs:
+      built: false
+  languageName: unknown
+  linkType: soft
 
 "web-streams-polyfill@npm:^3.0.3":
   version: 3.3.3

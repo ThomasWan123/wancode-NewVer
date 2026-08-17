@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
-  DESKTOP_DOWNLOAD_URLS,
   MAX_UPDATE_DOWNLOAD_BYTES,
   UpdateDownloadError,
+  desktopDownloadUrl,
   downloadDesktopUpdate,
   type DesktopDownloadPlatform,
   type UpdateArtifactRequest,
@@ -85,10 +85,10 @@ describe('desktop update installer download', () => {
       request,
     })
 
-    expect(result).toBe(join(userDataPath, 'updates', '2.1.0', 'DSH-Desktop-2.1.0-mac.dmg'))
+    expect(result).toBe(join(userDataPath, 'updates', '2.1.0', 'Wancode-NewVer-2.1.0-mac.dmg'))
     expect(await readFile(result)).toEqual(Buffer.from(artifact))
     expect(calls).toHaveLength(1)
-    expect(calls[0]?.url).toBe(DESKTOP_DOWNLOAD_URLS.darwin)
+    expect(calls[0]?.url).toBe(desktopDownloadUrl('darwin', '2.1.0'))
     expect(calls[0]?.init).toMatchObject({ method: 'GET', cache: 'no-store', redirect: 'follow' })
     await expectNoPartialFiles(userDataPath, '2.1.0')
   })
@@ -101,14 +101,33 @@ describe('desktop update installer download', () => {
       version: '2.2.0',
       userDataPath,
       request: async (url) => {
-        expect(url).toBe(DESKTOP_DOWNLOAD_URLS.win32)
+        expect(url).toBe(desktopDownloadUrl('win32', '2.2.0'))
         return chunkedResponse([artifact])
+      },
+      verifyWindowsSignature: async filename => {
+        expect(filename).toContain('.partial')
       },
     })
 
-    expect(result).toBe(join(userDataPath, 'updates', '2.2.0', 'DSH-Desktop-2.2.0-windows.exe'))
+    expect(result).toBe(join(userDataPath, 'updates', '2.2.0', 'Wancode-NewVer-2.2.0-x64-Setup.exe'))
     expect(await readFile(result)).toEqual(Buffer.from(artifact))
     await expectNoPartialFiles(userDataPath, '2.2.0')
+  })
+
+  it('rejects and removes a structurally valid Windows installer with an untrusted signature', async () => {
+    const userDataPath = await temporaryUserData()
+    await expectFailure(downloadDesktopUpdate({
+      platform: 'win32',
+      version: '2.2.1',
+      userDataPath,
+      request: async () => chunkedResponse([windowsArtifact()]),
+      verifyWindowsSignature: async () => {
+        throw new Error('NotSigned')
+      },
+    }), 'invalid-artifact')
+
+    await expectNoPartialFiles(userDataPath, '2.2.1')
+    expect(await readdir(join(userDataPath, 'updates', '2.2.1'))).toEqual([])
   })
 
   it('accepts canonical stable SemVer build metadata in the private artifact path', async () => {
@@ -124,7 +143,7 @@ describe('desktop update installer download', () => {
       userDataPath,
       'updates',
       '2.8.0+build',
-      'DSH-Desktop-2.8.0+build-mac.dmg',
+      'Wancode-NewVer-2.8.0+build-mac.dmg',
     ))
   })
 

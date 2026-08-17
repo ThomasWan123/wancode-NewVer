@@ -1,17 +1,24 @@
-/** Headless, confirmation-gated downloads for DSH Desktop installers. */
+/** Headless, confirmation-gated downloads for Wancode installers. */
 
 import { randomUUID } from 'node:crypto'
 import { chmod, lstat, mkdir, open, rename, unlink } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { parseSemVer } from './update-checker.ts'
+import { verifyWindowsAuthenticode } from './windows-signature.ts'
 
 /** Desktop platforms with a fixed installer download endpoint. */
 export type DesktopDownloadPlatform = 'darwin' | 'win32'
 
-/** Fixed download endpoints that record one user-confirmed installer download. */
-export const DESKTOP_DOWNLOAD_URLS: Readonly<Record<DesktopDownloadPlatform, string>> = {
-  darwin: 'https://www.dshdesktop.cn/api/downloads/mac',
-  win32: 'https://www.dshdesktop.cn/api/downloads/windows',
+/** Build the immutable GitHub release asset URL for one installer. */
+export function desktopDownloadUrl(
+  platform: DesktopDownloadPlatform,
+  version: string,
+): string {
+  const encodedVersion = encodeURIComponent(version)
+  const filename = platform === 'darwin'
+    ? `Wancode-NewVer-${encodedVersion}-mac.dmg`
+    : `Wancode-NewVer-${encodedVersion}-x64-Setup.exe`
+  return `https://github.com/ThomasWan123/wancode-NewVer/releases/download/v${encodedVersion}/${filename}`
 }
 
 /** Maximum accepted installer size, in bytes. */
@@ -42,6 +49,8 @@ export interface DownloadDesktopUpdateOptions {
   readonly request: UpdateArtifactRequest
   /** Optional cancellation signal owned by the update coordinator. */
   readonly signal?: AbortSignal
+  /** Injectable Authenticode verifier; production defaults to Windows trust validation. */
+  readonly verifyWindowsSignature?: (filename: string) => Promise<unknown>
 }
 
 /** Typed failure from installer request, validation, or cancellation. */
@@ -99,7 +108,7 @@ export async function downloadDesktopUpdate(options: DownloadDesktopUpdateOption
 
   let response: Response
   try {
-    response = await options.request(DESKTOP_DOWNLOAD_URLS[platform], {
+    response = await options.request(desktopDownloadUrl(platform, version), {
       method: 'GET',
       cache: 'no-store',
       redirect: 'follow',
@@ -127,6 +136,17 @@ export async function downloadDesktopUpdate(options: DownloadDesktopUpdateOption
     await writeResponseBody(paths.temporary, response.body, options.signal)
     throwIfAborted(options.signal)
     await validateArtifact(paths.temporary, platform)
+    if (platform === 'win32') {
+      try {
+        await (options.verifyWindowsSignature ?? verifyWindowsAuthenticode)(paths.temporary)
+      } catch (cause) {
+        throw new UpdateDownloadError(
+          'invalid-artifact',
+          'The Windows update installer does not have a trusted Authenticode signature.',
+          { cause },
+        )
+      }
+    }
     throwIfAborted(options.signal)
     await rename(paths.temporary, paths.completed)
     return paths.completed
@@ -184,8 +204,9 @@ async function prepareDownloadPaths(
   await preparePrivateDirectory(directory)
 
   const extension = platform === 'darwin' ? 'dmg' : 'exe'
-  const platformName = platform === 'darwin' ? 'mac' : 'windows'
-  const filename = `DSH-Desktop-${version}-${platformName}.${extension}`
+  const filename = platform === 'darwin'
+    ? `Wancode-NewVer-${version}-mac.${extension}`
+    : `Wancode-NewVer-${version}-x64-Setup.${extension}`
   const completed = join(directory, filename)
   const completedStat = await lstatOptional(completed)
   if (completedStat !== undefined) {

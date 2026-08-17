@@ -52,6 +52,10 @@ const PWSH_SANDBOX_ROW_ID = 'pwsh-sandbox'
 const UPSTREAM_PWSH_SANDBOX_PACKAGE = '@deepseek-ai/dsh-pwsh-sandbox'
 const DESKTOP_WINDOWS_PWSH_SANDBOX_ROW_ID = 'desktop-windows-pwsh-sandbox'
 const DESKTOP_WINDOWS_PWSH_SANDBOX_PACKAGE = 'dsh-plugin-desktop/windows-pwsh-sandbox'
+const CREDENTIALS_ROW_ID = 'credentials'
+const UPSTREAM_LOCAL_CREDENTIALS_PACKAGE = '@deepseek-ai/dsh-credentials-local'
+const DESKTOP_WINDOWS_CREDENTIALS_ROW_ID = 'desktop-windows-credentials'
+const DESKTOP_WINDOWS_CREDENTIALS_PACKAGE = 'dsh-plugin-desktop/credentials-win'
 const DEFAULT_DESKTOP_SHELL_MODE: DesktopShellMode = 'compatibility'
 const SETTINGS_FILE_PACKAGE = '@deepseek-ai/dsh-settings-file'
 const DESKTOP_SETTINGS_NAMESPACE = 'dsh-desktop'
@@ -412,6 +416,26 @@ export function prepareDesktopProfile(
               name: DESKTOP_WINDOWS_PWSH_SANDBOX_PACKAGE,
               ...(pwshSandbox.disabled === undefined ? {} : { disabled: pwshSandbox.disabled }),
               config: rowConfig(pwshSandbox),
+            },
+          ],
+        },
+      )
+    }
+    const credentials = rows.get(CREDENTIALS_ROW_ID)
+    if (credentials?.name === UPSTREAM_LOCAL_CREDENTIALS_PACKAGE
+      && !rowDisabledOnPlatform(credentials, platform)) {
+      patches.push(
+        {
+          id: CREDENTIALS_ROW_ID,
+          name: UPSTREAM_LOCAL_CREDENTIALS_PACKAGE,
+          disabled: true,
+        },
+        {
+          insert: [
+            {
+              id: DESKTOP_WINDOWS_CREDENTIALS_ROW_ID,
+              name: DESKTOP_WINDOWS_CREDENTIALS_PACKAGE,
+              config: { dshHome: home },
             },
           ],
         },

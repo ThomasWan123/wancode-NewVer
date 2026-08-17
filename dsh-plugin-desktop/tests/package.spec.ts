@@ -60,6 +60,10 @@ describe('published package surface', () => {
       types: './lib/types/windows-pwsh-sandbox.d.ts',
       default: './lib/windows-pwsh-sandbox.js',
     })
+    expect(manifest.exports).toHaveProperty('./credentials-win', {
+      types: './lib/types/credentials-win.d.ts',
+      default: './lib/credentials-win.js',
+    })
     expect(manifest.exports).toHaveProperty('./terminal', {
       types: './lib/types/terminal.d.ts',
       default: './lib/terminal.js',
@@ -111,6 +115,7 @@ describe('published package surface', () => {
     const config = readFileSync(new URL('tsdown.config.ts', packageRoot), 'utf8')
 
     expect(config).toContain("'windows-pwsh-sandbox': 'src/windows-pwsh-sandbox.ts'")
+    expect(config).toContain("'credentials-win': 'src/credentials-win.ts'")
     expect(config).toContain("'windows-acl-runner': 'src/windows-acl-runner.ts'")
     expect(config).toContain("'desktop-cli': 'src/desktop-cli.ts'")
     expect(config).toContain("'desktop-runtime-environment': 'src/desktop-runtime-environment.ts'")
@@ -146,8 +151,8 @@ describe('published package surface', () => {
 
   it('fixes the installed application identity', () => {
     expect(manifest.version).toBe(workspaceManifest.version)
-    expect(manifest.build?.productName).toBe('DSH Desktop')
-    expect(manifest.build?.appId).toBe('ai.deepseek.dsh.desktop')
+    expect(manifest.build?.productName).toBe('Wancode NewVer')
+    expect(manifest.build?.appId).toBe('com.wancode.newver.desktop')
     expect(manifest.build?.asarUnpack).toEqual([
       'package.json',
       'cordis.patch.yml',
@@ -189,9 +194,9 @@ describe('published package surface', () => {
       createDesktopShortcut: true,
       createStartMenuShortcut: true,
       differentialPackage: false,
-      shortcutName: 'DSH Desktop',
+      shortcutName: 'Wancode NewVer',
       useZip: true,
-      artifactName: 'DSH-Desktop-${version}-${arch}-Setup.${ext}',
+      artifactName: 'Wancode-NewVer-${version}-${arch}-Setup.${ext}',
     })
     expect(manifest.build?.linux?.icon).toBe('build/app-icon.png')
   })
