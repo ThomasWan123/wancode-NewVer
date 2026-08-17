@@ -106,7 +106,9 @@ corepack yarn dist:win
 
 Production signing uses `dist:win-release` and requires a code-signing
 certificate plus `WANCODE_WINDOWS_PUBLISHER`. Signing secrets are never supplied
-or committed by this repository.
+or committed by this repository. The release gate also requires an older trusted
+installer and an explicitly disposable Windows runner, where it exercises
+install, upgrade, rollback, restore, and uninstall before release.
 
 ## Upstream and license
 

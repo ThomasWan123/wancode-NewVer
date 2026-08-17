@@ -95,7 +95,9 @@ corepack yarn dist:win
 ```
 
 正式签名发布使用 `dist:win-release`，并要求代码签名证书以及
-`WANCODE_WINDOWS_PUBLISHER`。仓库不会提供或提交任何签名密钥。
+`WANCODE_WINDOWS_PUBLISHER`。仓库不会提供或提交任何签名密钥。发布门禁还要求
+一个更旧且受信的安装包，并在明确标记为一次性的 Windows runner 上完成安装、
+升级、回滚、恢复和卸载验证。
 
 ## 上游与许可证
 

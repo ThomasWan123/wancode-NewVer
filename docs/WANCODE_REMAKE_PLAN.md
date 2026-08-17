@@ -175,6 +175,9 @@ artifacts are trusted and use the same publisher certificate.
 
 The desktop settings now expose stable and beta GitHub release streams; changing
 the stream restarts into a generation whose update checker, prompt history, and
-asset download all accept the selected SemVer class. Producing a distributable
-signed artifact still requires the project's code-signing certificate and
-publisher value; lifecycle automation and update rollback remain active M1 work.
+asset download all accept the selected SemVer class. The signed release path now
+requires an older trusted installer and an explicitly disposable Windows runner,
+then verifies install, upgrade, rollback, current-version restore, and uninstall
+while pinning every executable transition to the expected Authenticode publisher.
+Executing that gate still requires the project's signing certificate and a
+signed previous release; user-facing automatic rollback remains active M1 work.

@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { withoutWindowsSigningSecrets } from './package-win.ts'
+import { assertWindowsLifecycleReady } from './verify-win-lifecycle.ts'
 
 type WindowsSigningSource = 'csc' | 'win-csc'
 
@@ -68,6 +69,7 @@ function run(command: string, args: readonly string[], cwd: string, env: NodeJS.
 function main(): void {
   try {
     const result = assertWindowsReleaseReady(process.env, process.platform, process.arch)
+    assertWindowsLifecycleReady(process.env, process.platform)
     const desktopRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
     const workspaceRoot = resolve(desktopRoot, '..')
     const require = createRequire(import.meta.url)
@@ -102,6 +104,12 @@ function main(): void {
     run(
       process.execPath,
       [fileURLToPath(new URL('./verify-win-release.ts', import.meta.url))],
+      desktopRoot,
+      process.env,
+    )
+    run(
+      process.execPath,
+      [fileURLToPath(new URL('./verify-win-lifecycle.ts', import.meta.url))],
       desktopRoot,
       process.env,
     )

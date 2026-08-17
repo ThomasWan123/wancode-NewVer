@@ -179,6 +179,8 @@ corepack.cmd yarn dist:win
 
 该本地命令会主动移除 Windows 证书变量。正式发布使用 `dist:win-release`，要求提供代码签名证书和 `WANCODE_WINDOWS_PUBLISHER`，并验证应用与 NSIS 安装器由同一受信证书签名。
 
+签名发布门禁必须运行在一次性的 Windows runner 上，因为安装过程会修改注册表状态。设置 `WANCODE_WINDOWS_LIFECYCLE_DISPOSABLE=1`、`WANCODE_PREVIOUS_WINDOWS_INSTALLER` 和 `WANCODE_PREVIOUS_WINDOWS_VERSION`，指向一个更旧且受信的版本。`WANCODE_WINDOWS_TRUSTED_THUMBPRINTS` 必须列出允许的 SHA-1 证书指纹；有计划地轮换证书时可用逗号同时列出新旧证书。门禁会按允许的证书集合验证旧安装器、新安装器、已安装应用和卸载器，并依次执行安装、升级、回滚、恢复当前版本和卸载；任一转换失败都会关闭发布并尝试清理，同时拒绝残留的安装目录、卸载注册表值和标准快捷方式。
+
 ### macOS DMG 冒烟构建
 
 `yarn dist:mac-smoke` 会在原生 macOS 宿主机上构建一个未签名的 universal DMG，同一个安装包可以在 Intel 和 Apple Silicon Mac 上原生运行。该命令拒绝非 macOS 宿主，先执行一组 macOS 可运行的 gate（build、全部 TypeScript compiler face、打包与 macOS 聚焦测试、runtime-closure verifier），再在不接触任何签名材料的情况下打包。它会挂载 DMG，检查属性列表、主程序执行权限、`x86_64` 与 `arm64` 两个架构切片，以及 `app.asar`。该命令与 `dist:win` 的密钥纪律一致：剥离 Electron Builder 能识别的全部 macOS 签名与公证变量、设置 `CSC_IDENTITY_AUTO_DISCOVERY=false`、关闭 notarization，且从不发布。产物没有 Developer ID 签名，因此 Gatekeeper 会在其他机器上拦截它；它的存在是为了让打包回归在人工发布之前就在 CI 中失败。签名并公证的 universal 正式发布仍是在持有凭证的 macOS 机器上执行 `yarn dist:mac`，产物写入 `dsh-plugin-desktop/dist/mac-release/`。
