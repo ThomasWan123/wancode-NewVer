@@ -151,8 +151,8 @@ describe('published package surface', () => {
 
   it('fixes the installed application identity', () => {
     expect(manifest.version).toBe(workspaceManifest.version)
-    expect(manifest.build?.productName).toBe('Wancode NewVer')
-    expect(manifest.build?.appId).toBe('com.wancode.newver.desktop')
+    expect(manifest.build?.productName).toBe('Wan Code')
+    expect(manifest.build?.appId).toBe('com.wancode.desktop')
     expect(manifest.build?.asarUnpack).toEqual([
       'package.json',
       'cordis.patch.yml',
@@ -194,9 +194,9 @@ describe('published package surface', () => {
       createDesktopShortcut: true,
       createStartMenuShortcut: true,
       differentialPackage: false,
-      shortcutName: 'Wancode NewVer',
+      shortcutName: 'Wan Code',
       useZip: true,
-      artifactName: 'Wancode-NewVer-${version}-${arch}-Setup.${ext}',
+      artifactName: 'Wan-Code-${version}-${arch}-Setup.${ext}',
     })
     expect(manifest.build?.linux?.icon).toBe('build/app-icon.png')
   })

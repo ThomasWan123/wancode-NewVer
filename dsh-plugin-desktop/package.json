@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-desktop",
   "version": "2.0.1",
-  "description": "Wancode NewVer: an Electron coding-agent shell composed with DeepSeek Harness",
+  "description": "Wan Code: an Electron coding-agent shell composed with the DeepSeek Harness runtime",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
@@ -240,8 +240,8 @@
     "vitest": "4.1.8"
   },
   "build": {
-    "appId": "com.wancode.newver.desktop",
-    "productName": "Wancode NewVer",
+    "appId": "com.wancode.desktop",
+    "productName": "Wan Code",
     "asar": true,
     "asarUnpack": [
       "package.json",
@@ -299,9 +299,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "differentialPackage": false,
-      "shortcutName": "Wancode NewVer",
+      "shortcutName": "Wan Code",
       "useZip": true,
-      "artifactName": "Wancode-NewVer-${version}-${arch}-Setup.${ext}"
+      "artifactName": "Wan-Code-${version}-${arch}-Setup.${ext}"
     },
     "linux": {
       "target": [

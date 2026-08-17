@@ -1,13 +1,13 @@
 import { join } from 'node:path'
 
 /** Stable native identity for the Wancode desktop product. */
-export const WANCODE_PRODUCT_NAME = 'Wancode NewVer'
+export const WANCODE_PRODUCT_NAME = 'Wan Code'
 
 /** Window title shown by compatibility and advanced presentation modes. */
 export const WANCODE_WINDOW_TITLE = WANCODE_PRODUCT_NAME
 
 /** Windows AppUserModelId and Electron Builder application identifier. */
-export const WANCODE_APP_ID = 'com.wancode.newver.desktop'
+export const WANCODE_APP_ID = 'com.wancode.desktop'
 
 /**
  * Keep Wancode profile and session data separate from an existing CLI install.

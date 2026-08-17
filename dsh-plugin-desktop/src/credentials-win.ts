@@ -40,7 +40,7 @@ export interface CredentialFallback {
 /** Build an opaque per-home target without disclosing the user's path. */
 export function credentialTarget(home: string, ref: CredentialRef): string {
   const homeId = createHash('sha256').update(resolve(home).toLowerCase()).digest('hex').slice(0, 24)
-  return `Wancode NewVer/${homeId}/${ref}`
+  return `Wan Code/${homeId}/${ref}`
 }
 
 /**
@@ -213,7 +213,7 @@ export function createWindowsCredentialStore(
         AttributeCount: 0,
         Attributes: null,
         TargetAlias: null,
-        UserName: 'Wancode NewVer',
+        UserName: 'Wan Code',
       }, 0)
       if (written === 0) throw failure('CredWriteW', target)
     },

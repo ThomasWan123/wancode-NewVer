@@ -12,8 +12,8 @@ function options(
     platform: 'win32',
     expectedPublisher: publisher,
     artifacts: {
-      installerPath: 'D:\\dist\\Wancode-NewVer-2.0.1-x64-Setup.exe',
-      applicationPath: 'D:\\dist\\win-unpacked\\Wancode NewVer.exe',
+      installerPath: 'D:\\dist\\Wan-Code-2.0.1-x64-Setup.exe',
+      applicationPath: 'D:\\dist\\win-unpacked\\Wan Code.exe',
     },
     verifyAuthenticode: verify,
   }

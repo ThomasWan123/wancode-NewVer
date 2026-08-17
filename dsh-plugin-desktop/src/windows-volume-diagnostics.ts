@@ -94,7 +94,7 @@ function concernForPath(
     return {
       ...entry,
       ...info,
-      reason: `${info.fileSystem} does not provide the NTFS-style ACL and junction behavior Wancode NewVer relies on`,
+      reason: `${info.fileSystem} does not provide the NTFS-style ACL and junction behavior Wan Code relies on`,
     }
   }
   if (info.driveType === REMOVABLE_DRIVE) {

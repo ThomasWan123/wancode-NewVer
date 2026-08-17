@@ -2,7 +2,7 @@
 
 ## Product
 
-**Wancode NewVer** is a Windows-first coding-agent desktop product built on the
+**Wan Code** is a Windows-first coding-agent desktop product built on the
 DeepSeek Harness runtime. It is an independent community product and is not an
 official DeepSeek application.
 

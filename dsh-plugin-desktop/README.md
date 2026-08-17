@@ -1,8 +1,8 @@
-# DSH Desktop
+# Wan Code desktop package
 
 English | [中文](README.zh.md)
 
-`dsh-plugin-desktop` runs DSH in Electron while remaining part of the ordinary Cordis composition. The installed application is named **DSH Desktop**. The package provides the `dsh-plugin-desktop` executable and the `dsh-desktop` alias; the registered npm package name is the reliable `npx` entry.
+`dsh-plugin-desktop` runs the pinned Harness runtime in Electron while remaining part of the ordinary Cordis composition. The installed product is **Wan Code**. The package and compatibility command names retain `dsh-plugin-desktop` and `dsh-desktop` because they are runtime-facing technical identifiers, not the product brand.
 
 ## Architecture
 
@@ -45,7 +45,7 @@ Linux supports compatibility mode only. Its tray mode command is disabled, and a
 
 ## Compatibility mode
 
-`dsh-desktop.mode` defaults to `compatibility`. This mode creates a normal operating-system window with its native frame and loads the official Web surface from the active DSH profile. macOS suppresses the visible page title. Windows retains the native caption icon and displays `DeepSeek Harness Desktop`, but removes the window menu bar. The operating system owns native title-bar color and appearance.
+`dsh-desktop.mode` defaults to `compatibility`. This mode creates a normal operating-system window with its native frame and loads the official Web surface from the active DSH profile. macOS suppresses the visible page title. Windows retains the native caption icon and displays `Wan Code`, but removes the window menu bar. The operating system owns native title-bar color and appearance.
 
 The desktop Client module validates the mode and platform markers, then has no compatibility-mode effects. It does not provide or replace the `layout` service, register a `root` or `sidebar` occupant, install styles, or change the conversation surface. Compatibility mode preserves the selected profile's own layout, sidebar, and conversation composition; the ordinary `desktop` and `web` profiles therefore keep the official rows unchanged.
 
@@ -71,7 +71,7 @@ On macOS the advanced window uses a transparent hidden-inset title bar, position
 
 ## Development
 
-This package is managed by the Yarn workspace at the repository root. The sibling `deepseek-harness/` checkout remains an independent upstream pnpm project and is not part of the Yarn workspace. Install and verify DSH Desktop from the repository root:
+This package is managed by the Yarn workspace at the repository root. The sibling `deepseek-harness/` checkout remains an independent upstream pnpm project and is not part of the Yarn workspace. Install and verify Wancode from the repository root:
 
 ```sh
 yarn install
@@ -146,13 +146,13 @@ A third-party Host plugin only needs its normal `dsh.bundle` patch. A plugin wit
 
 ## Desktop operations
 
-Packaged macOS and Windows applications query `https://www.dshdesktop.cn/api/desktop/version` 60 seconds after startup and every six hours after a completed check. Each no-cache request has a 15-second deadline and shares one in-flight operation with the **Check for Updates…** tray command. The response is accepted only when it contains canonical stable Semantic Versioning. Background network, HTTP, timeout, invalid-response, equal-version, and older-version outcomes are silent. A manual check always opens a native result dialog: equal or older results report the installed version, failures ask the user to retry, and a strictly newer version uses the **Download** or **Later** prompt. Automatic update prompts are remembered per version, while the tray can retry explicitly. Development, unpackaged, and Linux launches do not download an installer.
+Packaged macOS and Windows applications query the latest release from `ThomasWan123/wancode-NewVer` on GitHub 60 seconds after startup and every six hours after a completed check. Each no-cache request has a 15-second deadline and shares one in-flight operation with the **Check for Updates…** tray command. Only canonical stable `v<semver>` tags are accepted. Background network, HTTP, timeout, invalid-response, equal-version, and older-version outcomes are silent. A manual check always opens a native result dialog. Development, unpackaged, and Linux launches do not download an installer.
 
-Choosing **Download** first rechecks that the advertised version is unchanged, then makes the first request to the platform's fixed counted download endpoint. DSH Desktop follows the service redirect through Electron networking, streams at most 1 GiB into a private versioned user-data directory, and rejects an incomplete DMG or Windows PE before exposing it. On macOS it opens the downloaded DMG and tells the user to replace the application in `Applications` and reopen it. On Windows it asks again after the NSIS installer is ready; **Restart and Install** launches that installer and requests orderly Cordis teardown before the current process exits. Download, filesystem, and installer-opening failures remain silent and leave the available-version tray action retryable.
+Choosing **Download** first rechecks that the advertised version is unchanged, then requests the immutable Wancode asset for that GitHub release. Wancode streams at most 1 GiB into a private versioned user-data directory and rejects an incomplete DMG or Windows PE. Windows updates additionally require a trusted Authenticode signature before the NSIS installer can be opened. **Restart and Install** requests orderly Cordis teardown before the current process exits.
 
-Release operators must publish both platform artifacts before making a version discoverable. After the artifacts and download redirects are ready, set `deepseek-harness-desktop:release:version` to the canonical stable version in the Upstash Redis console, for example `SET deepseek-harness-desktop:release:version 2.0.1`. The version API changes immediately; missing, unavailable, or invalid values produce no Desktop prompt.
+Release operators must upload assets with the exact Wancode filenames before publishing the GitHub release. A release without matching assets remains discoverable but fails closed at download time.
 
-On macOS and Windows, **Open DSH Terminal** opens a system terminal rooted at the active profile. Its welcome text identifies the application version, active profile, profile directory, and DSH home, then lists configuration and plugin-management commands. Inside this terminal, bare `dsh`, `dsh --dump-config`, and plugin subcommands without a profile selection default to that active profile; an explicit `--profile` and the upstream `web` alias keep their original meaning. DSH Desktop generates private per-profile `dsh`, `pnpm`, and `node` shims under its user-data directory, sets `DSH_HOME`, uses the active profile as the working directory, and prepends the shim directory only to that terminal's `PATH`. A later profile switch therefore does not change commands in an already open terminal. It does not edit the global environment or shell startup files. The macOS launcher preserves the user's interactive zsh or bash setup before restoring the desktop-owned values. Windows selects PowerShell 7, Windows PowerShell, or Command Prompt in that order and opens it in a new Windows Terminal window; when `wt.exe` is unavailable, a private `cmd start` broker creates a visible console instead. Synchronous launch failures and unsuccessful broker exits are shown in a native error dialog. Linux does not compose the terminal command.
+On macOS and Windows, **Open Wancode Terminal** opens a system terminal rooted at the active profile. Its welcome text identifies the Wancode version, active profile, profile directory, and Harness home, then lists configuration and plugin-management commands. Private per-profile `dsh`, `pnpm`, and `node` compatibility shims exist only inside that terminal and never modify the system `PATH`.
 
 ## Native lifecycle
 
@@ -174,9 +174,9 @@ corepack.cmd yarn dist:win
 
 Python and Visual Studio C++ Build Tools are not required. The Windows command uses `node-pty`'s bundled x64 Node-API binaries instead of asking Electron Builder to rebuild them from source, and the packaged-runtime gate rejects an installer staging tree that omits those binaries.
 
-`dist:win` refuses non-Windows and non-x64 hosts, runs a Windows-safe gate containing the build, all TypeScript compiler faces, packaging and native-shell focused tests, and the runtime-closure verifier, then builds an assisted NSIS installer and verifies both generated PE files. The full cross-platform suite remains CI-owned because some POSIX execution tests are not Windows programs. The installer allows a per-user or elevated all-users installation, permits changing the installation directory, creates Start Menu and desktop shortcuts, and preserves DSH user data when the application is uninstalled. Version `2.0.1` is written to `dsh-plugin-desktop\dist\DSH-Desktop-2.0.1-x64-Setup.exe`; the unpacked application remains at `dsh-plugin-desktop\dist\win-unpacked\DSH Desktop.exe` for smoke testing.
+`dist:win` refuses non-Windows and non-x64 hosts, runs the Windows-safe gate and runtime-closure verifier, then builds an assisted NSIS test installer. Version `2.0.1` is written to `dsh-plugin-desktop\dist\Wan-Code-2.0.1-x64-Setup.exe`; the unpacked application is `dsh-plugin-desktop\dist\win-unpacked\Wan Code.exe`.
 
-This local command deliberately strips Windows certificate variables and sets `signExecutable=false`. Its output is installable for testing but has no Authenticode publisher, so Windows can display an Unknown publisher or SmartScreen warning. A signed Windows release, certificate verification, installer upgrade/uninstall testing, and native UI/sandbox smoke remain separate release gates.
+This local command deliberately strips signing variables. Production operators use `dist:win-release`, which requires a certificate and `WANCODE_WINDOWS_PUBLISHER`, then verifies that both PE artifacts are trusted and signed by the same certificate.
 
 ### macOS DMG smoke
 
@@ -198,7 +198,7 @@ None. The same DSH Host and client feature plugins assemble model requests.
 - The macOS and Windows tray terminal exposes private `dsh`, `pnpm`, and `node` shims. Separately, the Host runtime exposes the bundled `pnpm` command on the current Electron process `PATH` for ambient compatibility and provides the managed `desktopPnpm` service; none of these commands are added to the system `PATH`, and Linux currently has no desktop terminal command.
 - On Windows, the ambient `pnpm` command and lifecycle Node helper are `.cmd` shims. `desktopPnpm.run()` and `runPlugin()` avoid shell lookup for the manager process by launching exact packaged entries, while upstream `dsh plugin`, PowerShell, and Command Prompt can resolve the ambient shim through a command interpreter. A third-party plugin that calls Node `spawn('pnpm', { shell: false })`, or a lifecycle script that directly executes its `.cmd` `npm_node_execpath` with `shell: false`, remains non-portable and should use the managed service or a shell-aware launch path.
 - `dshmarket@1.2.3` remains an optional user-installed third-party package, not a bundled marketplace. Preinstallation is deferred until an audited release consumes the optional Desktop services while preserving ordinary DSH fallback and includes the complete license notice required for redistribution.
-- The update handoff validates the download container, not publisher identity. macOS still requires the user to replace the application from the opened DMG; Windows runs the downloaded NSIS installer but the local `dist:win` artifact is unsigned. Signed artifacts, Authenticode/publisher verification, SmartScreen reputation, and native upgrade testing remain release gates.
+- Windows update handoff validates PE structure and Authenticode trust. Publisher pinning is enforced by the signed-release gate; runtime publisher pinning, SmartScreen reputation, and native upgrade testing remain release work.
 - The shared carrier is loopback HTTP and WebSocket, not Electron IPC. Replacing it requires transport extension points in upstream DSH and is outside this standalone package.
 - This project currently pins the published DSH `0.1.0-rc.6` family, while the sibling `deepseek-harness/` source checkout predates that release. Tests therefore validate the published package interfaces rather than unpublished upstream sources.
 - `package:dir` is an unpacked smoke artifact. `dist:win` adds an unsigned NSIS test installer but does not establish Authenticode identity or SmartScreen reputation. Installation and upgrade behavior, native notifications and terminals, the Windows ACL sandbox, and native-material appearance remain target-platform verification boundaries.

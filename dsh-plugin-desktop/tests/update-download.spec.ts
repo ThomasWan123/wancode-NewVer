@@ -85,7 +85,7 @@ describe('desktop update installer download', () => {
       request,
     })
 
-    expect(result).toBe(join(userDataPath, 'updates', '2.1.0', 'Wancode-NewVer-2.1.0-mac.dmg'))
+    expect(result).toBe(join(userDataPath, 'updates', '2.1.0', 'Wan-Code-2.1.0-mac.dmg'))
     expect(await readFile(result)).toEqual(Buffer.from(artifact))
     expect(calls).toHaveLength(1)
     expect(calls[0]?.url).toBe(desktopDownloadUrl('darwin', '2.1.0'))
@@ -109,7 +109,7 @@ describe('desktop update installer download', () => {
       },
     })
 
-    expect(result).toBe(join(userDataPath, 'updates', '2.2.0', 'Wancode-NewVer-2.2.0-x64-Setup.exe'))
+    expect(result).toBe(join(userDataPath, 'updates', '2.2.0', 'Wan-Code-2.2.0-x64-Setup.exe'))
     expect(await readFile(result)).toEqual(Buffer.from(artifact))
     await expectNoPartialFiles(userDataPath, '2.2.0')
   })
@@ -143,7 +143,7 @@ describe('desktop update installer download', () => {
       userDataPath,
       'updates',
       '2.8.0+build',
-      'Wancode-NewVer-2.8.0+build-mac.dmg',
+      'Wan-Code-2.8.0+build-mac.dmg',
     ))
   })
 

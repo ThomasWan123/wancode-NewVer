@@ -221,8 +221,8 @@ export function apply(ctx: Context, config: Config): void {
       label: () => downloadingVersion === undefined
         ? availableVersion === undefined
           ? checking ? 'Checking for Updates…' : 'Check for Updates…'
-          : `Wancode NewVer ${availableVersion} Available`
-        : `Downloading Wancode NewVer ${downloadingVersion}…`,
+          : `Wan Code ${availableVersion} Available`
+        : `Downloading Wan Code ${downloadingVersion}…`,
       invoke: runManualCheck,
     })
     refreshTray = registration.refresh

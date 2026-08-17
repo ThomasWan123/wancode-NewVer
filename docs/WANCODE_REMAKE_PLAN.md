@@ -1,4 +1,4 @@
-# Wancode NewVer delivery plan
+# Wan Code delivery plan
 
 Status: active
 
@@ -16,7 +16,7 @@ Status: active
 
 ## Goal
 
-Build Wancode NewVer as a Windows-first coding-agent product on the published
+Build Wan Code as a Windows-first coding-agent product on the published
 DeepSeek Harness runtime. Version 1 includes the desktop core, an encrypted
 cloud relay, an installable mobile PWA, a reviewed plugin marketplace, and
 official IM channel adapters.

@@ -16,8 +16,8 @@ export function desktopDownloadUrl(
 ): string {
   const encodedVersion = encodeURIComponent(version)
   const filename = platform === 'darwin'
-    ? `Wancode-NewVer-${encodedVersion}-mac.dmg`
-    : `Wancode-NewVer-${encodedVersion}-x64-Setup.exe`
+    ? `Wan-Code-${encodedVersion}-mac.dmg`
+    : `Wan-Code-${encodedVersion}-x64-Setup.exe`
   return `https://github.com/ThomasWan123/wancode-NewVer/releases/download/v${encodedVersion}/${filename}`
 }
 
@@ -205,8 +205,8 @@ async function prepareDownloadPaths(
 
   const extension = platform === 'darwin' ? 'dmg' : 'exe'
   const filename = platform === 'darwin'
-    ? `Wancode-NewVer-${version}-mac.${extension}`
-    : `Wancode-NewVer-${version}-x64-Setup.${extension}`
+    ? `Wan-Code-${version}-mac.${extension}`
+    : `Wan-Code-${version}-x64-Setup.${extension}`
   const completed = join(directory, filename)
   const completedStat = await lstatOptional(completed)
   if (completedStat !== undefined) {

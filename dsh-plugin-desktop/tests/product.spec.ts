@@ -10,9 +10,9 @@ import {
 
 describe('Wancode product identity', () => {
   it('uses one stable native identity across the desktop shell', () => {
-    expect(WANCODE_PRODUCT_NAME).toBe('Wancode NewVer')
-    expect(WANCODE_WINDOW_TITLE).toBe('Wancode NewVer')
-    expect(WANCODE_APP_ID).toBe('com.wancode.newver.desktop')
+      expect(WANCODE_PRODUCT_NAME).toBe('Wan Code')
+      expect(WANCODE_WINDOW_TITLE).toBe('Wan Code')
+      expect(WANCODE_APP_ID).toBe('com.wancode.desktop')
   })
 
   it('isolates Harness data under Wancode user data by default', () => {

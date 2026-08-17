@@ -92,7 +92,7 @@ export function apply(ctx: Context, config: Config): void {
   if (runtime === undefined) {
     process.stderr.write(
       'dsh-plugin-desktop: this profile is composed with the Wancode shell, which requires the desktop launcher (desktopRuntime).\n'
-      + 'Start it with `dsh-desktop`, or select this profile inside the packaged Wancode NewVer application.\n'
+      + 'Start it with `dsh-desktop`, or select this profile inside the packaged Wan Code application.\n'
       + 'The desktop terminal, profile, and update rows stay inactive in an ordinary DSH boot.\n',
     )
     return

@@ -37,7 +37,7 @@ describe('Windows credential vault', () => {
     const first = credentialTarget('C:\\Users\\A\\Wancode\\harness', credentialRef('DEEPSEEK_API_KEY'))
     const second = credentialTarget('D:\\Portable\\Wancode\\harness', credentialRef('DEEPSEEK_API_KEY'))
 
-    expect(first).toMatch(/^Wancode NewVer\/[a-f0-9]{24}\/DEEPSEEK_API_KEY$/u)
+    expect(first).toMatch(/^Wan Code\/[a-f0-9]{24}\/DEEPSEEK_API_KEY$/u)
     expect(second).not.toBe(first)
     expect(first).not.toContain('Users')
   })
