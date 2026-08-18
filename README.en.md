@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows desktop core (M1) | **Available**: identity, isolated data, credentials, updates, rollback, crash recovery |
 | Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package |
 | Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
-| Cloud relay protocol (M2) | **In progress**: fail-closed remote-protocol contract |
+| Cloud relay protocol (M2) | **In progress**: fail-closed contract, device keys, and outbound-only handshake |
 | Mobile PWA, marketplace, channels | Roadmap; not published as available features |
 
 The desktop `master` branch currently includes:

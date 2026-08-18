@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows 桌面核心（M1） | **可用**：身份、隔离数据、凭据、更新、回退、崩溃恢复 |
 | 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包 |
 | 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
-| 云中继协议（M2） | **进行中**：fail-closed 的远程协议契约 |
+| 云中继协议（M2） | **进行中**：fail-closed 契约、设备密钥与仅出站握手 |
 | 移动 PWA、插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
 
 桌面 `master` 现已包含：

@@ -10,8 +10,7 @@ Status: active
 - M1 desktop core is accepted on `master`. Signed production NSIS release remains
   deferred until a code-signing certificate and trusted previous installer exist.
 - M2 in progress: `@wancode/relay-protocol` encodes the fail-closed remote
-  protocol (replay, expired token, revoked device, cross-account, no plaintext
-  application fields).
+  protocol, Ed25519 device keys, and desktop-only outbound handshake.
 - The Windows package gate currently passes with 233 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
@@ -166,7 +165,13 @@ M2 starts with `@wancode/relay-protocol`. The control plane accepts a versioned
 ciphertext envelope only after a live token matches a registered, non-revoked
 device. Identical retries of the same message id stay idempotent; a mutated
 payload is replay and fails closed. Unknown protocol versions and plaintext
-prompt, credential, or tool-output fields are rejected before routing. Desktop
+prompt, credential, or tool-output fields are rejected before routing.
+
+A desktop device holds an Ed25519 keypair and opens a session with a signed
+outbound handshake. The relay verifies that signature against the registered
+public key, grants only the closed capability list, and refuses inbound claims,
+untrusted keys, unknown capabilities, and reused nonces. Handshake and ack
+ciphertext never include the private key or application plaintext. Desktop
 still initiates any future cloud connection; this package does not listen on a
 network port and does not declare a Harness plugin entry.
 
