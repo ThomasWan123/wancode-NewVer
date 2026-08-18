@@ -8,7 +8,7 @@ import {
 import { SIDEBAR_COLLAPSED } from './layout-state.ts'
 
 /** Advanced-shell stylesheet kept as a plain string so the package client bundle stays self-contained. */
-const ADVANCED_STYLES = `
+export const ADVANCED_SHELL_STYLES = `
 html, body, #root { width: 100%; height: 100%; }
 body[data-dsh-desktop-mode="advanced"] { margin: 0; background: transparent !important; }
 .dshDesktopFrame { position: relative; display: grid; grid-template-rows: 100%; width: 100%; height: 100%; overflow: hidden; background: transparent; }
@@ -41,6 +41,24 @@ html:has([aria-modal="true"]) .dshDesktopWindowsCaptionRow::before,
 html:has([aria-modal="true"]) .dshDesktopMacCaptionRow::before,
 html:has([aria-modal="true"]) .dshDesktopSidebarSurface,
 html:has([aria-modal="true"]) .dshDesktopSidebarSurface::before { -webkit-app-region: no-drag !important; }
+.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"]) {
+  display: inline-flex; align-items: center; gap: 8px; color: var(--dsw-alias-label-primary);
+}
+.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"]) svg { position: absolute; width: 0; height: 0; overflow: hidden; }
+.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"])::before {
+  content: ""; width: 24px; height: 24px; flex: 0 0 24px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"])::after {
+  content: "Wan Code"; font-size: 14px; font-weight: 650; letter-spacing: 0.01em; white-space: nowrap;
+}
+.dshDesktopUpstreamSidebar svg[viewBox="0 0 23.16 17.04"] {
+  width: 24px !important; height: 24px !important; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.dshDesktopUpstreamSidebar svg[viewBox="0 0 23.16 17.04"] path { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .dshDesktopFrame { transition: none !important; } }
 `
 
@@ -49,7 +67,7 @@ export function installAdvancedStyles(): () => void {
   const style = document.createElement('style')
   style.dataset.plugin = 'dsh-plugin-desktop'
   style.dataset.pluginCss = 'dsh-plugin-desktop/advanced-shell'
-  style.textContent = ADVANCED_STYLES
+  style.textContent = ADVANCED_SHELL_STYLES
   document.head.appendChild(style)
   return () => { style.remove() }
 }

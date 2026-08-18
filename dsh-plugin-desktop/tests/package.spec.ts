@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -204,6 +203,7 @@ describe('published package surface', () => {
   it('separates unsigned smoke packaging from the signed macOS release', () => {
     const packageDir = readFileSync(new URL('scripts/package-dir.mjs', packageRoot), 'utf8')
 
+    expect(manifest.scripts?.build).toContain('node scripts/generate-app-icon.mjs')
     expect(manifest.scripts?.build).toContain('node scripts/generate-mac-app-icon.mjs')
     expect(manifest.scripts?.['package:dir']).toBe('yarn run build && node scripts/package-dir.mjs')
     expect(packageDir).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
@@ -244,7 +244,8 @@ describe('published package surface', () => {
     const source = readFileSync(new URL('build/tray-icon.svg', packageRoot), 'utf8')
 
     expect(source.match(/#4D6BFE/gu)).toHaveLength(1)
-    expect(source).not.toMatch(/<style\b|prefers-color-scheme/iu)
+    expect(source).toMatch(/fill-rule="evenodd"/u)
+    expect(source).not.toMatch(/<style\b|prefers-color-scheme|M48\.8354/iu)
     for (const filename of [
       'tray-iconTemplate.png',
       'tray-iconTemplate@2x.png',
@@ -257,12 +258,12 @@ describe('published package surface', () => {
     }
   })
 
-  it('keeps the iOS Default source icon unmodified', () => {
-    const digest = createHash('sha256')
-      .update(readFileSync(new URL('build/app-icon.png', packageRoot)))
-      .digest('hex')
-
-    expect(digest).toBe('315fbc6e57ff1f34894f21f66fb7f9f26deccf78333c71fad21a6cec64e7de80')
+  it('ships a boxed-W application icon instead of the upstream whale mark', () => {
+    const source = readFileSync(new URL('build/app-icon.svg', packageRoot), 'utf8')
+    expect(source).toContain('#4D6BFE')
+    expect(source).toMatch(/<rect\b/u)
+    expect(source).not.toMatch(/whale|orca|M48\.8354/iu)
+    expect(readFileSync(new URL('build/app-icon.png', packageRoot)).byteLength).toBeGreaterThan(0)
   })
 
   it('generates a centered macOS icon with a 100-pixel visual inset', async () => {
