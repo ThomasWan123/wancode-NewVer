@@ -9,9 +9,10 @@ Status: active
   and the Yarn/pnpm ownership gate passes.
 - M1 in progress: native product identity, isolated Harness home, opt-in first-run
   import from `~/.dsh`, telemetry-private defaults, a read-only permission default
-  for new sessions, stable/beta updates, confirmation-gated rollback, and one-shot
-  automatic Windows recovery after a failed or overdue health report.
-- The Windows package gate currently passes with 225 focused tests plus the
+  for new sessions, stable/beta updates, confirmation-gated rollback, one-shot
+  automatic Windows recovery after a failed or overdue health report, renderer
+  crash recovery, and a local diagnostics log.
+- The Windows package gate currently passes with 233 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
 
@@ -199,3 +200,9 @@ tree after a native confirmation. The original install is left in place, plugin
 `node_modules` directories are omitted, and a symlink that escapes the source
 home fails closed. An explicit `DSH_HOME` override remains a shared-home choice
 and is never rewritten by this import.
+
+Packaged launches mirror stdout and stderr into `logs/wancode.log` under Electron
+user data. The tray **Open Diagnostics Folder** command reveals that directory.
+If the sandboxed renderer exits abnormally, Wan Code offers reload, diagnostics,
+or restart without first tearing down the Host. Clean exits and window unmount
+do not open that recovery dialog.

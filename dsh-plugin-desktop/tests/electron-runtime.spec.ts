@@ -1,4 +1,6 @@
 import { basename, dirname, join } from 'node:path'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DesktopShellSpec } from '../src/runtime.ts'
 
@@ -167,6 +169,7 @@ const electron = vi.hoisted(() => {
     templateIcon,
     Tray,
     trays,
+    webContents,
   }
 })
 
@@ -218,6 +221,7 @@ describe('Electron compatibility runtime', () => {
     electron.loadURL.mockResolvedValue(undefined)
     electron.dialog.showMessageBox.mockResolvedValue({ response: 0, checkboxChecked: false })
     electron.shell.openPath.mockResolvedValue('')
+    electron.app.getPath.mockImplementation(() => '/tmp/dsh-desktop-user-data')
     electron.nativeTheme.themeSource = 'system'
   })
 
@@ -392,7 +396,7 @@ describe('Electron compatibility runtime', () => {
 
     const labels = (electron.menuTemplates.at(-1) as Array<{ label?: string }>).map(item => item.label)
     expect(labels).toEqual([
-      'Open DSH Desktop', undefined,
+      'Open DSH Desktop', 'Open Diagnostics Folder', undefined,
       'Earlier Tool', 'Later Tool', undefined,
       'Check for Updates…', undefined,
       'Switch to Advanced Mode', undefined,
@@ -626,6 +630,73 @@ describe('Electron compatibility runtime', () => {
 
     runtime.reportRendererBoot({ status: 'failed', plugins: ['dsh-vision-router'] })
     await vi.waitFor(() => { expect(restart).toHaveBeenCalledOnce() })
+  })
+
+  it('opens the diagnostics folder from the native tray', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    const userDataPath = await mkdtemp(join(tmpdir(), 'dsh-desktop-diagnostics-'))
+    electron.app.getPath.mockImplementation(() => userDataPath)
+    try {
+      const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+      const runtime = new ElectronDesktopRuntime(async () => {})
+      const release = runtime.schedule(spec)
+      await runtime.mountScheduled()
+      const item = (electron.menuTemplates[0] as Array<{ label?: string, click?: () => void }>)
+        .find(candidate => candidate.label === 'Open Diagnostics Folder')
+      expect(item).toBeDefined()
+      item?.click?.()
+      await vi.waitFor(() => {
+        expect(electron.shell.openPath).toHaveBeenCalledWith(join(userDataPath, 'logs'))
+      })
+      await release()
+    } finally {
+      await rm(userDataPath, { recursive: true, force: true })
+    }
+  })
+
+  it('reloads the same-origin page after the renderer process crashes', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    const userDataPath = await mkdtemp(join(tmpdir(), 'dsh-desktop-renderer-crash-'))
+    electron.app.getPath.mockImplementation(() => userDataPath)
+    electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 0, checkboxChecked: false })
+    try {
+      const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+      const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const runtime = new ElectronDesktopRuntime(async () => {})
+      const release = runtime.schedule(spec)
+      await runtime.mountScheduled()
+      const gone = electron.webContents.on.mock.calls.find(([event]) => event === 'render-process-gone')?.[1]
+      expect(gone).toEqual(expect.any(Function))
+      gone?.({}, { reason: 'crashed', exitCode: 1 })
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining('renderer process gone: crashed'))
+      await vi.waitFor(() => { expect(electron.loadURL).toHaveBeenCalledTimes(2) })
+      expect(electron.dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'error',
+        title: 'Display Recovery',
+        buttons: ['Reload', 'Open Diagnostics Folder', 'Restart Wan Code', 'Dismiss'],
+      }))
+      expect(electron.loadURL).toHaveBeenLastCalledWith(spec.url)
+      await release()
+    } finally {
+      await rm(userDataPath, { recursive: true, force: true })
+    }
+  })
+
+  it('does not offer display recovery for a clean renderer exit or unmount', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+    const release = runtime.schedule(spec)
+    await runtime.mountScheduled()
+    const gone = electron.webContents.on.mock.calls.find(([event]) => event === 'render-process-gone')?.[1]
+    gone?.({}, { reason: 'clean-exit', exitCode: 0 })
+    electron.browserWindows[0]?.destroy.mockImplementation(() => {
+      gone?.({}, { reason: 'killed', exitCode: 0 })
+    })
+    await release()
+
+    expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
+    expect(electron.loadURL).toHaveBeenCalledOnce()
   })
 
   it('uses Electron networking and confirmation-gated macOS update handoff', async () => {

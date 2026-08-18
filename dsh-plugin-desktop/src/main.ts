@@ -13,6 +13,7 @@ import {
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { defaultDshHome } from '@deepseek-ai/dsh-home-paths'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
+import { appendDesktopLog, installDesktopLogMirror } from './desktop-log.ts'
 import {
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
@@ -168,6 +169,17 @@ async function start(): Promise<void> {
 
   app.on('second-instance', () => { runtime.show() })
   await app.whenReady()
+  try {
+    installDesktopLogMirror(app.getPath('userData'))
+    appendDesktopLog(
+      app.getPath('userData'),
+      `${BIN_NAME}: starting ${WANCODE_PRODUCT_NAME} on ${process.platform}\n`,
+    )
+  } catch (cause) {
+    process.stderr.write(
+      `${BIN_NAME}: failed to install diagnostics log: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+    )
+  }
   if (process.platform === 'win32') app.setAppUserModelId(WANCODE_APP_ID)
   if (app.isPackaged && process.cwd() === '/') process.chdir(app.getPath('home'))
   const explicitHome = process.env.DSH_HOME !== undefined && process.env.DSH_HOME.trim().length > 0

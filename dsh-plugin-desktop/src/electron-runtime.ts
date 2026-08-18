@@ -16,6 +16,7 @@ import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { appendDesktopLog, ensureDesktopLogsDirectory } from './desktop-log.ts'
 import { desktopTerminalStateDirectory, openDesktopTerminal } from './desktop-terminal.ts'
 import { packagedDependencyPath } from './packaged-runtime-path.ts'
 import type {
@@ -87,6 +88,8 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   private mountTask: Promise<void> | undefined
   private release: (() => Promise<void>) | undefined
   private quitting = false
+  private unmounting = false
+  private rendererRecoveryInFlight = false
   private readonly trayItems = new Map<symbol, DesktopTrayItem>()
   private terminalSpec: DesktopTerminalSpec | undefined
   private rendererBootReported = false
@@ -180,6 +183,11 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       throw new Error('dsh-plugin-desktop: terminal profile is already configured')
     }
     this.terminalSpec = { ...spec }
+  }
+
+  /** @inheritdoc */
+  openDiagnosticsFolder(): void {
+    void this.revealDiagnosticsFolder()
   }
 
   /** @inheritdoc */
@@ -299,6 +307,61 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       noLink: true,
     })
     return result.response === 0
+  }
+
+  private async revealDiagnosticsFolder(): Promise<void> {
+    try {
+      const logsDir = ensureDesktopLogsDirectory(app.getPath('userData'))
+      const openError = await shell.openPath(logsDir)
+      if (openError.length > 0) throw new Error(openError)
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : String(cause)
+      process.stderr.write(`dsh-plugin-desktop: failed to open diagnostics folder: ${message}\n`)
+      try {
+        dialog.showErrorBox('Unable to Open Diagnostics', message)
+      } catch (dialogCause) {
+        process.stderr.write(`dsh-plugin-desktop: failed to show diagnostics error: ${dialogCause instanceof Error ? dialogCause.message : String(dialogCause)}\n`)
+      }
+    }
+  }
+
+  private async handleRendererProcessGone(details: Electron.RenderProcessGoneDetails): Promise<void> {
+    if (this.quitting || this.unmounting || this.window === undefined) return
+    if (details.reason === 'clean-exit') return
+    if (this.rendererRecoveryInFlight) return
+    this.rendererRecoveryInFlight = true
+    const summary = `renderer process gone: ${details.reason} (${String(details.exitCode)})`
+    process.stderr.write(`dsh-plugin-desktop: ${summary}\n`)
+    appendDesktopLog(app.getPath('userData'), `dsh-plugin-desktop: ${summary}\n`)
+    try {
+      const result = await dialog.showMessageBox({
+        type: 'error',
+        title: 'Display Recovery',
+        message: 'Wan Code stopped drawing the current window.',
+        detail: `The renderer exited (${details.reason}, code ${String(details.exitCode)}). Reload keeps the Host running. Restart relaunches Wan Code. Diagnostics contains the local log file.`,
+        buttons: ['Reload', 'Open Diagnostics Folder', 'Restart Wan Code', 'Dismiss'],
+        defaultId: 0,
+        cancelId: 3,
+        noLink: true,
+      })
+      if (this.quitting || this.unmounting) return
+      if (result.response === 0) {
+        const spec = this.scheduled
+        const window = this.window
+        if (spec === undefined || window === undefined || window.isDestroyed()) return
+        await window.loadURL(spec.url)
+        return
+      }
+      if (result.response === 1) {
+        await this.revealDiagnosticsFolder()
+        return
+      }
+      if (result.response === 2) await this.requestRestart()
+    } catch (cause) {
+      process.stderr.write(`dsh-plugin-desktop: failed to recover renderer: ${cause instanceof Error ? cause.message : String(cause)}\n`)
+    } finally {
+      this.rendererRecoveryInFlight = false
+    }
   }
 
   private async showRendererBootRecovery(report: Extract<RendererBootReport, { status: 'failed' }>): Promise<void> {
@@ -544,6 +607,10 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     const status = this.contributedTrayItems('status')
     const template: Electron.MenuItemConstructorOptions[] = [
       { label: `Open ${spec.productName}`, click: show },
+      {
+        label: 'Open Diagnostics Folder',
+        click: this.trayCommand(() => { this.openDiagnosticsFolder() }),
+      },
     ]
     if (tools.length > 0) template.push({ type: 'separator' }, ...tools)
     if (profiles.length > 0) template.push({ type: 'separator' }, ...profiles)
@@ -601,8 +668,15 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     app.on('activate', show)
     window.on('close', close)
     window.on('page-title-updated', preserveBlankTitle)
+    const recoverRenderer = (
+      _event: Electron.Event,
+      details: Electron.RenderProcessGoneDetails,
+    ): void => {
+      void this.handleRendererProcessGone(details)
+    }
     window.webContents.on('will-frame-navigate', navigate)
     window.webContents.on('will-redirect', navigate)
+    window.webContents.on('render-process-gone', recoverRenderer)
     window.webContents.setWindowOpenHandler(({ url }) => {
       try {
         const target = new URL(url)
@@ -628,13 +702,18 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       tray.on('click', show)
       beforeInteractive?.()
     } catch (cause) {
+      this.unmounting = true
       app.off('activate', show)
       window.off('page-title-updated', preserveBlankTitle)
+      window.webContents.off('will-frame-navigate', navigate)
+      window.webContents.off('will-redirect', navigate)
+      window.webContents.off('render-process-gone', recoverRenderer)
       tray?.off('click', show)
       tray?.destroy()
       window.destroy()
       this.tray = undefined
       this.window = undefined
+      this.unmounting = false
       throw cause
     }
 
@@ -647,16 +726,19 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     return async () => {
       if (released) return
       released = true
+      this.unmounting = true
       app.off('activate', show)
       window.off('close', close)
       window.off('page-title-updated', preserveBlankTitle)
       window.webContents.off('will-frame-navigate', navigate)
       window.webContents.off('will-redirect', navigate)
+      window.webContents.off('render-process-gone', recoverRenderer)
       mountedTray.off('click', show)
       mountedTray.destroy()
       if (!window.isDestroyed()) window.destroy()
       if (this.tray === mountedTray) this.tray = undefined
       if (this.window === window) this.window = undefined
+      this.unmounting = false
     }
   }
 }

@@ -182,6 +182,9 @@ export interface DesktopRuntime {
   /** Open a native terminal containing packaged DSH command shims. */
   openTerminal(): void
 
+  /** Reveal the local diagnostics directory containing the desktop log file. */
+  openDiagnosticsFolder(): void
+
   /** Accept the terminal client Loader outcome for the mounted generation. */
   reportRendererBoot(report: RendererBootReport): void
 

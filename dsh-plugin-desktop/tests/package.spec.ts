@@ -213,6 +213,7 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['check:win-package']).toContain('yarn run build')
     expect(manifest.scripts?.['check:win-package']).toContain('yarn run typecheck')
     expect(manifest.scripts?.['check:win-package']).toContain('tests/electron-runtime.spec.ts')
+    expect(manifest.scripts?.['check:win-package']).toContain('tests/desktop-log.spec.ts')
     expect(manifest.scripts?.['check:win-package']).toContain('tests/home-migration.spec.ts')
     expect(manifest.scripts?.['check:win-package']).toContain('tests/package-win.spec.ts')
     expect(manifest.scripts?.['check:win-package']).toContain('tests/profile.spec.ts')

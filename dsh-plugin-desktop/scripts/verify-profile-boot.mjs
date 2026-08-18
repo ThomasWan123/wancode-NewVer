@@ -99,6 +99,7 @@ try {
       }
     },
     openTerminal() {},
+    openDiagnosticsFolder() {},
     setThemeSource(source) { nativeThemeSource = source },
     async requestRestart() {},
     prepareToQuit() {},
