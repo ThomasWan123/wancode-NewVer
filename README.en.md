@@ -1,77 +1,37 @@
-# Wan Code
+<p align="center">
+  <img src="dsh-plugin-desktop/build/app-icon.png" width="96" height="96" alt="Wan Code">
+</p>
 
-Wan Code is a Windows-first, local-first Coding Agent desktop product. It uses a
-pinned [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-release as its underlying agent runtime, while Wan Code owns the desktop
-experience, security boundaries, updates, remote control, and plugin ecosystem.
+<h1 align="center">Wan Code</h1>
 
-> Wan Code is an independent community product, not an official DeepSeek
-> application. DeepSeek Harness is the attributed upstream runtime used by
-> Wan Code; it is not this product's name.
+<p align="center">
+  <strong>A Windows-first, local-first coding-agent desktop</strong><br>
+  Pinned DeepSeek Harness is the agent runtime. Wan Code owns the desktop experience, security boundary, updates, and upcoming remote control.
+</p>
 
-[中文](README.md) · [Delivery plan](docs/WANCODE_REMAKE_PLAN.md) ·
-[Architecture decision](docs/adr/0001-product-runtime-separation.md) ·
-[Upstream policy](UPSTREAM.md)
+<p align="center">
+  <a href="https://github.com/ThomasWan123/wancode-NewVer/actions/workflows/ci.yml"><img src="https://github.com/ThomasWan123/wancode-NewVer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/node-22.19%2B%20%7C%2024.x-brightgreen.svg" alt="Node.js"></a>
+</p>
 
-## Current status
+<p align="center">
+  <a href="README.md">中文</a>
+  ·
+  <a href="docs/WANCODE_REMAKE_PLAN.md">Delivery plan</a>
+  ·
+  <a href="docs/adr/0001-product-runtime-separation.md">Architecture decision</a>
+  ·
+  <a href="UPSTREAM.md">Upstream policy</a>
+  ·
+  <a href="CONTRIBUTING.en.md">Contributing</a>
+</p>
 
-Development follows a Windows-first delivery path. The current `master` branch
-provides:
+> Wan Code is an independent community product, not an official DeepSeek application. DeepSeek Harness is the attributed upstream runtime; it is not this product's name.
 
-- **Wan Code native identity** across the application, window, installer,
-  shortcuts, and GitHub update endpoints.
-- **Local Harness Host** bound only to `127.0.0.1`, with a sandboxed Electron
-  renderer, context isolation, and no Node integration.
-- **Isolated product data** under Wan Code's Electron user-data directory rather
-  than automatically sharing an existing `~/.dsh`. First launch can copy
-  settings, sessions, and credentials from that original home; the source is
-  left unchanged.
-- **Private defaults** with upstream telemetry disabled unless the user
-  explicitly chooses otherwise.
-- **Least-privilege sessions** defaulting to the `read-only` permission preset
-  (read-only sandbox and ask-for-approval). `DSH_PERMISSION_MODE` and the
-  in-app permission selector still take precedence.
-- **Crash recovery and diagnostics**: a renderer crash can reload, open the
-  diagnostics folder, or restart; packaged launches also write
-  `logs/wancode.log` under Electron user data.
-- **Windows-secured credentials** stored in Windows Credential Manager, including
-  one-time migration and removal of the legacy plaintext `.credentials.yaml`.
-- **Trusted updates** sourced from
-  [`ThomasWan123/wancode-NewVer`](https://github.com/ThomasWan123/wancode-NewVer/releases);
-  Windows installers must pass PE and Authenticode trust validation.
-- **Stable and beta channels** selectable through desktop settings, with an
-  orderly restart and persisted prompted-version history.
-- **Version rollback** armed before installer handoff. An updated version must
-  report healthy within 30 seconds; startup failure or timeout triggers one
-  fully revalidated automatic Windows rollback, while healthy starts retain a
-  manual tray rollback.
-- **Signed release gates** that require an explicit certificate and expected
-  publisher, then verify that the application and NSIS installer use the same
-  signing certificate.
-- **Plugin-composed desktop capabilities** for windows, tray, profiles, terminal,
-  and updates without modifying the pinned Harness submodule.
+## Positioning
 
-The Windows-focused gate currently covers 233 tests plus the complete runtime
-dependency closure. Roadmap features are described as planned work, not as
-already available functionality.
-
-## Product roadmap
-
-1. **Windows desktop core**: install, first run, model setup, task execution,
-   session recovery, signed updates, rollback, and uninstall.
-2. **Wan Code Cloud Relay**: accounts, device registration, short-lived tokens,
-   revocation, audit, and an end-to-end encrypted remote protocol.
-3. **Mobile PWA**: session viewing, follow-up prompts, tool approval,
-   cancellation, and notifications.
-4. **Reviewed plugin marketplace**: signed manifests, declared capabilities,
-   compatibility checks, atomic activation, and rollback.
-5. **Messaging channels**: official API integrations for Feishu, Discord,
-   WhatsApp, and compliant WeChat capabilities where available.
-
-See [`docs/WANCODE_REMAKE_PLAN.md`](docs/WANCODE_REMAKE_PLAN.md) for milestones,
-exit criteria, and risk controls.
-
-## Architecture boundary
+Wan Code runs the Harness Host on the user's machine and presents the official Web surface in a sandboxed Electron window. The cloud never opens an inbound port on that machine, and it cannot execute local tools or read model credentials. Future remote control uses an outbound connection initiated by the desktop. Sensitive payloads are end-to-end encrypted with device keys.
 
 ```text
 Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / tools
@@ -79,22 +39,44 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
        └── outbound encrypted WSS ──> Wan Code Relay <──> Mobile PWA / Channels
 ```
 
-- `deepseek-harness/`: read-only, pinned official upstream Git submodule.
-- `dsh-plugin-desktop/`: Wan Code Electron, Host/Client plugins, Windows security,
-  and packaging.
-- `dsh-community-fabric/`: community interoperability specification.
-- `dsh-community-market/`: documentation and contract scaffold for the reviewed
-  marketplace.
-- Future Wan Code protocol, Relay, and PWA modules live under
-  `packages/wancode/` or `apps/`.
+## Current capabilities
 
-The cloud cannot directly execute local tools or read local model credentials.
-Remote commands target an explicit user, device, and session and remain
-idempotent; sensitive payloads are end-to-end encrypted with device keys.
+| Area | Status |
+| --- | --- |
+| Windows desktop core (M1) | **Available**: identity, isolated data, credentials, updates, rollback, crash recovery |
+| Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package |
+| Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
+| Cloud relay protocol (M2) | **In progress**: fail-closed remote-protocol contract |
+| Mobile PWA, marketplace, channels | Roadmap; not published as available features |
+
+The desktop `master` branch currently includes:
+
+- Native product identity across the application, window, installer, shortcuts, and GitHub update endpoints
+- A local Host bound only to `127.0.0.1`, with a sandboxed renderer, context isolation, and no Node integration
+- Isolated Electron user data; first launch can copy settings, sessions, and credentials from `~/.dsh` without changing the source
+- Telemetry off by default and new sessions pinned to the `read-only` permission preset
+- Model keys stored in Windows Credential Manager, with one-time removal of plaintext `.credentials.yaml` after every secure write succeeds
+- Updates from this repository's GitHub Releases; Windows installers must pass PE and Authenticode trust validation
+- Stable / beta channels, confirmation-gated rollback, and one automatic Windows recovery after a failed health report
+- Renderer crash recovery, **Open Diagnostics Folder**, and `logs/wancode.log`
+
+The Windows-focused gate covers 233 desktop tests plus the runtime-closure verifier. Roadmap work is labeled as planned, not as shipping functionality.
+
+## Repository layout
+
+| Path | Ownership |
+| --- | --- |
+| `deepseek-harness/` | Read-only, pinned official upstream Git submodule |
+| `dsh-plugin-desktop/` | Electron, Host/Client plugins, Windows security, and packaging |
+| `packages/wancode/` | Wan Code protocol and cloud modules; currently the relay contract |
+| `dsh-community-fabric/` | Community interoperability RFC (documentation scaffold, not loadable) |
+| `dsh-community-market/` | Reviewed marketplace contract (documentation scaffold, not loadable) |
+
+Owned modules consume published Harness interfaces and do not modify the submodule.
 
 ## Verify from source
 
-Use Windows x64 with Git and Node.js `22.19+` or `24.x`:
+Use Windows x64 with Git and Node.js `22.19+` or `24.x`.
 
 ```powershell
 git clone --recurse-submodules https://github.com/ThomasWan123/wancode-NewVer.git
@@ -116,18 +98,25 @@ Build an unsigned local test installer:
 corepack yarn dist:win
 ```
 
-Production signing uses `dist:win-release` and requires a code-signing
-certificate plus `WANCODE_WINDOWS_PUBLISHER`. Signing secrets are never supplied
-or committed by this repository. The release gate also requires an older trusted
-installer and an explicitly disposable Windows runner, where it exercises
-install, upgrade, rollback, restore, and uninstall before release.
+Production signing uses `dist:win-release` and requires a code-signing certificate plus `WANCODE_WINDOWS_PUBLISHER`. This repository never supplies or commits signing secrets.
 
-## Upstream and license
+## Roadmap
 
-Wan Code retains the licenses and attribution for DeepSeek Harness, Cordis, and
-all third-party components. Wan Code-owned code and repository content are
-licensed under the [MIT License](LICENSE). See [`UPSTREAM.md`](UPSTREAM.md) for
-source provenance, pinning, and update policy.
+1. **Windows desktop core** — delivered as an independently useful local product; signed production packages wait on the certificate.
+2. **Wan Code Cloud Relay** — accounts, device registration, short-lived tokens, revocation, audit, and an end-to-end encrypted protocol.
+3. **Mobile PWA** — session viewing, follow-up prompts, tool approval, cancellation, and notifications.
+4. **Reviewed plugin marketplace** — signed manifests, declared capabilities, compatibility checks, atomic activation, and rollback.
+5. **Messaging channels** — official APIs for Feishu, Discord, WhatsApp, and compliant WeChat where available.
 
-Please report issues and suggestions through
-[GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues).
+See [`docs/WANCODE_REMAKE_PLAN.md`](docs/WANCODE_REMAKE_PLAN.md) for milestones and exit criteria.
+
+## Documentation
+
+- [Architecture decision ADR-0001](docs/adr/0001-product-runtime-separation.md)
+- [Upstream pinning and update policy](UPSTREAM.md)
+- [Desktop package notes](dsh-plugin-desktop/README.md)
+- [Contributing](CONTRIBUTING.en.md)
+
+## License
+
+Wan Code-owned code is released under the [MIT License](LICENSE). Licenses and attribution for DeepSeek Harness, Cordis, and third-party components are retained. Please file issues at [GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues).

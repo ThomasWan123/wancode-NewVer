@@ -7,11 +7,11 @@ Status: active
 - M0 complete: the private GitHub repository exists, the current Desktop
   baseline is on `master`, official Harness is pinned as a read-only submodule,
   and the Yarn/pnpm ownership gate passes.
-- M1 in progress: native product identity, isolated Harness home, opt-in first-run
-  import from `~/.dsh`, telemetry-private defaults, a read-only permission default
-  for new sessions, stable/beta updates, confirmation-gated rollback, one-shot
-  automatic Windows recovery after a failed or overdue health report, renderer
-  crash recovery, and a local diagnostics log.
+- M1 desktop core is accepted on `master`. Signed production NSIS release remains
+  deferred until a code-signing certificate and trusted previous installer exist.
+- M2 in progress: `@wancode/relay-protocol` encodes the fail-closed remote
+  protocol (replay, expired token, revoked device, cross-account, no plaintext
+  application fields).
 - The Windows package gate currently passes with 233 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
@@ -159,7 +159,18 @@ and acknowledged work survives provider outages.
 
 ## Current implementation slice
 
-M0 is complete. M1 now includes Wancode application and installer identity,
+M0 is complete. M1 desktop core is accepted on `master`; signed production NSIS
+release remains deferred pending a code-signing certificate.
+
+M2 starts with `@wancode/relay-protocol`. The control plane accepts a versioned
+ciphertext envelope only after a live token matches a registered, non-revoked
+device. Identical retries of the same message id stay idempotent; a mutated
+payload is replay and fails closed. Unknown protocol versions and plaintext
+prompt, credential, or tool-output fields are rejected before routing. Desktop
+still initiates any future cloud connection; this package does not listen on a
+network port and does not declare a Harness plugin entry.
+
+M1 now includes Wancode application and installer identity,
 an isolated Harness home, telemetry-private defaults, GitHub release discovery,
 and immutable Wancode release asset URLs.
 

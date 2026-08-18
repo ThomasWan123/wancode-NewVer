@@ -1,66 +1,37 @@
-# Wan Code
+<p align="center">
+  <img src="dsh-plugin-desktop/build/app-icon.png" width="96" height="96" alt="Wan Code">
+</p>
 
-Wan Code 是面向 Windows 的本地优先 Coding Agent 桌面产品。它以固定版本的
-[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 作为底层
-Agent 运行时，并由 Wan Code 自己负责桌面体验、安全边界、更新、远程控制和
-插件生态。
+<h1 align="center">Wan Code</h1>
 
-> Wan Code 是独立社区产品，不是 DeepSeek 官方应用。DeepSeek Harness 是
-> Wan Code 使用并保留署名的上游开源运行时，不是本产品名称。
+<p align="center">
+  <strong>Windows 优先、本地优先的 Coding Agent 桌面产品</strong><br>
+  以固定版本的 DeepSeek Harness 作为 Agent 运行时，由 Wan Code 负责桌面体验、安全边界、更新与后续远程控制。
+</p>
 
-[English](README.en.md) · [开发计划](docs/WANCODE_REMAKE_PLAN.md) ·
-[架构决策](docs/adr/0001-product-runtime-separation.md) ·
-[上游策略](UPSTREAM.md)
+<p align="center">
+  <a href="https://github.com/ThomasWan123/wancode-NewVer/actions/workflows/ci.yml"><img src="https://github.com/ThomasWan123/wancode-NewVer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/node-22.19%2B%20%7C%2024.x-brightgreen.svg" alt="Node.js"></a>
+</p>
 
-## 当前状态
+<p align="center">
+  <a href="README.en.md">English</a>
+  ·
+  <a href="docs/WANCODE_REMAKE_PLAN.md">开发计划</a>
+  ·
+  <a href="docs/adr/0001-product-runtime-separation.md">架构决策</a>
+  ·
+  <a href="UPSTREAM.md">上游策略</a>
+  ·
+  <a href="CONTRIBUTING.md">参与贡献</a>
+</p>
 
-项目正在按 Windows-first 路线开发。当前 `master` 已具备：
+> Wan Code 是独立社区产品，不是 DeepSeek 官方应用。DeepSeek Harness 是署名保留的上游开源运行时，不是本产品名称。
 
-- **Wan Code 原生身份**：应用名、窗口、安装器、快捷方式和 GitHub 更新地址
-  正在统一迁移到 Wan Code。
-- **本地 Harness Host**：Host 仅监听 `127.0.0.1`，Electron Renderer 启用
-  Chromium sandbox、上下文隔离，并禁止 Node 集成。
-- **数据隔离**：默认数据目录位于 Wan Code 的 Electron user-data 下，不会与
-  用户现有的 `~/.dsh` 自动混用。首次启动若发现 `~/.dsh`，可选择拷贝设置、
-  会话和凭据；原目录保持不变。
-- **隐私默认值**：上游遥测默认关闭，用户显式配置仍然优先。
-- **最小权限默认**：新桌面会话默认使用 `read-only` 权限预设（沙箱只读 +
-  审批询问）。`DSH_PERMISSION_MODE` 或设置中的权限选择仍然优先。
-- **崩溃恢复与诊断**：Renderer 崩溃后可重新加载、打开诊断目录或重启；打包
-  启动会把日志写入 Electron user-data 下的 `logs/wancode.log`。
-- **Windows 安全凭据**：模型密钥写入 Windows Credential Manager；首次启动
-  可迁移并删除旧的明文 `.credentials.yaml`。
-- **安全更新**：从
-  [`ThomasWan123/wancode-NewVer`](https://github.com/ThomasWan123/wancode-NewVer/releases)
-  获取版本和安装包，Windows 安装器必须通过 PE 与 Authenticode 信任校验。
-- **Stable / Beta 通道**：在桌面设置中选择更新流；切换后有序重启，并保留
-  已提示版本记录。
-- **版本回退**：启动更新安装器前持久化版本转换；新版本必须在 30 秒内报告
-  健康状态，启动失败或超时会在 Windows 上触发一次经过完整校验的自动回退。
-  健康启动后仍可从托盘手动回退。
-- **签名发布门禁**：正式 Windows 构建要求证书和预期发布者，并验证应用与
-  NSIS 安装器由同一证书签名。
-- **插件化桌面能力**：窗口、托盘、Profile、终端和更新仍通过 Cordis/DSH
-  插件组合，不修改固定的 Harness 子模块。
+## 产品定位
 
-Windows 聚焦门禁当前覆盖 233 项测试和完整运行时依赖闭包。尚未发布的功能会
-明确标注为路线图，不会伪装成已经可用。
-
-## 产品路线
-
-1. **Windows 桌面核心**：安装、首次运行、模型配置、任务执行、会话恢复、
-   签名更新、回滚和卸载。
-2. **Wan Code Cloud Relay**：账号、设备注册、短期令牌、撤销、审计和端到端
-   加密远程协议。
-3. **移动 PWA**：查看会话、发送后续指令、审批工具、取消任务和接收通知。
-4. **审核制插件市场**：签名 Manifest、权限声明、兼容性检查、原子安装与回滚。
-5. **消息渠道**：通过官方 API 接入飞书、Discord、WhatsApp，以及合规可用的
-   微信能力。
-
-完整里程碑、退出条件与风险控制见
-[`docs/WANCODE_REMAKE_PLAN.md`](docs/WANCODE_REMAKE_PLAN.md)。
-
-## 架构边界
+Wan Code 在本机运行 Harness Host，并在沙箱 Electron 窗口中呈现官方 Web 界面。云端不能打开用户机器上的入站端口，也不能直接执行本机工具或读取模型凭据。后续远程控制只允许桌面主动发起的出站连接，敏感载荷使用设备密钥端到端加密。
 
 ```text
 Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / tools
@@ -68,19 +39,44 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
        └── outbound encrypted WSS ──> Wan Code Relay <──> Mobile PWA / Channels
 ```
 
-- `deepseek-harness/`：只读、固定版本的官方上游 Git 子模块。
-- `dsh-plugin-desktop/`：Wan Code Electron、Host/Client 插件、Windows 安全与
-  打包代码。
-- `dsh-community-fabric/`：社区互操作规范。
-- `dsh-community-market/`：审核制插件市场的文档与契约骨架。
-- 后续 Wan Code 协议、Relay 和 PWA 模块位于 `packages/wancode/` 或 `apps/`。
+## 当前能力
 
-云端不能直接执行本机工具，也不能读取本机模型凭据。远程请求必须指向明确的
-用户、设备和会话，并保持幂等；敏感载荷使用设备密钥端到端加密。
+| 范围 | 状态 |
+| --- | --- |
+| Windows 桌面核心（M1） | **可用**：身份、隔离数据、凭据、更新、回退、崩溃恢复 |
+| 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包 |
+| 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
+| 云中继协议（M2） | **进行中**：fail-closed 的远程协议契约 |
+| 移动 PWA、插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
+
+桌面 `master` 现已包含：
+
+- 原生产品身份：应用名、窗口、安装器、快捷方式与 GitHub 更新地址
+- 仅监听 `127.0.0.1` 的本地 Host；Renderer 启用 Chromium sandbox、上下文隔离，并禁止 Node 集成
+- 独立的 Electron user-data 目录；首次启动可选择从 `~/.dsh` 拷贝设置、会话与凭据，源目录保持不变
+- 默认关闭上游遥测；新会话默认 `read-only` 权限预设
+- 模型密钥写入 Windows Credential Manager，并在安全写入成功后删除旧的明文 `.credentials.yaml`
+- 从本仓库 GitHub Releases 下载更新；Windows 安装器必须通过 PE 与 Authenticode 信任校验
+- Stable / Beta 通道、确认后回退，以及一次健康检查失败后的自动 Windows 恢复
+- Renderer 崩溃恢复、托盘「打开诊断目录」，以及 `logs/wancode.log`
+
+Windows 聚焦门禁覆盖 233 项桌面测试，外加完整运行时依赖闭包。尚未交付的能力会写在路线图中，不会写成已经可用。
+
+## 仓库结构
+
+| 路径 | 职责 |
+| --- | --- |
+| `deepseek-harness/` | 只读、固定版本的官方上游 Git 子模块 |
+| `dsh-plugin-desktop/` | Electron、Host/Client 插件、Windows 安全与打包 |
+| `packages/wancode/` | Wan Code 自有协议与云模块；当前为 relay 协议契约 |
+| `dsh-community-fabric/` | 社区互操作规范（文档骨架，不可加载） |
+| `dsh-community-market/` | 审核制插件市场契约（文档骨架，不可加载） |
+
+自有模块只消费已发布的 Harness 接口，不修改子模块。
 
 ## 从源码验证
 
-要求 Windows x64、Git，以及 Node.js `22.19+` 或 `24.x`：
+要求 Windows x64、Git，以及 Node.js `22.19+` 或 `24.x`。
 
 ```powershell
 git clone --recurse-submodules https://github.com/ThomasWan123/wancode-NewVer.git
@@ -102,16 +98,25 @@ corepack yarn dev
 corepack yarn dist:win
 ```
 
-正式签名发布使用 `dist:win-release`，并要求代码签名证书以及
-`WANCODE_WINDOWS_PUBLISHER`。仓库不会提供或提交任何签名密钥。发布门禁还要求
-一个更旧且受信的安装包，并在明确标记为一次性的 Windows runner 上完成安装、
-升级、回滚、恢复和卸载验证。
+正式签名发布使用 `dist:win-release`，需要代码签名证书和 `WANCODE_WINDOWS_PUBLISHER`。仓库不会提供或提交任何签名密钥。
 
-## 上游与许可证
+## 路线图
 
-Wan Code 保留 DeepSeek Harness、Cordis 及所有第三方组件的许可证与署名。
-Wan Code 自有代码和仓库内容遵循 [MIT License](LICENSE)。上游来源、固定策略和
-更新流程见 [`UPSTREAM.md`](UPSTREAM.md)。
+1. **Windows 桌面核心** — 已作为可独立使用的本地产品交付；签名正式包待证书。
+2. **Wan Code Cloud Relay** — 账号、设备注册、短期令牌、撤销、审计与端到端加密协议。
+3. **移动 PWA** — 查看会话、发送后续指令、审批工具、取消任务与通知。
+4. **审核制插件市场** — 签名 Manifest、权限声明、兼容性检查、原子安装与回滚。
+5. **消息渠道** — 通过官方 API 接入飞书、Discord、WhatsApp，以及合规可用的微信能力。
 
-问题与建议请提交到
-[GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues)。
+完整里程碑与退出条件见 [`docs/WANCODE_REMAKE_PLAN.md`](docs/WANCODE_REMAKE_PLAN.md)。
+
+## 文档
+
+- [架构决策 ADR-0001](docs/adr/0001-product-runtime-separation.md)
+- [上游固定与更新策略](UPSTREAM.md)
+- [桌面包装说明](dsh-plugin-desktop/README.zh.md)
+- [参与贡献](CONTRIBUTING.md)
+
+## 许可证
+
+Wan Code 自有代码遵循 [MIT License](LICENSE)，并保留 DeepSeek Harness、Cordis 及第三方组件的许可证与署名。问题请提交到 [GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues)。
