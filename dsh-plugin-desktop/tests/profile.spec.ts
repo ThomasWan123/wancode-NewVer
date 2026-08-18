@@ -100,7 +100,7 @@ describe('desktop profile composition', () => {
 
   it('assembles the Host shell without replacing the upstream client shell', () => {
     const home = temporaryHome()
-    const prepared = prepareDesktopProfile(undefined, home, 'darwin')
+    const prepared = prepareDesktopProfile(undefined, home, 'darwin', 'desktop', '')
     const patches = prepared.patches as Array<Record<string, unknown>>
     const inserted = patches.flatMap((patch) => {
       const rows = patch.insert
@@ -164,6 +164,15 @@ describe('desktop profile composition', () => {
     }))
     expect(rows.find(row => row.id === 'desktop-profiles')).toEqual(expect.objectContaining({
       name: 'dsh-plugin-desktop/profiles',
+    }))
+    expect(rows.find(row => row.id === 'sandbox-policy')?.config).toEqual(expect.objectContaining({
+      mode: 'read-only',
+    }))
+    expect(rows.find(row => row.id === 'approval')?.config).toEqual(expect.objectContaining({
+      policy: 'ask',
+    }))
+    expect(rows.find(row => row.id === 'permission')?.config).toEqual(expect.objectContaining({
+      defaultPreset: 'read-only',
     }))
   })
 
@@ -427,5 +436,27 @@ describe('desktop profile composition', () => {
       name: 'third-party-pwsh-sandbox',
     }))
     expect(rows.map(row => row.id)).not.toContain('desktop-windows-pwsh-sandbox')
+  })
+
+  it('keeps an explicit permission mode over the least-privilege default', () => {
+    const home = temporaryHome()
+    const prepared = prepareDesktopProfile(undefined, home, 'win32', 'desktop', 'danger-full-access')
+    const rows = composeEntries([prepared.patches])
+    expect(rows.find(row => row.id === 'sandbox-policy')?.config).toEqual(expect.objectContaining({
+      mode: 'danger-full-access',
+    }))
+    expect(rows.find(row => row.id === 'approval')?.config).toEqual(expect.objectContaining({
+      policy: 'never',
+    }))
+    expect(rows.find(row => row.id === 'permission')?.config).toEqual(expect.objectContaining({
+      defaultPreset: 'danger-full-access',
+    }))
+  })
+
+  it('rejects an unknown DSH_PERMISSION_MODE instead of falling back', () => {
+    const home = temporaryHome()
+    expect(() => prepareDesktopProfile(undefined, home, 'win32', 'desktop', 'unrestricted')).toThrow(
+      'DSH_PERMISSION_MODE must be "read-only", "workspace-write", or "danger-full-access"',
+    )
   })
 })

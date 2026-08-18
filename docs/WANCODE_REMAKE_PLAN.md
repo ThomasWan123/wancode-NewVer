@@ -8,9 +8,10 @@ Status: active
   baseline is on `master`, official Harness is pinned as a read-only submodule,
   and the Yarn/pnpm ownership gate passes.
 - M1 in progress: native product identity, isolated Harness home, telemetry-private
-  defaults, stable/beta updates, confirmation-gated rollback, and one-shot
-  automatic Windows recovery after a failed or overdue health report.
-- The Windows package gate currently passes with 201 focused tests plus the
+  defaults, a read-only permission default for new sessions, stable/beta updates,
+  confirmation-gated rollback, and one-shot automatic Windows recovery after a
+  failed or overdue health report.
+- The Windows package gate currently passes with 218 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
 
@@ -187,3 +188,8 @@ automatic Windows recovery attempt that re-downloads, revalidates, and launches
 the previous installer without another confirmation dialog. The one-shot marker
 prevents rollback loops; a healthy start retains the confirmation-gated tray
 rollback, and starting the previous version clears the transition.
+
+Launcher composition now pins new desktop sessions to the `read-only` permission
+preset unless `DSH_PERMISSION_MODE` names `workspace-write` or
+`danger-full-access`. The in-app Permissions selector still changes later
+sessions through the upstream settings and session pins.

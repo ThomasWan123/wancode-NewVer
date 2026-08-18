@@ -26,6 +26,9 @@ provides:
   than automatically sharing an existing `~/.dsh`.
 - **Private defaults** with upstream telemetry disabled unless the user
   explicitly chooses otherwise.
+- **Least-privilege sessions** defaulting to the `read-only` permission preset
+  (read-only sandbox and ask-for-approval). `DSH_PERMISSION_MODE` and the
+  in-app permission selector still take precedence.
 - **Windows-secured credentials** stored in Windows Credential Manager, including
   one-time migration and removal of the legacy plaintext `.credentials.yaml`.
 - **Trusted updates** sourced from
@@ -43,7 +46,7 @@ provides:
 - **Plugin-composed desktop capabilities** for windows, tray, profiles, terminal,
   and updates without modifying the pinned Harness submodule.
 
-The Windows-focused gate currently covers 201 tests plus the complete runtime
+The Windows-focused gate currently covers 218 tests plus the complete runtime
 dependency closure. Roadmap features are described as planned work, not as
 already available functionality.
 

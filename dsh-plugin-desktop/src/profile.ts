@@ -57,9 +57,17 @@ const CREDENTIALS_ROW_ID = 'credentials'
 const UPSTREAM_LOCAL_CREDENTIALS_PACKAGE = '@deepseek-ai/dsh-credentials-local'
 const DESKTOP_WINDOWS_CREDENTIALS_ROW_ID = 'desktop-windows-credentials'
 const DESKTOP_WINDOWS_CREDENTIALS_PACKAGE = 'dsh-plugin-desktop/credentials-win'
+const SANDBOX_POLICY_ROW_ID = 'sandbox-policy'
+const APPROVAL_ROW_ID = 'approval'
+const PERMISSION_ROW_ID = 'permission'
+const DESKTOP_PERMISSION_MODES = ['read-only', 'workspace-write', 'danger-full-access'] as const
+const DEFAULT_DESKTOP_PERMISSION_MODE: DesktopPermissionMode = 'read-only'
 const DEFAULT_DESKTOP_SHELL_MODE: DesktopShellMode = 'compatibility'
 const DEFAULT_UPDATE_CHANNEL: UpdateChannel = 'stable'
 const SETTINGS_FILE_PACKAGE = '@deepseek-ai/dsh-settings-file'
+
+/** Sandbox and approval bundle selected for new desktop sessions. */
+export type DesktopPermissionMode = typeof DESKTOP_PERMISSION_MODES[number]
 const DESKTOP_SETTINGS_NAMESPACE = 'dsh-desktop'
 const UI_LAYOUT_PACKAGE = '@deepseek-ai/dsh-client-ui-layout'
 const UI_SIDEBAR_PACKAGE = '@deepseek-ai/dsh-client-ui-sidebar'
@@ -108,6 +116,19 @@ export function desktopUpdateChannelFromSettings(document: unknown): UpdateChann
   if (channel === undefined) return DEFAULT_UPDATE_CHANNEL
   if (channel === 'stable' || channel === 'beta') return channel
   throw new Error(`${BIN_NAME}: ${DESKTOP_SETTINGS_NAMESPACE}.updateChannel must be "stable" or "beta"`)
+}
+
+/**
+ * Parse the desktop permission mode and reject unknown values.
+ * @param value - inherited `DSH_PERMISSION_MODE` or an explicit test override.
+ * @returns a named permission preset used as the composition default.
+ */
+export function parseDesktopPermissionMode(value: unknown): DesktopPermissionMode {
+  if (value === undefined || value === '') return DEFAULT_DESKTOP_PERMISSION_MODE
+  if (typeof value === 'string' && (DESKTOP_PERMISSION_MODES as readonly string[]).includes(value)) {
+    return value as DesktopPermissionMode
+  }
+  throw new Error(`${BIN_NAME}: DSH_PERMISSION_MODE must be "read-only", "workspace-write", or "danger-full-access"`)
 }
 
 /**
@@ -317,6 +338,7 @@ function omitUnresolvedOptionalEntries(
  * @param home - Harness home containing profiles and the machine-wide patch.
  * @param platform - native platform selecting launcher-owned safety overlays.
  * @param profileName - existing or lazily available Web profile to compose.
+ * @param permissionMode - inherited permission mode; empty selects read-only.
  * @returns root config, profile metadata, and ordered patches.
  */
 export function prepareDesktopProfile(
@@ -324,6 +346,7 @@ export function prepareDesktopProfile(
   home: string = resolveDshHome(),
   platform: NodeJS.Platform = process.platform,
   profileName: string = DESKTOP_PROFILE_NAME,
+  permissionMode: string | undefined = process.env.DSH_PERMISSION_MODE,
 ): PreparedDesktopProfile {
   const profileDir = profileName === DESKTOP_PROFILE_NAME
     ? ensureDesktopProfile(home)
@@ -372,6 +395,7 @@ export function prepareDesktopProfile(
   const desktopSettingsDocument = readDesktopSettingsDocument(settingsConfig)
   const mode = desktopShellModeFromSettings(desktopSettingsDocument)
   const updateChannel = desktopUpdateChannelFromSettings(desktopSettingsDocument)
+  const resolvedPermission = parseDesktopPermissionMode(permissionMode)
   patches.push({
     id: 'settings',
     config: settingsConfig,
@@ -386,6 +410,41 @@ export function prepareDesktopProfile(
       channel: updateChannel,
     },
   })
+  const sandboxPolicy = rows.get(SANDBOX_POLICY_ROW_ID)
+  if (sandboxPolicy === undefined) {
+    throw new Error(`${BIN_NAME}: desktop profile has no ${SANDBOX_POLICY_ROW_ID} row`)
+  }
+  const approval = rows.get(APPROVAL_ROW_ID)
+  if (approval === undefined) {
+    throw new Error(`${BIN_NAME}: desktop profile has no ${APPROVAL_ROW_ID} row`)
+  }
+  const permission = rows.get(PERMISSION_ROW_ID)
+  if (permission === undefined) {
+    throw new Error(`${BIN_NAME}: desktop profile has no ${PERMISSION_ROW_ID} row`)
+  }
+  patches.push(
+    {
+      id: SANDBOX_POLICY_ROW_ID,
+      config: {
+        ...rowConfig(sandboxPolicy),
+        mode: resolvedPermission,
+      },
+    },
+    {
+      id: APPROVAL_ROW_ID,
+      config: {
+        ...rowConfig(approval),
+        policy: resolvedPermission === 'danger-full-access' ? 'never' : 'ask',
+      },
+    },
+    {
+      id: PERMISSION_ROW_ID,
+      config: {
+        ...rowConfig(permission),
+        defaultPreset: resolvedPermission,
+      },
+    },
+  )
   if (mode === 'advanced') {
     for (const [id, packageName] of [
       ['ui-layout', UI_LAYOUT_PACKAGE],
