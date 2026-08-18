@@ -307,6 +307,8 @@ async function start(): Promise<void> {
     }
   } catch (cause) {
     process.stderr.write(`${BIN_NAME}: ${cause instanceof Error ? cause.stack ?? cause.message : String(cause)}\n`)
+    await runtime.reportApplicationHealth('failed')
+    if (runtime.hasRequestedQuit()) return
     let exitCode = 1
     if (profileStartup !== undefined && profileStatePath !== undefined) {
       const retryLastKnownGood = profileStartup.profileName !== profileStartup.state.lastKnownGood

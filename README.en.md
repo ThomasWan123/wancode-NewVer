@@ -33,15 +33,17 @@ provides:
   Windows installers must pass PE and Authenticode trust validation.
 - **Stable and beta channels** selectable through desktop settings, with an
   orderly restart and persisted prompted-version history.
-- **Version rollback** armed before installer handoff and exposed after the new
-  version starts; the older installer is downloaded again and revalidated.
+- **Version rollback** armed before installer handoff. An updated version must
+  report healthy within 30 seconds; startup failure or timeout triggers one
+  fully revalidated automatic Windows rollback, while healthy starts retain a
+  manual tray rollback.
 - **Signed release gates** that require an explicit certificate and expected
   publisher, then verify that the application and NSIS installer use the same
   signing certificate.
 - **Plugin-composed desktop capabilities** for windows, tray, profiles, terminal,
   and updates without modifying the pinned Harness submodule.
 
-The Windows-focused gate currently covers 133 tests plus the complete runtime
+The Windows-focused gate currently covers 201 tests plus the complete runtime
 dependency closure. Roadmap features are described as planned work, not as
 already available functionality.
 

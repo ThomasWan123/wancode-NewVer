@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { desktopTerminalStateDirectory, openDesktopTerminal } from './desktop-terminal.ts'
 import { packagedDependencyPath } from './packaged-runtime-path.ts'
 import type {
+  DesktopApplicationHealth,
   DesktopNotification,
   DesktopPlatform,
   DesktopRuntime,
@@ -29,6 +30,7 @@ import type {
   DesktopTrayItemGroup,
   DesktopTrayItemRegistration,
   DesktopUpdateAdapter,
+  DesktopUpdateInstallMode,
 } from './runtime.ts'
 import type { RendererBootReport } from './renderer-boot-contract.ts'
 import { prepareTrayIcon } from './tray-icons.ts'
@@ -75,7 +77,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     confirmDownload: version => this.confirmUpdateDownload(version),
     confirmRollback: version => this.confirmUpdateRollback(version),
     showManualCheckResult: result => this.showManualUpdateCheckResult(result),
-    downloadAndOpen: (version, signal) => this.downloadAndOpenUpdate(version, signal),
+    downloadAndOpen: (version, signal, mode) => this.downloadAndOpenUpdate(version, signal, mode),
     notify: notification => { this.showNotification(notification) },
   }
 
@@ -88,6 +90,10 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   private readonly trayItems = new Map<symbol, DesktopTrayItem>()
   private terminalSpec: DesktopTerminalSpec | undefined
   private rendererBootReported = false
+  private applicationHealth: DesktopApplicationHealth | undefined
+  private readonly applicationHealthHandlers = new Set<
+    (status: DesktopApplicationHealth) => void | Promise<void>
+  >()
 
   constructor(
     private readonly restart: () => Promise<void>,
@@ -215,10 +221,46 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     } catch (cause) {
       process.stderr.write(`dsh-plugin-desktop: failed to persist renderer boot health: ${cause instanceof Error ? cause.message : String(cause)}\n`)
     }
-    if (report.status === 'failed') {
-      void this.showRendererBootRecovery(report).catch((cause: unknown) => {
-        process.stderr.write(`dsh-plugin-desktop: failed to show plugin recovery: ${cause instanceof Error ? cause.message : String(cause)}\n`)
-      })
+    void this.finalizeRendererBoot(report)
+  }
+
+  private async finalizeRendererBoot(report: RendererBootReport): Promise<void> {
+    await this.reportApplicationHealth(report.status)
+    if (this.quitting) return
+    if (report.status !== 'failed') return
+    try {
+      await this.showRendererBootRecovery(report)
+    } catch (cause) {
+      process.stderr.write(`dsh-plugin-desktop: failed to show plugin recovery: ${cause instanceof Error ? cause.message : String(cause)}\n`)
+    }
+  }
+
+  /** @inheritdoc */
+  async reportApplicationHealth(status: DesktopApplicationHealth): Promise<void> {
+    if (this.applicationHealth !== undefined) return
+    this.applicationHealth = status
+    await Promise.all([...this.applicationHealthHandlers].map(handler => this.invokeApplicationHealthHandler(handler, status)))
+  }
+
+  /** @inheritdoc */
+  registerApplicationHealthHandler(
+    handler: (status: DesktopApplicationHealth) => void | Promise<void>,
+  ): () => void {
+    this.applicationHealthHandlers.add(handler)
+    if (this.applicationHealth !== undefined) {
+      void this.invokeApplicationHealthHandler(handler, this.applicationHealth)
+    }
+    return () => { this.applicationHealthHandlers.delete(handler) }
+  }
+
+  private async invokeApplicationHealthHandler(
+    handler: (status: DesktopApplicationHealth) => void | Promise<void>,
+    status: DesktopApplicationHealth,
+  ): Promise<void> {
+    try {
+      await handler(status)
+    } catch (cause) {
+      process.stderr.write(`dsh-plugin-desktop: application health handler failed: ${cause instanceof Error ? cause.message : String(cause)}\n`)
     }
   }
 
@@ -237,6 +279,11 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   /** @inheritdoc */
   prepareToQuit(): void {
     this.quitting = true
+  }
+
+  /** Whether installer handoff already requested a process exit. */
+  hasRequestedQuit(): boolean {
+    return this.quitting
   }
 
   private async showRendererBootRecovery(report: Extract<RendererBootReport, { status: 'failed' }>): Promise<void> {
@@ -374,7 +421,11 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   }
 
   /** Download a confirmed installer and hand it to the native installation flow. */
-  private async downloadAndOpenUpdate(version: string, signal: AbortSignal): Promise<void> {
+  private async downloadAndOpenUpdate(
+    version: string,
+    signal: AbortSignal,
+    mode: DesktopUpdateInstallMode = 'interactive',
+  ): Promise<void> {
     if (this.platform !== 'darwin' && this.platform !== 'win32') {
       throw new Error(`dsh-plugin-desktop: updates are unavailable on ${this.platform}`)
     }
@@ -403,23 +454,28 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       return
     }
 
-    const result = await dialog.showMessageBox({
-      type: 'info',
-      title: 'Wan Code Update Downloaded',
-      message: `Wan Code ${version} is ready to install.`,
-      detail: 'Restart Wan Code and run the installer now?',
-      buttons: ['Restart and Install', 'Later'],
-      defaultId: 1,
-      cancelId: 1,
-      noLink: true,
-    })
-    if (result.response !== 0) return
+    if (mode === 'interactive') {
+      const result = await dialog.showMessageBox({
+        type: 'info',
+        title: 'Wan Code Update Downloaded',
+        message: `Wan Code ${version} is ready to install.`,
+        detail: 'Restart Wan Code and run the installer now?',
+        buttons: ['Restart and Install', 'Later'],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      })
+      if (result.response !== 0) return
+    }
 
-    const spec = this.scheduled
-    if (spec === undefined) throw new Error('dsh-plugin-desktop: no active shell can exit for update installation')
     signal.throwIfAborted()
     await this.launchWindowsUpdateInstaller(artifactPath)
     this.quitting = true
+    const spec = this.scheduled
+    if (spec === undefined) {
+      app.exit(0)
+      return
+    }
     spec.requestQuit(0)
   }
 

@@ -133,6 +133,7 @@ const electron = vi.hoisted(() => {
       dock: { setIcon: vi.fn() },
       getPath: vi.fn(() => '/tmp/dsh-desktop-user-data'),
       getVersion: vi.fn(() => '43.4.0'),
+      exit: vi.fn(),
       isPackaged: false,
       on: vi.fn(),
       off: vi.fn(),
@@ -574,6 +575,21 @@ describe('Electron compatibility runtime', () => {
     expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
   })
 
+  it('replays one terminal application-health outcome to a late update observer', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+    const handler = vi.fn()
+
+    runtime.reportRendererBoot({ status: 'healthy' })
+    const dispose = runtime.registerApplicationHealthHandler(handler)
+    runtime.reportApplicationHealth('failed')
+    dispose()
+
+    expect(handler).toHaveBeenCalledOnce()
+    expect(handler).toHaveBeenCalledWith('healthy')
+  })
+
   it('opens the active profile terminal from plugin recovery', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     Object.defineProperty(process.versions, 'electron', {
@@ -715,6 +731,69 @@ describe('Electron compatibility runtime', () => {
 
     expect(childProcess.child.unref).toHaveBeenCalledOnce()
     expect(requestQuit).toHaveBeenCalledWith(0)
+  })
+
+  it('starts a validated Windows recovery installer without another confirmation dialog', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    updater.download.mockResolvedValueOnce('C:\\Updates\\DSH-Desktop-2.0.0-windows.exe')
+    const requestQuit = vi.fn()
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+    runtime.schedule({ ...spec, requestQuit })
+
+    const pending = runtime.updates.downloadAndOpen(
+      '2.0.0',
+      new AbortController().signal,
+      'automatic-recovery',
+    )
+    await vi.waitFor(() => { expect(childProcess.spawn).toHaveBeenCalledOnce() })
+
+    expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
+    childProcess.emit('spawn')
+    await pending
+    expect(requestQuit).toHaveBeenCalledWith(0)
+  })
+
+  it('starts a Windows recovery installer even when no shell is scheduled', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    updater.download.mockResolvedValueOnce('C:\\Updates\\DSH-Desktop-2.0.0-windows.exe')
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+
+    const pending = runtime.updates.downloadAndOpen(
+      '2.0.0',
+      new AbortController().signal,
+      'automatic-recovery',
+    )
+    await vi.waitFor(() => { expect(childProcess.spawn).toHaveBeenCalledOnce() })
+    childProcess.emit('spawn')
+    await pending
+
+    expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
+    expect(electron.app.exit).toHaveBeenCalledWith(0)
+  })
+
+  it('does not show plugin recovery after automatic version recovery requests quit', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    updater.download.mockResolvedValueOnce('C:\\Updates\\DSH-Desktop-2.0.0-windows.exe')
+    const requestQuit = vi.fn()
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+    runtime.schedule({ ...spec, requestQuit })
+    runtime.registerApplicationHealthHandler(async () => {
+      await runtime.updates.downloadAndOpen(
+        '2.0.0',
+        new AbortController().signal,
+        'automatic-recovery',
+      )
+    })
+
+    runtime.reportRendererBoot({ status: 'failed', plugins: ['dsh-vision-router'] })
+    await vi.waitFor(() => { expect(childProcess.spawn).toHaveBeenCalledOnce() })
+    childProcess.emit('spawn')
+    await vi.waitFor(() => { expect(requestQuit).toHaveBeenCalledWith(0) })
+
+    expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
   })
 
   it('does not exit when the downloaded Windows installer fails to spawn', async () => {

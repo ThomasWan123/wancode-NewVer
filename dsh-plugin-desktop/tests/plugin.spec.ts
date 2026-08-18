@@ -75,6 +75,8 @@ function createHarness(platform: DesktopRuntime['platform'] = 'darwin'): PluginH
     registerTrayItem: () => ({ refresh: () => {}, dispose: () => {} }),
     openTerminal: () => {},
     reportRendererBoot: rendererBoot,
+    reportApplicationHealth: async () => {},
+    registerApplicationHealthHandler: () => () => {},
     setThemeSource,
     requestRestart: restart,
     prepareToQuit: () => {},

@@ -12,6 +12,7 @@ import {
   type UpdateChannel,
   type UpdateCheckResult,
 } from './update-checker.ts'
+import type { DesktopApplicationHealth } from './runtime.ts'
 
 /** Stable Cordis plugin name. */
 export const name = 'desktop-updates'
@@ -34,6 +35,8 @@ export interface Config {
   intervalMs: number
   /** Maximum duration of one version request before caller-owned cancellation. */
   requestTimeoutMs: number
+  /** Maximum time an updated renderer may take to report terminal health. */
+  healthTimeoutMs: number
 }
 
 /** Validated scheduled update policy. */
@@ -43,6 +46,7 @@ export const Config: z<Config> = z.object({
   initialDelayMs: z.number().step(1).min(0).max(MAX_TIMER_DELAY_MS).default(60_000),
   intervalMs: z.number().step(1).min(1).max(MAX_TIMER_DELAY_MS).default(6 * 60 * 60 * 1000),
   requestTimeoutMs: z.number().step(1).min(1).max(MAX_TIMER_DELAY_MS).default(15_000),
+  healthTimeoutMs: z.number().step(1).min(1).max(MAX_TIMER_DELAY_MS).default(30_000),
 })
 
 interface UpdateStateV2 {
@@ -62,7 +66,19 @@ interface UpdateStateV3 {
   readonly rollback: UpdateRollbackState
 }
 
-type UpdateState = UpdateStateV2 | UpdateStateV3
+interface UpdateRollbackStateV4 {
+  readonly fromVersion: string
+  readonly toVersion: string
+  readonly status: 'pending' | 'verifying' | 'available' | 'automatic-attempted'
+}
+
+interface UpdateStateV4 {
+  readonly version: 4
+  readonly lastPromptedVersion?: string
+  readonly rollback: UpdateRollbackStateV4
+}
+
+type UpdateState = UpdateStateV2 | UpdateStateV3 | UpdateStateV4
 
 const EMPTY_STATE: UpdateState = { version: 2 }
 
@@ -82,12 +98,14 @@ export function apply(ctx: Context, config: Config): void {
     let rollbackVersion: string | undefined
     let pollTimer: ReturnType<typeof setTimeout> | undefined
     let requestTimer: ReturnType<typeof setTimeout> | undefined
+    let healthTimer: ReturnType<typeof setTimeout> | undefined
     let requestController: AbortController | undefined
     let downloadController: AbortController | undefined
     let inFlight: Promise<UpdateCheckResult | null> | undefined
     let manualTask: Promise<void> | undefined
     let downloadTask: Promise<void> | undefined
     let requiredStateWrite: Promise<void> | undefined
+    let automaticRecoveryInFlight = false
     let refreshTray = (): void => {}
 
     const persistState = async (): Promise<void> => {
@@ -118,23 +136,42 @@ export function apply(ctx: Context, config: Config): void {
       try {
         state = parseState(await readState(adapter.statePath))
         if (state.version === 3) {
+          const legacy = state
+          state = {
+            version: 4,
+            ...(state.lastPromptedVersion === undefined ? {} : { lastPromptedVersion: state.lastPromptedVersion }),
+            rollback: {
+              ...state.rollback,
+              status: state.rollback.status === 'pending'
+                ? state.rollback.toVersion === adapter.currentVersion ? 'verifying' : 'pending'
+                : 'available',
+            },
+          }
+          try {
+            await persistRequiredState()
+          } catch {
+            state = legacy
+            return
+          }
+        } else if (state.version === 4 && state.rollback.toVersion === adapter.currentVersion
+          && state.rollback.status === 'pending') {
+          const pending = state
+          state = {
+            ...state,
+            rollback: { ...state.rollback, status: 'verifying' },
+          }
+          try {
+            await persistRequiredState()
+          } catch {
+            state = pending
+            return
+          }
+        }
+        if (state.version === 4) {
           if (state.rollback.toVersion === adapter.currentVersion) {
-            if (state.rollback.status === 'pending') {
-              const pending = state
-              state = {
-                ...state,
-                rollback: { ...state.rollback, status: 'available' },
-              }
-              try {
-                await persistRequiredState()
-              } catch {
-                state = pending
-                return
-              }
-            }
             rollbackVersion = state.rollback.fromVersion
-          } else if (state.rollback.status === 'available'
-            && state.rollback.fromVersion === adapter.currentVersion) {
+          } else if (state.rollback.fromVersion === adapter.currentVersion
+            && state.rollback.status !== 'pending') {
             state = state.lastPromptedVersion === undefined
               ? EMPTY_STATE
               : { version: 2, lastPromptedVersion: state.lastPromptedVersion }
@@ -158,7 +195,7 @@ export function apply(ctx: Context, config: Config): void {
     const rememberPrompt = async (version: string): Promise<void> => {
       await stateReady
       if (state.lastPromptedVersion === version) return
-      state = state.version === 3
+      state = state.version === 3 || state.version === 4
         ? { ...state, lastPromptedVersion: version }
         : { version: 2, lastPromptedVersion: version }
       await persistState()
@@ -221,7 +258,7 @@ export function apply(ctx: Context, config: Config): void {
         await stateReady
         if (disposed) return
         state = {
-          version: 3,
+          version: 4,
           ...(state.lastPromptedVersion === undefined
             ? {}
             : { lastPromptedVersion: state.lastPromptedVersion }),
@@ -327,6 +364,88 @@ export function apply(ctx: Context, config: Config): void {
       return task
     }
 
+    const runAutomaticRollback = (): Promise<void> => {
+      if (downloadTask !== undefined) return downloadTask
+      const task = (async () => {
+        await stateReady
+        if (disposed || state.version !== 4
+          || state.rollback.toVersion !== adapter.currentVersion
+          || state.rollback.status !== 'verifying'
+          || !adapter.isPackaged
+          || !adapter.canDownload) return
+        const previousState = state
+        state = {
+          ...state,
+          rollback: { ...state.rollback, status: 'automatic-attempted' },
+        }
+        try {
+          await persistRequiredState()
+        } catch {
+          state = previousState
+          return
+        }
+        automaticRecoveryInFlight = true
+        const version = state.rollback.fromVersion
+        const controller = new AbortController()
+        downloadController = controller
+        downloadingVersion = version
+        refreshTray()
+        try {
+          await adapter.downloadAndOpen(version, controller.signal, 'automatic-recovery')
+        } catch {
+          // Automatic rollback is one-shot; the tray keeps a manual retry available.
+        } finally {
+          if (downloadController === controller) downloadController = undefined
+          downloadingVersion = undefined
+          refreshTray()
+        }
+      })().finally(() => {
+        if (downloadTask === task) downloadTask = undefined
+      })
+      downloadTask = task
+      return task
+    }
+
+    const handleApplicationHealth = async (status: DesktopApplicationHealth): Promise<void> => {
+      await stateReady
+      if (disposed || state.version !== 4
+        || state.rollback.toVersion !== adapter.currentVersion
+        || state.rollback.status !== 'verifying') return
+      if (healthTimer !== undefined) clearTimeout(healthTimer)
+      healthTimer = undefined
+      if (status === 'failed') {
+        await runAutomaticRollback()
+        return
+      }
+      const previousState = state
+      state = {
+        ...state,
+        rollback: { ...state.rollback, status: 'available' },
+      }
+      try {
+        await persistRequiredState()
+      } catch {
+        state = previousState
+      }
+      refreshTray()
+    }
+
+    const removeHealthHandler = ctx.desktopRuntime.registerApplicationHealthHandler((status) => {
+      return handleApplicationHealth(status)
+    })
+    void stateReady.then(() => {
+      if (disposed || !adapter.isPackaged || !adapter.canDownload || state.version !== 4
+        || state.rollback.toVersion !== adapter.currentVersion) return
+      if (state.rollback.status === 'verifying') {
+        healthTimer = setTimeout(() => {
+          healthTimer = undefined
+          void runAutomaticRollback()
+        }, config.healthTimeoutMs)
+      } else if (state.rollback.status === 'automatic-attempted') {
+        // A previous unhealthy startup already consumed the one automatic attempt.
+      }
+    })
+
     const runTrayCommand = async (): Promise<void> => {
       await stateReady
       if (disposed) return
@@ -376,8 +495,10 @@ export function apply(ctx: Context, config: Config): void {
       disposed = true
       if (pollTimer !== undefined) clearTimeout(pollTimer)
       if (requestTimer !== undefined) clearTimeout(requestTimer)
+      if (healthTimer !== undefined) clearTimeout(healthTimer)
       requestController?.abort()
-      downloadController?.abort()
+      if (!automaticRecoveryInFlight) downloadController?.abort()
+      removeHealthHandler()
       registration.dispose()
       // Native dialogs are not cancellable. Await only file state and the abortable version request.
       const pending: Promise<unknown>[] = [stateReady]
@@ -399,6 +520,30 @@ function parseState(text: string): UpdateState {
     return value.lastPromptedVersion === undefined
       ? EMPTY_STATE
       : { version: 2, lastPromptedVersion: value.lastPromptedVersion as string }
+  }
+  if (value.version === 4) {
+    if ((value.lastPromptedVersion !== undefined && !isReleaseVersion(value.lastPromptedVersion))
+      || !isRecord(value.rollback)
+      || !isReleaseVersion(value.rollback.fromVersion)
+      || !isReleaseVersion(value.rollback.toVersion)
+      || typeof value.rollback.status !== 'string'
+      || !['pending', 'verifying', 'available', 'automatic-attempted'].includes(value.rollback.status)
+      || (compareSemVerVersions(value.rollback.fromVersion, value.rollback.toVersion) ?? 0) >= 0
+      || Object.keys(value).some(key => !['version', 'lastPromptedVersion', 'rollback'].includes(key))
+      || Object.keys(value.rollback).some(key => !['fromVersion', 'toVersion', 'status'].includes(key))) {
+      throw new Error('invalid v4 update state')
+    }
+    return {
+      version: 4,
+      ...(value.lastPromptedVersion === undefined
+        ? {}
+        : { lastPromptedVersion: value.lastPromptedVersion as string }),
+      rollback: {
+        fromVersion: value.rollback.fromVersion,
+        toVersion: value.rollback.toVersion,
+        status: value.rollback.status as UpdateRollbackStateV4['status'],
+      },
+    }
   }
   if (value.version !== 3
     || (value.lastPromptedVersion !== undefined && !isReleaseVersion(value.lastPromptedVersion))

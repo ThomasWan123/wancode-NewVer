@@ -17,6 +17,7 @@ const testConfig: UpdateConfig = {
   initialDelayMs: 10,
   intervalMs: 1000,
   requestTimeoutMs: 1000,
+  healthTimeoutMs: 30_000,
 }
 
 function versionResponse(version: unknown): Response {
@@ -34,6 +35,7 @@ interface Harness {
   readonly downloadAndOpen: ReturnType<typeof vi.fn>
   readonly refresh: ReturnType<typeof vi.fn>
   readonly registrationDispose: ReturnType<typeof vi.fn>
+  reportHealth(status: 'healthy' | 'failed'): void | Promise<void>
   dispose(): Promise<void>
 }
 
@@ -46,7 +48,11 @@ async function createHarness(options: {
   readonly confirmDownload?: (version: string) => Promise<boolean>
   readonly confirmRollback?: (version: string) => Promise<boolean>
   readonly showManualCheckResult?: (result: UpdateCheckResult | null) => Promise<void>
-  readonly downloadAndOpen?: (version: string, signal: AbortSignal) => Promise<void>
+  readonly downloadAndOpen?: (
+    version: string,
+    signal: AbortSignal,
+    mode?: 'interactive' | 'automatic-recovery',
+  ) => Promise<void>
   readonly notify?: (notification: DesktopNotification) => void
   readonly state?: string
 } = {}): Promise<Harness> {
@@ -66,6 +72,7 @@ async function createHarness(options: {
   const downloadAndOpen = vi.fn(options.downloadAndOpen ?? (async () => {}))
   let tray: DesktopTrayItem | undefined
   let disposer: (() => void | Promise<void>) | undefined
+  let applicationHealthHandler: ((status: 'healthy' | 'failed') => void) | undefined
   const runtime = {
     updates: {
       isPackaged: options.packaged ?? true,
@@ -82,6 +89,12 @@ async function createHarness(options: {
     registerTrayItem: (item: DesktopTrayItem) => {
       tray = item
       return { refresh, dispose: registrationDispose }
+    },
+    registerApplicationHealthHandler: (handler: (status: 'healthy' | 'failed') => void) => {
+      applicationHealthHandler = handler
+      return () => {
+        if (applicationHealthHandler === handler) applicationHealthHandler = undefined
+      }
     },
   } as unknown as DesktopRuntime
   const ctx = {
@@ -106,6 +119,7 @@ async function createHarness(options: {
     downloadAndOpen,
     refresh,
     registrationDispose,
+    reportHealth: status => applicationHealthHandler?.(status),
     dispose: async () => { await disposer?.() },
   }
 }
@@ -115,7 +129,174 @@ afterEach(() => {
 })
 
 describe('desktop update Host plugin', () => {
-  it('activates a pending rollback after the target version starts', async () => {
+  it('automatically rolls back once when the updated renderer reports failed health', async () => {
+    const harness = await createHarness({
+      currentVersion: '2.1.0',
+      config: { ...testConfig, enabled: false },
+      state: JSON.stringify({
+        version: 3,
+        rollback: {
+          fromVersion: '2.0.0',
+          toVersion: '2.1.0',
+          status: 'pending',
+        },
+      }),
+    })
+
+    await vi.waitFor(async () => {
+      expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
+        version: 4,
+        rollback: {
+          fromVersion: '2.0.0',
+          toVersion: '2.1.0',
+          status: 'verifying',
+        },
+      })
+    })
+    harness.reportHealth('failed')
+
+    await vi.waitFor(() => {
+      expect(harness.downloadAndOpen).toHaveBeenCalledWith(
+        '2.0.0',
+        expect.any(AbortSignal),
+        'automatic-recovery',
+      )
+    })
+    expect(harness.confirmRollback).not.toHaveBeenCalled()
+    expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
+      version: 4,
+      rollback: {
+        fromVersion: '2.0.0',
+        toVersion: '2.1.0',
+        status: 'automatic-attempted',
+      },
+    })
+  })
+
+  it('keeps manual rollback available after the updated renderer reports healthy', async () => {
+    const harness = await createHarness({
+      currentVersion: '2.1.0',
+      config: { ...testConfig, enabled: false },
+      state: JSON.stringify({
+        version: 4,
+        rollback: {
+          fromVersion: '2.0.0',
+          toVersion: '2.1.0',
+          status: 'pending',
+        },
+      }),
+    })
+
+    await vi.waitFor(async () => {
+      expect(JSON.parse(await readFile(harness.statePath, 'utf8')).rollback.status).toBe('verifying')
+    })
+    harness.reportHealth('healthy')
+
+    await vi.waitFor(async () => {
+      expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
+        version: 4,
+        rollback: {
+          fromVersion: '2.0.0',
+          toVersion: '2.1.0',
+          status: 'available',
+        },
+      })
+    })
+    expect(harness.downloadAndOpen).not.toHaveBeenCalled()
+    expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+  })
+
+  it('automatically rolls back when the updated renderer misses its health deadline', async () => {
+    vi.useFakeTimers()
+    const harness = await createHarness({
+      currentVersion: '2.1.0',
+      config: { ...testConfig, enabled: false, healthTimeoutMs: 25 },
+      state: JSON.stringify({
+        version: 4,
+        rollback: {
+          fromVersion: '2.0.0',
+          toVersion: '2.1.0',
+          status: 'pending',
+        },
+      }),
+    })
+
+    await vi.waitFor(async () => {
+      expect(JSON.parse(await readFile(harness.statePath, 'utf8')).rollback.status).toBe('verifying')
+    })
+    await vi.advanceTimersByTimeAsync(25)
+
+    await vi.waitFor(() => {
+      expect(harness.downloadAndOpen).toHaveBeenCalledWith(
+        '2.0.0',
+        expect.any(AbortSignal),
+        'automatic-recovery',
+      )
+    })
+    expect(harness.confirmRollback).not.toHaveBeenCalled()
+  })
+
+  it('does not abort automatic recovery when the Host disposes during download', async () => {
+    let observedSignal: AbortSignal | undefined
+    let finishDownload!: () => void
+    const downloadStarted = new Promise<void>((resolve) => {
+      finishDownload = resolve
+    })
+    const harness = await createHarness({
+      currentVersion: '2.1.0',
+      config: { ...testConfig, enabled: false },
+      state: JSON.stringify({
+        version: 4,
+        rollback: {
+          fromVersion: '2.0.0',
+          toVersion: '2.1.0',
+          status: 'verifying',
+        },
+      }),
+      downloadAndOpen: async (_version, signal) => {
+        observedSignal = signal
+        await downloadStarted
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+    })
+    const health = Promise.resolve(harness.reportHealth('failed'))
+    await vi.waitFor(() => { expect(harness.downloadAndOpen).toHaveBeenCalledOnce() })
+    await harness.dispose()
+
+    expect(observedSignal?.aborted).toBe(false)
+    finishDownload()
+    await health
+  })
+
+  it('does not repeat an automatic rollback attempt on a later unhealthy launch', async () => {
+    vi.useFakeTimers()
+    const harness = await createHarness({
+      currentVersion: '2.1.0',
+      config: { ...testConfig, enabled: false, healthTimeoutMs: 25 },
+      state: JSON.stringify({
+        version: 4,
+        rollback: {
+          fromVersion: '2.0.0',
+          toVersion: '2.1.0',
+          status: 'automatic-attempted',
+        },
+      }),
+    })
+
+    await vi.waitFor(() => {
+      expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+    })
+    harness.reportHealth('failed')
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(harness.downloadAndOpen).not.toHaveBeenCalled()
+    expect(harness.confirmRollback).not.toHaveBeenCalled()
+  })
+
+  it('offers manual rollback while the target version awaits health confirmation', async () => {
     const harness = await createHarness({
       packaged: false,
       currentVersion: '2.1.0',
@@ -139,12 +320,12 @@ describe('desktop update Host plugin', () => {
     expect(harness.confirmRollback).toHaveBeenCalledWith('2.0.0')
     expect(harness.downloadAndOpen).toHaveBeenCalledWith('2.0.0', expect.any(AbortSignal))
     expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
-      version: 3,
+      version: 4,
       lastPromptedVersion: '2.1.0',
       rollback: {
         fromVersion: '2.0.0',
         toVersion: '2.1.0',
-        status: 'available',
+        status: 'verifying',
       },
     })
   })
@@ -173,17 +354,17 @@ describe('desktop update Host plugin', () => {
     expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({ version: 2 })
   })
 
-  it('clears rollback state after the previous version starts again', async () => {
+  it('clears the automatic rollback marker after the previous version starts again', async () => {
     const harness = await createHarness({
       packaged: false,
       currentVersion: '2.0.0',
       state: JSON.stringify({
-        version: 3,
+        version: 4,
         lastPromptedVersion: '2.1.0',
         rollback: {
           fromVersion: '2.0.0',
           toVersion: '2.1.0',
-          status: 'available',
+          status: 'automatic-attempted',
         },
       }),
     })
@@ -245,7 +426,7 @@ describe('desktop update Host plugin', () => {
     let closeDialog!: (confirmed: boolean) => void
     const confirmation = new Promise<boolean>(resolve => { closeDialog = resolve })
     const originalState = {
-      version: 3,
+      version: 4,
       rollback: {
         fromVersion: '2.0.0',
         toVersion: '2.1.0',
@@ -279,9 +460,11 @@ describe('desktop update Host plugin', () => {
       initialDelayMs: 60_000,
       intervalMs: 21_600_000,
       requestTimeoutMs: 15_000,
+      healthTimeoutMs: 30_000,
     })
     expect(() => Config({ intervalMs: 0 } as UpdateConfig)).toThrow()
     expect(() => Config({ requestTimeoutMs: 0 } as UpdateConfig)).toThrow()
+    expect(() => Config({ healthTimeoutMs: 0 } as UpdateConfig)).toThrow()
   })
 
   it.each([
@@ -407,7 +590,7 @@ describe('desktop update Host plugin', () => {
     expect(signal.aborted).toBe(false)
     expect(harness.tray.label()).toBe('Downloading Wan Code 2.1.0…')
     expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
-      version: 3,
+      version: 4,
       lastPromptedVersion: '2.1.0',
       rollback: {
         fromVersion: '2.0.0',

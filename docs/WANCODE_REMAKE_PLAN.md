@@ -7,10 +7,10 @@ Status: active
 - M0 complete: the private GitHub repository exists, the current Desktop
   baseline is on `master`, official Harness is pinned as a read-only submodule,
   and the Yarn/pnpm ownership gate passes.
-- M1 in progress: native product identity, Windows installer naming, update
-  discovery/download URLs, terminal and recovery copy, isolated Harness home,
-  and telemetry-private defaults are implemented locally.
-- The Windows package gate currently passes with 114 focused tests plus the
+- M1 in progress: native product identity, isolated Harness home, telemetry-private
+  defaults, stable/beta updates, confirmation-gated rollback, and one-shot
+  automatic Windows recovery after a failed or overdue health report.
+- The Windows package gate currently passes with 201 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
 
@@ -180,7 +180,10 @@ requires an older trusted installer and an explicitly disposable Windows runner,
 then verifies install, upgrade, rollback, current-version restore, and uninstall
 while pinning every executable transition to the expected Authenticode publisher.
 Executing that gate still requires the project's signing certificate and a
-signed previous release. Update handoff now persists a fail-closed v3 transition
-record; after the target version starts, the tray can re-download and revalidate
-the previous installer, and successful rollback clears the record. Automatic
-rollback triggered by failed application health checks remains active M1 work.
+signed previous release. Update handoff now persists a fail-closed v4 transition
+record. The target version must report terminal application health within 30
+seconds. A failed Host or renderer startup, or a missed deadline, triggers one
+automatic Windows recovery attempt that re-downloads, revalidates, and launches
+the previous installer without another confirmation dialog. The one-shot marker
+prevents rollback loops; a healthy start retains the confirmation-gated tray
+rollback, and starting the previous version clears the transition.

@@ -149,7 +149,7 @@ npx dsh-plugin-desktop
 
 打包后的 macOS 与 Windows 应用会从 GitHub 的 `ThomasWan123/wancode-NewVer` 查询所选 stable 或 beta 更新流。只有与 GitHub Release 元数据一致的规范 `v<semver>` tag 会被接受；后台网络、HTTP、超时、无效响应、相同版本和旧版本结果保持静默。开发运行、未打包启动与 Linux 不会下载安装包。
 
-选择 **Download** 后，Wancode 会先持久化回滚转换，再请求该 GitHub Release 中名称固定的安装包，并把不超过 1 GiB 的文件流式写入私有版本目录。Windows 安装器必须通过 PE 和 Authenticode 信任校验后才允许打开。目标版本启动后，托盘会提供需确认的版本回退；旧安装包会重新下载并再次校验，回退完成后转换记录会被清除。**Restart and Install** 会在退出前请求 Cordis 有序 teardown。
+选择 **Download** 后，Wancode 会先持久化回滚转换，再请求该 GitHub Release 中名称固定的安装包，并把不超过 1 GiB 的文件流式写入私有版本目录。Windows 安装器必须通过 PE 和 Authenticode 信任校验后才允许打开。目标版本必须在 30 秒内报告 Host 与 Renderer 的终态健康结果；启动失败或超时会触发一次防循环的 Windows 自动恢复：旧安装包会重新下载、重新校验，并在不再次弹出确认框的情况下启动。健康启动后仍保留需确认的托盘回退；自动下载失败也可从托盘手动重试，旧版本成功启动后会清除转换记录。**Restart and Install** 会在退出前请求 Cordis 有序 teardown。
 
 Release operator 必须先上传名称完全匹配的 Wancode 产物，再发布 GitHub Release。缺少对应产物的 Release 会在下载阶段安全失败。
 

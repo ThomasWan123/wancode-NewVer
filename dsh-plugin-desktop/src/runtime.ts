@@ -82,6 +82,12 @@ export interface DesktopNotification {
   body: string
 }
 
+/** Terminal health outcome for one mounted application generation. */
+export type DesktopApplicationHealth = 'healthy' | 'failed'
+
+/** Installer handoff policy selected by the update state machine. */
+export type DesktopUpdateInstallMode = 'interactive' | 'automatic-recovery'
+
 /** Electron capabilities used by the headless update plugin. */
 export interface DesktopUpdateAdapter {
   /** Whether the running executable came from an Electron package. */
@@ -100,8 +106,12 @@ export interface DesktopUpdateAdapter {
   confirmRollback(version: string): Promise<boolean>
   /** Present the outcome of a user-triggered version check. */
   showManualCheckResult(result: UpdateCheckResult | null): Promise<void>
-  /** Download and hand one confirmed update to the platform installer. */
-  downloadAndOpen(version: string, signal: AbortSignal): Promise<void>
+  /** Download and hand one validated update to the platform installer. */
+  downloadAndOpen(
+    version: string,
+    signal: AbortSignal,
+    mode?: DesktopUpdateInstallMode,
+  ): Promise<void>
   /** Present a native status notification without blocking the Host tree. */
   notify(notification: DesktopNotification): void
 }
@@ -174,6 +184,17 @@ export interface DesktopRuntime {
 
   /** Accept the terminal client Loader outcome for the mounted generation. */
   reportRendererBoot(report: RendererBootReport): void
+
+  /** Commit the first terminal health outcome for this application generation. */
+  reportApplicationHealth(status: DesktopApplicationHealth): Promise<void>
+
+  /**
+   * Observe the first terminal application-health outcome for this generation.
+   * A late observer immediately receives an outcome reported before registration.
+   */
+  registerApplicationHealthHandler(
+    handler: (status: DesktopApplicationHealth) => void | Promise<void>,
+  ): () => void
 
   /** Apply a built-in theme preference to Electron's native appearance. */
   setThemeSource(source: DesktopThemeSource): void
