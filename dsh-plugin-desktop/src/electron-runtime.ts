@@ -286,6 +286,21 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     return this.quitting
   }
 
+  /** Ask whether an existing `~/.dsh` tree may be copied into the Wan Code home. */
+  async confirmImportLegacyHome(): Promise<boolean> {
+    const result = await dialog.showMessageBox({
+      type: 'question',
+      title: 'Import Existing Data',
+      message: 'Copy data from ~/.dsh into Wan Code?',
+      detail: 'Wan Code keeps a private data directory and will not share ~/.dsh automatically. Importing copies settings, sessions, and credentials. The original install is left unchanged, and plugin node_modules directories are not copied.',
+      buttons: ['Import', 'Start Fresh'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    })
+    return result.response === 0
+  }
+
   private async showRendererBootRecovery(report: Extract<RendererBootReport, { status: 'failed' }>): Promise<void> {
     const plugins = report.plugins.length === 0
       ? 'Unknown client plugin'

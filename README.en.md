@@ -23,7 +23,9 @@ provides:
 - **Local Harness Host** bound only to `127.0.0.1`, with a sandboxed Electron
   renderer, context isolation, and no Node integration.
 - **Isolated product data** under Wan Code's Electron user-data directory rather
-  than automatically sharing an existing `~/.dsh`.
+  than automatically sharing an existing `~/.dsh`. First launch can copy
+  settings, sessions, and credentials from that original home; the source is
+  left unchanged.
 - **Private defaults** with upstream telemetry disabled unless the user
   explicitly chooses otherwise.
 - **Least-privilege sessions** defaulting to the `read-only` permission preset
@@ -46,7 +48,7 @@ provides:
 - **Plugin-composed desktop capabilities** for windows, tray, profiles, terminal,
   and updates without modifying the pinned Harness submodule.
 
-The Windows-focused gate currently covers 218 tests plus the complete runtime
+The Windows-focused gate currently covers 225 tests plus the complete runtime
 dependency closure. Roadmap features are described as planned work, not as
 already available functionality.
 

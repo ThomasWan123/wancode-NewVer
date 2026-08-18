@@ -7,11 +7,11 @@ Status: active
 - M0 complete: the private GitHub repository exists, the current Desktop
   baseline is on `master`, official Harness is pinned as a read-only submodule,
   and the Yarn/pnpm ownership gate passes.
-- M1 in progress: native product identity, isolated Harness home, telemetry-private
-  defaults, a read-only permission default for new sessions, stable/beta updates,
-  confirmation-gated rollback, and one-shot automatic Windows recovery after a
-  failed or overdue health report.
-- The Windows package gate currently passes with 218 focused tests plus the
+- M1 in progress: native product identity, isolated Harness home, opt-in first-run
+  import from `~/.dsh`, telemetry-private defaults, a read-only permission default
+  for new sessions, stable/beta updates, confirmation-gated rollback, and one-shot
+  automatic Windows recovery after a failed or overdue health report.
+- The Windows package gate currently passes with 225 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
 
@@ -193,3 +193,9 @@ Launcher composition now pins new desktop sessions to the `read-only` permission
 preset unless `DSH_PERMISSION_MODE` names `workspace-write` or
 `danger-full-access`. The in-app Permissions selector still changes later
 sessions through the upstream settings and session pins.
+
+First launch of an empty isolated Wan Code home can copy an existing `~/.dsh`
+tree after a native confirmation. The original install is left in place, plugin
+`node_modules` directories are omitted, and a symlink that escapes the source
+home fails closed. An explicit `DSH_HOME` override remains a shared-home choice
+and is never rewritten by this import.

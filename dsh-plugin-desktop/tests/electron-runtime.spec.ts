@@ -796,6 +796,20 @@ describe('Electron compatibility runtime', () => {
     expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
   })
 
+  it('asks before copying an existing ~/.dsh tree into the Wan Code home', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+    electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 0, checkboxChecked: false })
+
+    await expect(runtime.confirmImportLegacyHome()).resolves.toBe(true)
+    expect(electron.dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Import Existing Data',
+      message: 'Copy data from ~/.dsh into Wan Code?',
+      buttons: ['Import', 'Start Fresh'],
+    }))
+  })
+
   it('does not exit when the downloaded Windows installer fails to spawn', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     updater.download.mockResolvedValueOnce('C:\\Updates\\DSH-Desktop-2.1.0-windows.exe')

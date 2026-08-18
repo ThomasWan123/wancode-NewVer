@@ -11,13 +11,14 @@ import {
   type FailLoudProcess,
 } from '@deepseek-ai/dsh-app-boot'
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import { defaultDshHome } from '@deepseek-ai/dsh-home-paths'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 import {
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
 } from './desktop-runtime-environment.ts'
 import { ElectronDesktopRuntime } from './electron-runtime.ts'
+import { maybeImportLegacyHarnessHome } from './home-migration.ts'
 import { installProfilePackageResolver } from './module-resolution.ts'
 import { packagedDependencyPath } from './packaged-runtime-path.ts'
 import {
@@ -169,9 +170,32 @@ async function start(): Promise<void> {
   await app.whenReady()
   if (process.platform === 'win32') app.setAppUserModelId(WANCODE_APP_ID)
   if (app.isPackaged && process.cwd() === '/') process.chdir(app.getPath('home'))
-  configureWancodeHarnessHome(app.getPath('userData'), process.env)
+  const explicitHome = process.env.DSH_HOME !== undefined && process.env.DSH_HOME.trim().length > 0
+  const homeDir = configureWancodeHarnessHome(app.getPath('userData'), process.env)
   configureWancodeTelemetry(process.env)
-  const homeDir = resolveDshHome()
+  try {
+    await maybeImportLegacyHarnessHome({
+      userDataPath: app.getPath('userData'),
+      destinationHome: homeDir,
+      sourceHome: defaultDshHome(),
+      explicitHome,
+      confirm: () => runtime.confirmImportLegacyHome(),
+    })
+  } catch (cause) {
+    process.stderr.write(
+      `${BIN_NAME}: failed to import existing Harness data: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+    )
+    try {
+      runtime.updates.notify({
+        title: 'Unable to Import Data',
+        body: 'Wan Code could not copy ~/.dsh and will start with a private data directory.',
+      })
+    } catch (notifyCause) {
+      process.stderr.write(
+        `${BIN_NAME}: failed to show import warning: ${notifyCause instanceof Error ? notifyCause.message : String(notifyCause)}\n`,
+      )
+    }
+  }
   const windowsVolumeConcerns = diagnoseWindowsVolumes(process.platform, [
     { label: 'application install', path: process.execPath },
     { label: 'desktop user data', path: app.getPath('userData') },
