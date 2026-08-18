@@ -10,7 +10,9 @@ Status: active
 - M1 desktop core is accepted on `master`. Signed production NSIS release remains
   deferred until a code-signing certificate and trusted previous installer exist.
 - M2 in progress: `@wancode/relay-protocol` encodes the fail-closed remote
-  protocol, Ed25519 device keys, and desktop-only outbound handshake.
+  protocol, Ed25519 device keys, desktop-only outbound handshake, the
+  outbound WebSocket dialer, short-lived device-bound access tokens, a
+  replaceable OIDC identity seam, and immediate device registration/revocation.
 - The Windows package gate currently passes with 233 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
@@ -172,8 +174,14 @@ outbound handshake. The relay verifies that signature against the registered
 public key, grants only the closed capability list, and refuses inbound claims,
 untrusted keys, unknown capabilities, and reused nonces. Handshake and ack
 ciphertext never include the private key or application plaintext. Desktop
-still initiates any future cloud connection; this package does not listen on a
-network port and does not declare a Harness plugin entry.
+initiates the cloud connection over outbound WSS. The same package sends the
+signed handshake as the first JSON frame after presenting a short-lived token,
+waits for `handshake-ack`, and refuses non-loopback cleartext WebSocket. It
+does not listen on a public interface and does not declare a Harness plugin
+entry. A 127.0.0.1 loopback acceptor exists only as a test double under the
+`./loopback` export. A replaceable OIDC identity provider verifies issuer,
+audience, subject, and expiry before a device may register. Revoking that
+device fails closed immediately and the device id cannot be reused.
 
 M1 now includes Wancode application and installer identity,
 an isolated Harness home, telemetry-private defaults, GitHub release discovery,

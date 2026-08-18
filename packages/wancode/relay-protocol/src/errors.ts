@@ -1,17 +1,29 @@
 /** Fail-closed authorization outcomes for the Wan Code relay protocol. */
 
 /** Stable fail-closed authorization outcomes. */
-export type RelayErrorCode =
-  | 'replay'
-  | 'expired-token'
-  | 'revoked-device'
-  | 'cross-account'
-  | 'unknown-protocol'
-  | 'malformed'
-  | 'plaintext'
-  | 'untrusted-key'
-  | 'inbound-forbidden'
-  | 'unknown-capability'
+export const RELAY_ERROR_CODES = [
+  'replay',
+  'expired-token',
+  'revoked-device',
+  'cross-account',
+  'unknown-protocol',
+  'malformed',
+  'plaintext',
+  'untrusted-key',
+  'untrusted-identity',
+  'inbound-forbidden',
+  'unknown-capability',
+  'cleartext-transport',
+] as const
+
+export type RelayErrorCode = (typeof RELAY_ERROR_CODES)[number]
+
+const ERROR_CODES = new Set<string>(RELAY_ERROR_CODES)
+
+/** True when `code` is a documented fail-closed relay outcome. */
+export function isRelayErrorCode(code: string): code is RelayErrorCode {
+  return ERROR_CODES.has(code)
+}
 
 /** Authorization or envelope rejection that must not continue dispatch. */
 export class RelayAuthorizationError extends Error {

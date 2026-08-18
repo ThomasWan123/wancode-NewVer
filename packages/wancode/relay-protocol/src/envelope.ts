@@ -93,6 +93,18 @@ const FRAME_KINDS = new Set<RelayFrameKind>([
 
 const PLAINTEXT_FIELDS = ['prompt', 'credential', 'credentials', 'toolOutput', 'plaintext'] as const
 
+/** Reject plaintext application fields on any untrusted relay JSON object. */
+export function assertNoPlaintextRelayFields(
+  record: Record<string, unknown>,
+  label = 'relay envelope',
+): void {
+  for (const field of PLAINTEXT_FIELDS) {
+    if (field in record) {
+      throw new RelayAuthorizationError('plaintext', `${label} must not carry plaintext field ${field}`)
+    }
+  }
+}
+
 /**
  * Parse one untrusted envelope. Unknown versions, malformed shape, and plaintext
  * application fields fail closed before token checks run.
@@ -102,11 +114,7 @@ export function parseRelayEnvelope(value: unknown): RelayEnvelope {
     throw new RelayAuthorizationError('malformed', 'relay envelope must be an object')
   }
   const record = value as Record<string, unknown>
-  for (const field of PLAINTEXT_FIELDS) {
-    if (field in record) {
-      throw new RelayAuthorizationError('plaintext', `relay envelope must not carry plaintext field ${field}`)
-    }
-  }
+  assertNoPlaintextRelayFields(record)
   if (record.protocolVersion !== RELAY_PROTOCOL_VERSION) {
     throw new RelayAuthorizationError('unknown-protocol', 'relay envelope protocol version is not supported')
   }

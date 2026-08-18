@@ -6,6 +6,8 @@ import {
   dispatchRelayEnvelope,
   generateDeviceKeyPair,
   openOutboundSession,
+  parseHandshakeAck,
+  parseRelayWireHandshake,
 } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
@@ -63,6 +65,10 @@ describe('outbound device handshake', () => {
     expect(session.ack.kind).toBe('handshake-ack')
     expect(session.ack.ciphertext).not.toContain(keys.privateKey)
     expect(session.ack.ciphertext).not.toMatch(/prompt|credential|toolOutput/i)
+    const ack = parseHandshakeAck(session.ack)
+    expect(ack.sessionId).toBe(session.sessionId)
+    expect(ack.grantedCapabilities).toEqual(['session.observe', 'session.prompt'])
+    expect(ack.nonce).toBe('nonce-1')
   })
 
   it('returns the same session when the identical handshake is retried', () => {
@@ -197,5 +203,42 @@ describe('outbound device handshake', () => {
       store,
       now: NOW,
     }).outcome).toBe('accepted')
+  })
+
+  it('rejects a handshake-ack whose kind is not handshake-ack', () => {
+    expectRelayError(() => parseHandshakeAck({
+      protocolVersion: 1,
+      id: 'hs-1:ack',
+      kind: 'handshake',
+      sentAt: NOW,
+      actor: ACTOR,
+      ciphertext: 'v1:ack:e30',
+    }), 'malformed')
+  })
+
+  it('accepts a first-frame wire handshake that keeps the token off the url', () => {
+    const envelope = {
+      protocolVersion: 1,
+      id: 'hs-1',
+      kind: 'handshake',
+      sentAt: NOW,
+      actor: ACTOR,
+      ciphertext: 'v1:hs:opaque',
+    }
+    expect(parseRelayWireHandshake({
+      accessToken: 'tok-live',
+      envelope,
+    })).toEqual({
+      accessToken: 'tok-live',
+      envelope,
+    })
+  })
+
+  it('refuses plaintext application fields on the first wire frame', () => {
+    expectRelayError(() => parseRelayWireHandshake({
+      accessToken: 'tok-live',
+      envelope: { protocolVersion: 1 },
+      prompt: 'delete all files',
+    }), 'plaintext')
   })
 })

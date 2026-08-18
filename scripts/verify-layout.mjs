@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, lstatSync, readFileSync, readlinkSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
@@ -33,14 +33,27 @@ if (JSON.stringify(workspace.workspaces) !== JSON.stringify([
 ])) {
   fail('the root Yarn workspace must contain the desktop, community, and packages/wancode members')
 }
-const relay = readJson('packages/wancode/relay-protocol/package.json')
-if (relay.name !== '@wancode/relay-protocol') fail('packages/wancode/relay-protocol must own @wancode/relay-protocol')
-if (relay.dsh !== undefined) fail('@wancode/relay-protocol must not declare a loadable DSH entry')
+const wancodeMembers = []
+for (const entry of readdirSync(resolve(root, 'packages/wancode'), { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue
+  const manifestPath = `packages/wancode/${entry.name}/package.json`
+  if (!existsSync(resolve(root, manifestPath))) continue
+  const manifest = readJson(manifestPath)
+  if (typeof manifest.name !== 'string' || !manifest.name.startsWith('@wancode/')) {
+    fail(`${manifestPath} must own an @wancode package`)
+  }
+  if (manifest.dsh !== undefined) fail(`${manifest.name} must not declare a loadable DSH entry`)
+  if (manifest.packageManager !== undefined) fail(`${manifest.name} must inherit the root Yarn release`)
+  wancodeMembers.push([entry.name, manifest])
+}
+if (!wancodeMembers.some(([, manifest]) => manifest.name === '@wancode/relay-protocol')) {
+  fail('packages/wancode/relay-protocol must own @wancode/relay-protocol')
+}
 for (const [name, manifest] of [
   ['dsh-plugin-desktop', plugin],
   ['dsh-community-fabric', fabric],
   ['dsh-community-market', market],
-  ['@wancode/relay-protocol', relay],
+  ...wancodeMembers.map(([, manifest]) => [manifest.name, manifest]),
 ]) {
   if (manifest.packageManager !== undefined) fail(`${name} must inherit the root Yarn release`)
 }
@@ -65,8 +78,10 @@ for (const legacyFile of [
   'dsh-community-fabric/pnpm-workspace.yaml',
   'dsh-community-market/pnpm-lock.yaml',
   'dsh-community-market/pnpm-workspace.yaml',
-  'packages/wancode/relay-protocol/pnpm-lock.yaml',
-  'packages/wancode/relay-protocol/pnpm-workspace.yaml',
+  ...wancodeMembers.flatMap(([directory]) => [
+    `packages/wancode/${directory}/pnpm-lock.yaml`,
+    `packages/wancode/${directory}/pnpm-workspace.yaml`,
+  ]),
 ]) {
   if (existsSync(resolve(root, legacyFile))) fail(`${legacyFile} must not exist`)
 }
@@ -85,11 +100,13 @@ for (const [owner, manifest] of [
   ['desktop', plugin],
   ['fabric', fabric],
   ['market', market],
-  ['relay-protocol', relay],
+  ...wancodeMembers,
 ]) {
   for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies', 'resolutions']) {
     for (const [name, range] of Object.entries(manifest[field] ?? {})) {
       if (typeof range !== 'string') continue
+      const ownedWorkspace = name.startsWith('@wancode/') && range.startsWith('workspace:')
+      if (ownedWorkspace) continue
       if (/^(?:workspace|portal|link):/u.test(range)
         || (range.startsWith('file:') && range.includes('deepseek-harness'))) {
         fail(`${owner} ${field}.${name} bypasses the published DSH package boundary`)

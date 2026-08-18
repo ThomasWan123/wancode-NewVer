@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows 桌面核心（M1） | **可用**：身份、隔离数据、凭据、更新、回退、崩溃恢复 |
 | 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包 |
 | 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
-| 云中继协议（M2） | **进行中**：fail-closed 契约、设备密钥与仅出站握手 |
+| 云中继协议（M2） | **进行中**：fail-closed 契约、设备密钥、OIDC 接缝、仅出站 WSS 与短期令牌 |
 | 移动 PWA、插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
 
 桌面 `master` 现已包含：
@@ -68,7 +68,7 @@ Windows 聚焦门禁覆盖 233 项桌面测试，外加完整运行时依赖闭�
 | --- | --- |
 | `deepseek-harness/` | 只读、固定版本的官方上游 Git 子模块 |
 | `dsh-plugin-desktop/` | Electron、Host/Client 插件、Windows 安全与打包 |
-| `packages/wancode/` | Wan Code 自有协议与云模块；当前为 relay 协议契约 |
+| `packages/wancode/` | Wan Code 自有协议与云模块；当前为 relay 契约与仅出站客户端 |
 | `dsh-community-fabric/` | 社区互操作规范（文档骨架，不可加载） |
 | `dsh-community-market/` | 审核制插件市场契约（文档骨架，不可加载） |
 

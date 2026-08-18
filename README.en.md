@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows desktop core (M1) | **Available**: identity, isolated data, credentials, updates, rollback, crash recovery |
 | Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package |
 | Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
-| Cloud relay protocol (M2) | **In progress**: fail-closed contract, device keys, and outbound-only handshake |
+| Cloud relay protocol (M2) | **In progress**: fail-closed contract, device keys, OIDC seam, outbound WSS, and short-lived tokens |
 | Mobile PWA, marketplace, channels | Roadmap; not published as available features |
 
 The desktop `master` branch currently includes:
@@ -68,7 +68,7 @@ The Windows-focused gate covers 233 desktop tests plus the runtime-closure verif
 | --- | --- |
 | `deepseek-harness/` | Read-only, pinned official upstream Git submodule |
 | `dsh-plugin-desktop/` | Electron, Host/Client plugins, Windows security, and packaging |
-| `packages/wancode/` | Wan Code protocol and cloud modules; currently the relay contract |
+| `packages/wancode/` | Wan Code protocol and cloud modules; currently the relay contract and outbound client |
 | `dsh-community-fabric/` | Community interoperability RFC (documentation scaffold, not loadable) |
 | `dsh-community-market/` | Reviewed marketplace contract (documentation scaffold, not loadable) |
 

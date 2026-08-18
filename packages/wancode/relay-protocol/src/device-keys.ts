@@ -7,6 +7,7 @@ import {
   sign,
   verify,
 } from 'node:crypto'
+import { RelayAuthorizationError } from './errors.ts'
 
 /** Desktop-held device identity. The private key never leaves the device. */
 export interface DeviceKeyPair {
@@ -46,6 +47,25 @@ export function verifyDevicePayload(publicKey: string, payload: Uint8Array, sign
     return verify(null, payload, publicKeyFrom(publicKey), Buffer.from(signature, 'base64'))
   } catch {
     return false
+  }
+}
+
+/**
+ * Refuse a device public key that is not a valid Ed25519 SPKI blob.
+ * @param publicKey - SPKI Ed25519 key as standard base64.
+ */
+export function assertDevicePublicKey(publicKey: string): void {
+  if (typeof publicKey !== 'string' || publicKey.length === 0 || /[\0\r\n]/u.test(publicKey)) {
+    throw new RelayAuthorizationError('untrusted-key', 'relay device public key is required')
+  }
+  try {
+    const key = publicKeyFrom(publicKey)
+    if (key.asymmetricKeyType !== 'ed25519') {
+      throw new Error('not ed25519')
+    }
+  } catch (cause) {
+    if (cause instanceof RelayAuthorizationError) throw cause
+    throw new RelayAuthorizationError('untrusted-key', 'relay device public key is not a valid Ed25519 SPKI key')
   }
 }
 

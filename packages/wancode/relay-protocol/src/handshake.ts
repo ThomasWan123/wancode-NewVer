@@ -235,6 +235,56 @@ function createSession(
   }
 }
 
+/** Parsed handshake acknowledgement returned to the outbound desktop client. */
+export interface HandshakeAck {
+  readonly sessionId: string
+  readonly grantedCapabilities: readonly RelayCapability[]
+  readonly nonce: string
+  readonly envelope: RelayEnvelope
+}
+
+/**
+ * Parse a handshake-ack envelope. Used by the outbound client after the relay
+ * accepts a signed desktop handshake.
+ */
+export function parseHandshakeAck(value: unknown): HandshakeAck {
+  const envelope = parseRelayEnvelope(value)
+  if (envelope.kind !== 'handshake-ack') {
+    throw new RelayAuthorizationError('malformed', 'handshake ack kind is required')
+  }
+  if (!envelope.ciphertext.startsWith(ACK_PREFIX)) {
+    throw new RelayAuthorizationError('malformed', 'handshake ack ciphertext is invalid')
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(Buffer.from(envelope.ciphertext.slice(ACK_PREFIX.length), 'base64').toString('utf8'))
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'handshake ack ciphertext is invalid')
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new RelayAuthorizationError('malformed', 'handshake ack ciphertext is invalid')
+  }
+  const record = parsed as Record<string, unknown>
+  if (typeof record.sessionId !== 'string' || record.sessionId.length === 0 || /[\0\r\n]/u.test(record.sessionId)) {
+    throw new RelayAuthorizationError('malformed', 'handshake ack sessionId is required')
+  }
+  if (typeof record.nonce !== 'string' || record.nonce.length === 0 || /[\0\r\n]/u.test(record.nonce)) {
+    throw new RelayAuthorizationError('malformed', 'handshake ack nonce is required')
+  }
+  if (envelope.actor.sessionId !== undefined && envelope.actor.sessionId !== record.sessionId) {
+    throw new RelayAuthorizationError('malformed', 'handshake ack sessionId does not match the actor')
+  }
+  if (!Array.isArray(record.grantedCapabilities)) {
+    throw new RelayAuthorizationError('malformed', 'handshake ack capabilities are required')
+  }
+  return {
+    sessionId: record.sessionId,
+    grantedCapabilities: grantedCapabilities(record.grantedCapabilities),
+    nonce: record.nonce,
+    envelope,
+  }
+}
+
 function canonicalClaims(claims: OutboundHandshakeClaims): Uint8Array {
   return Buffer.from(JSON.stringify({
     direction: claims.direction,

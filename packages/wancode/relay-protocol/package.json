@@ -2,13 +2,17 @@
   "name": "@wancode/relay-protocol",
   "version": "0.1.0-dev.0",
   "private": true,
-  "description": "Fail-closed Wan Code cloud-relay protocol: envelopes, tokens, replay, and device authorization",
+  "description": "Fail-closed Wan Code cloud-relay protocol and outbound-only WebSocket client",
   "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./loopback": {
+      "types": "./src/loopback.ts",
+      "default": "./src/loopback.ts"
     }
   },
   "files": [
@@ -29,8 +33,12 @@
     "test": "vitest run",
     "check": "yarn typecheck && yarn test"
   },
+  "dependencies": {
+    "ws": "8.18.3"
+  },
   "devDependencies": {
     "@types/node": "^22.20.0",
+    "@types/ws": "8.18.1",
     "typescript": "6.0.3",
     "vitest": "4.1.8"
   },
