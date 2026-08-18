@@ -19,6 +19,7 @@ export {
   type RelayDispatchResult,
   type RelayEnvelope,
   type RelayFrameKind,
+  type RelayRoute,
   type RelayStore,
 } from './envelope.ts'
 export {
@@ -74,3 +75,24 @@ export {
   type IssuedRelayAccessToken,
   type RelayTokenIssuer,
 } from './tokens.ts'
+export {
+  routeRelayEnvelope,
+  type RelayRouteStore,
+  type RouteRelayEnvelopeInput,
+} from './route.ts'
+export {
+  RELAY_RATE_LIMIT_MAX_EVENTS,
+  RELAY_RATE_LIMIT_WINDOW_MS,
+  createMemoryRelayRateLimiter,
+  type MemoryRelayRateLimiterConfig,
+  type RelayRateLimiter,
+} from './rate-limit.ts'
+export {
+  createMemoryRelayAuditLog,
+  parseRelayAuditEvent,
+  recordRelayAuditEvent,
+  type RelayAuditAction,
+  type RelayAuditEvent,
+  type RelayAuditLog,
+  type RelayAuditOutcome,
+} from './audit.ts'

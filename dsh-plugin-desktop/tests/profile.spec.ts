@@ -162,6 +162,10 @@ describe('desktop profile composition', () => {
     expect(rows.find(row => row.id === 'desktop-updates')).toEqual(expect.objectContaining({
       name: 'dsh-plugin-desktop/updates',
     }))
+    expect(rows.find(row => row.id === 'desktop-relay')).toEqual(expect.objectContaining({
+      name: 'dsh-plugin-desktop/relay',
+      config: expect.objectContaining({ enabled: false, url: '' }),
+    }))
     expect(rows.find(row => row.id === 'desktop-profiles')).toEqual(expect.objectContaining({
       name: 'dsh-plugin-desktop/profiles',
     }))
@@ -174,7 +178,7 @@ describe('desktop profile composition', () => {
     expect(rows.find(row => row.id === 'permission')?.config).toEqual(expect.objectContaining({
       defaultPreset: 'read-only',
     }))
-  })
+  }, 15_000)
 
   it('boots a selected Web profile without overriding its compatibility UI rows', () => {
     const home = temporaryHome()

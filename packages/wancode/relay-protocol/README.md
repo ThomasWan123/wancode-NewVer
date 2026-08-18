@@ -28,7 +28,13 @@ plugin entry.
   later JWKS-backed factory. Expired assertions and tokens fail closed.
 - Device registration binds one Ed25519 public key to that account. Revocation
   is immediate and the device id cannot be reused.
+- Routing delivers an authorized envelope only to another device on the same
+  account. Cross-account destinations fail closed. Accepted frames consume a
+  per-device rate limit; identical retries do not. Audit records stay free of
+  prompt, credential, tool-output, and ciphertext fields.
 
 Desktop initiates the cloud connection with `connectOutboundRelay`. This package
 is not an inbound Host surface. `@wancode/relay-protocol/loopback` is a
-127.0.0.1 test acceptor only and is not part of the default export.
+127.0.0.1 test acceptor only and is not part of the default export. The desktop
+Host loads `dsh-plugin-desktop/relay` disabled by default and bundles this
+dialer without declaring a Yarn workspace link.

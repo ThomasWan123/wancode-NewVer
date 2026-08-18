@@ -59,6 +59,15 @@ export interface RelayDispatchResult {
   readonly outcome: 'accepted' | 'duplicate'
 }
 
+/** Same-account device-to-device route after an envelope is authorized. */
+export interface RelayRoute {
+  readonly envelopeId: string
+  readonly userId: string
+  readonly fromDeviceId: string
+  readonly toDeviceId: string
+  readonly outcome: 'accepted' | 'duplicate'
+}
+
 /** Durable lookups required before a frame may enter the routing plane. */
 export interface RelayStore {
   getAccessToken(tokenId: string): RelayAccessToken | undefined
@@ -178,12 +187,15 @@ export function dispatchRelayEnvelope(input: RelayDispatchInput): RelayDispatchR
 export function createMemoryRelayStore(): RelayStore & {
   putAccessToken(token: RelayAccessToken): void
   putDevice(device: RelayDevice): void
+  getRoute(envelopeId: string): RelayRoute | undefined
+  putRoute(route: RelayRoute): void
 } {
   const tokens = new Map<string, RelayAccessToken>()
   const devices = new Map<string, RelayDevice>()
   const dispatches = new Map<string, { envelopeHash: string, result: RelayDispatchResult }>()
   const nonces = new Set<string>()
   const sessions = new Map<string, OutboundSession>()
+  const routes = new Map<string, RelayRoute>()
   return {
     putAccessToken(token) { tokens.set(token.tokenId, token) },
     putDevice(device) { devices.set(device.deviceId, device) },
@@ -195,6 +207,8 @@ export function createMemoryRelayStore(): RelayStore & {
     putNonce(deviceId, nonce) { nonces.add(`${deviceId}:${nonce}`) },
     getSession(envelopeId) { return sessions.get(envelopeId) },
     putSession(envelopeId, session) { sessions.set(envelopeId, session) },
+    getRoute(envelopeId) { return routes.get(envelopeId) },
+    putRoute(route) { routes.set(route.envelopeId, route) },
   }
 }
 

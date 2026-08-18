@@ -59,6 +59,10 @@
       "types": "./lib/types/updates.d.ts",
       "default": "./lib/updates.js"
     },
+    "./relay": {
+      "types": "./lib/types/relay.d.ts",
+      "default": "./lib/relay.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -104,7 +108,7 @@
     "verify:win-lifecycle": "node scripts/verify-win-lifecycle.ts",
     "verify:win-release": "node scripts/verify-win-release.ts",
     "check": "yarn run build && yarn run typecheck && yarn run test && yarn run verify:closure && yarn run verify:cli && yarn run verify:loader && yarn run verify:profile && yarn run verify:licenses",
-    "check:win-package": "yarn run build && yarn run typecheck && vitest run tests/product.spec.ts tests/credentials-win.spec.ts tests/desktop-log.spec.ts tests/electron-runtime.spec.ts tests/home-migration.spec.ts tests/package.spec.ts tests/package-win.spec.ts tests/profile.spec.ts tests/release-win.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/updates.spec.ts tests/windows-signature.spec.ts tests/verify-win-installer.spec.ts tests/verify-win-lifecycle.spec.ts tests/verify-win-release.spec.ts tests/verify-packaged-runtime.spec.ts tests/windows-pwsh-sandbox.spec.ts tests/windows-volume-diagnostics.spec.ts tests/window-options.spec.ts && yarn run verify:closure",
+    "check:win-package": "yarn run build && yarn run typecheck && vitest run tests/product.spec.ts tests/credentials-win.spec.ts tests/desktop-log.spec.ts tests/electron-runtime.spec.ts tests/home-migration.spec.ts tests/package.spec.ts tests/package-win.spec.ts tests/profile.spec.ts tests/relay.spec.ts tests/release-win.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/updates.spec.ts tests/windows-signature.spec.ts tests/verify-win-installer.spec.ts tests/verify-win-lifecycle.spec.ts tests/verify-win-release.spec.ts tests/verify-packaged-runtime.spec.ts tests/windows-pwsh-sandbox.spec.ts tests/windows-volume-diagnostics.spec.ts tests/window-options.spec.ts && yarn run verify:closure",
     "check:mac-package": "yarn run build && yarn run typecheck && vitest run tests/product.spec.ts tests/mac-universal.spec.ts tests/package.spec.ts tests/package-mac.spec.ts tests/package-win.spec.ts tests/release-mac.spec.ts tests/release-preflight.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/verify-mac-release.spec.ts tests/verify-mac-smoke.spec.ts tests/verify-packaged-runtime.spec.ts tests/verify-win-installer.spec.ts tests/window-options.spec.ts && yarn run verify:closure",
     "start": "node lib/bin.js",
     "dev": "yarn run build && node lib/bin.js",
@@ -223,6 +227,7 @@
     "node-addon-require-builtin": "^0.1.4",
     "pnpm": "11.7.0",
     "react": "18.3.1",
+    "ws": "8.18.3",
     "yaml": "^2.9.0"
   },
   "peerDependencies": {
@@ -233,6 +238,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.20.0",
     "@types/react": "^18",
+    "@types/ws": "8.18.1",
     "electron": "43.4.0",
     "electron-builder": "26.15.3",
     "sharp": "0.35.3",

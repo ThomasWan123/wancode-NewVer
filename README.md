@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows 桌面核心（M1） | **可用**：身份、隔离数据、凭据、更新、回退、崩溃恢复 |
 | 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包 |
 | 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
-| 云中继协议（M2） | **进行中**：fail-closed 契约、设备密钥、OIDC 接缝、仅出站 WSS 与短期令牌 |
+| 云中继协议（M2） | **进行中**：fail-closed 契约、OIDC 接缝、仅出站 WSS、路由、速率限制、审计与桌面 opt-in 拨号 |
 | 移动 PWA、插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
 
 桌面 `master` 现已包含：
@@ -60,7 +60,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 - Stable / Beta 通道、确认后回退，以及一次健康检查失败后的自动 Windows 恢复
 - Renderer 崩溃恢复、托盘「打开诊断目录」，以及 `logs/wancode.log`
 
-Windows 聚焦门禁覆盖 233 项桌面测试，外加完整运行时依赖闭包。尚未交付的能力会写在路线图中，不会写成已经可用。
+Windows 聚焦门禁覆盖 236 项桌面测试，外加完整运行时依赖闭包。尚未交付的能力会写在路线图中，不会写成已经可用。
 
 ## 仓库结构
 

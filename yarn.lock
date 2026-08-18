@@ -6755,6 +6755,7 @@ __metadata:
     "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:^22.20.0"
     "@types/react": "npm:^18"
+    "@types/ws": "npm:8.18.1"
     electron: "npm:43.4.0"
     electron-builder: "npm:26.15.3"
     koffi: "npm:3.1.5"
@@ -6765,6 +6766,7 @@ __metadata:
     tsdown: "npm:0.22.2"
     typescript: "npm:6.0.3"
     vitest: "npm:4.1.8"
+    ws: "npm:8.18.3"
     yaml: "npm:^2.9.0"
   peerDependencies:
     electron: 43.4.0

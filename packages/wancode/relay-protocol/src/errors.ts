@@ -14,6 +14,7 @@ export const RELAY_ERROR_CODES = [
   'inbound-forbidden',
   'unknown-capability',
   'cleartext-transport',
+  'rate-limited',
 ] as const
 
 export type RelayErrorCode = (typeof RELAY_ERROR_CODES)[number]

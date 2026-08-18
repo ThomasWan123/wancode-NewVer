@@ -21,6 +21,7 @@ describe('relay-protocol package surface', () => {
     expect(manifest.exports).toHaveProperty('./loopback')
     expect(protocol).toHaveProperty('connectOutboundRelay')
     expect(protocol).toHaveProperty('assertOutboundRelayUrl')
+    expect(protocol).toHaveProperty('routeRelayEnvelope')
     expect(protocol).not.toHaveProperty('startLoopbackRelay')
     expect(protocol).not.toHaveProperty('listen')
     expect(protocol).not.toHaveProperty('createServer')

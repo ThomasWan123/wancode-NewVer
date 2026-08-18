@@ -12,8 +12,11 @@ Status: active
 - M2 in progress: `@wancode/relay-protocol` encodes the fail-closed remote
   protocol, Ed25519 device keys, desktop-only outbound handshake, the
   outbound WebSocket dialer, short-lived device-bound access tokens, a
-  replaceable OIDC identity seam, and immediate device registration/revocation.
-- The Windows package gate currently passes with 233 focused tests plus the
+  replaceable OIDC identity seam, immediate device registration/revocation,
+  same-account routing, per-device rate limits, a plaintext-free audit log,
+  and an opt-in desktop Host plugin that never listens and does not dial until
+  connect is invoked.
+- The Windows package gate currently passes with 236 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
 
@@ -181,7 +184,14 @@ does not listen on a public interface and does not declare a Harness plugin
 entry. A 127.0.0.1 loopback acceptor exists only as a test double under the
 `./loopback` export. A replaceable OIDC identity provider verifies issuer,
 audience, subject, and expiry before a device may register. Revoking that
-device fails closed immediately and the device id cannot be reused.
+device fails closed immediately and the device id cannot be reused. Authorized
+envelopes route only to another device on the same account. Cross-account
+destinations, unknown devices, and per-device rate-limit excess fail closed.
+Identical retries stay idempotent and do not consume the limiter. The audit log
+records route outcomes without prompt, credential, tool-output, or ciphertext
+fields. Desktop loads an opt-in `desktop-relay` Host row that stays idle by
+default, never binds a port, and only dials a fail-closed outbound URL when
+`connect` is called.
 
 M1 now includes Wancode application and installer identity,
 an isolated Harness home, telemetry-private defaults, GitHub release discovery,

@@ -1,6 +1,13 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'tsdown'
 
 const PACKAGE_NAME = 'dsh-plugin-desktop'
+const RELAY_PROTOCOL_ENTRY = fileURLToPath(
+  new URL('../packages/wancode/relay-protocol/src/index.ts', import.meta.url),
+)
+const RELAY_PROTOCOL_ALIAS = {
+  '@wancode/relay-protocol': RELAY_PROTOCOL_ENTRY,
+} as const
 
 export default defineConfig([
   {
@@ -22,11 +29,14 @@ export default defineConfig([
       'update-checker': 'src/update-checker.ts',
       'update-download': 'src/update-download.ts',
       updates: 'src/updates.ts',
+      relay: 'src/relay.ts',
       'credentials-win': 'src/credentials-win.ts',
       'windows-pwsh-sandbox': 'src/windows-pwsh-sandbox.ts',
       'windows-acl-runner': 'src/windows-acl-runner.ts',
       main: 'src/main.ts',
     },
+    alias: RELAY_PROTOCOL_ALIAS,
+    noExternal: ['@wancode/relay-protocol'],
     outDir: 'lib',
     format: 'esm',
     platform: 'node',
