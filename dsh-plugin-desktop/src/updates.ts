@@ -7,6 +7,7 @@ import z from '@deepseek-ai/schemastery'
 import type {} from './runtime.ts'
 import {
   checkForUpdate,
+  compareSemVerVersions,
   parseSemVer,
   type UpdateChannel,
   type UpdateCheckResult,
@@ -49,7 +50,21 @@ interface UpdateStateV2 {
   readonly lastPromptedVersion?: string
 }
 
-const EMPTY_STATE: UpdateStateV2 = { version: 2 }
+interface UpdateRollbackState {
+  readonly fromVersion: string
+  readonly toVersion: string
+  readonly status: 'pending' | 'available'
+}
+
+interface UpdateStateV3 {
+  readonly version: 3
+  readonly lastPromptedVersion?: string
+  readonly rollback: UpdateRollbackState
+}
+
+type UpdateState = UpdateStateV2 | UpdateStateV3
+
+const EMPTY_STATE: UpdateState = { version: 2 }
 
 /**
  * Register effect-scoped update polling and its dynamic tray command.
@@ -63,7 +78,8 @@ export function apply(ctx: Context, config: Config): void {
     let checking = false
     let availableVersion: string | undefined
     let downloadingVersion: string | undefined
-    let state: UpdateStateV2 = EMPTY_STATE
+    let state: UpdateState = EMPTY_STATE
+    let rollbackVersion: string | undefined
     let pollTimer: ReturnType<typeof setTimeout> | undefined
     let requestTimer: ReturnType<typeof setTimeout> | undefined
     let requestController: AbortController | undefined
@@ -71,6 +87,7 @@ export function apply(ctx: Context, config: Config): void {
     let inFlight: Promise<UpdateCheckResult | null> | undefined
     let manualTask: Promise<void> | undefined
     let downloadTask: Promise<void> | undefined
+    let requiredStateWrite: Promise<void> | undefined
     let refreshTray = (): void => {}
 
     const persistState = async (): Promise<void> => {
@@ -84,20 +101,66 @@ export function apply(ctx: Context, config: Config): void {
       }
     }
 
+    const persistRequiredState = async (): Promise<void> => {
+      const task = writeFileAtomic(adapter.statePath, renderState(state), {
+        mode: 0o600,
+        dirMode: 0o700,
+      })
+      requiredStateWrite = task
+      try {
+        await task
+      } finally {
+        if (requiredStateWrite === task) requiredStateWrite = undefined
+      }
+    }
+
     const stateReady = (async () => {
       try {
         state = parseState(await readState(adapter.statePath))
+        if (state.version === 3) {
+          if (state.rollback.toVersion === adapter.currentVersion) {
+            if (state.rollback.status === 'pending') {
+              const pending = state
+              state = {
+                ...state,
+                rollback: { ...state.rollback, status: 'available' },
+              }
+              try {
+                await persistRequiredState()
+              } catch {
+                state = pending
+                return
+              }
+            }
+            rollbackVersion = state.rollback.fromVersion
+          } else if (state.rollback.status === 'available'
+            && state.rollback.fromVersion === adapter.currentVersion) {
+            state = state.lastPromptedVersion === undefined
+              ? EMPTY_STATE
+              : { version: 2, lastPromptedVersion: state.lastPromptedVersion }
+            await persistState()
+          } else if (state.rollback.fromVersion !== adapter.currentVersion) {
+            state = state.lastPromptedVersion === undefined
+              ? EMPTY_STATE
+              : { version: 2, lastPromptedVersion: state.lastPromptedVersion }
+            await persistState()
+          }
+        }
       } catch (cause) {
         if (isEnoent(cause)) return
         state = EMPTY_STATE
         if (!disposed) await persistState()
       }
-    })()
+    })().finally(() => {
+      if (!disposed) refreshTray()
+    })
 
     const rememberPrompt = async (version: string): Promise<void> => {
       await stateReady
       if (state.lastPromptedVersion === version) return
-      state = { version: 2, lastPromptedVersion: version }
+      state = state.version === 3
+        ? { ...state, lastPromptedVersion: version }
+        : { version: 2, lastPromptedVersion: version }
       await persistState()
     }
 
@@ -155,6 +218,22 @@ export function apply(ctx: Context, config: Config): void {
         const confirmedVersion = observeResult(await startCheck())
         if (confirmedVersion !== version || disposed) return
 
+        await stateReady
+        if (disposed) return
+        state = {
+          version: 3,
+          ...(state.lastPromptedVersion === undefined
+            ? {}
+            : { lastPromptedVersion: state.lastPromptedVersion }),
+          rollback: {
+            fromVersion: adapter.currentVersion,
+            toVersion: version,
+            status: 'pending',
+          },
+        }
+        await persistRequiredState()
+        if (disposed) return
+
         const controller = new AbortController()
         downloadController = controller
         downloadingVersion = version
@@ -201,8 +280,65 @@ export function apply(ctx: Context, config: Config): void {
       return manualTask
     }
 
+    const runRollback = (): Promise<void> => {
+      const version = rollbackVersion
+      if (version === undefined) return Promise.resolve()
+      if (downloadTask !== undefined) return downloadTask
+      const task = (async () => {
+        let confirmed: boolean
+        try {
+          confirmed = await adapter.confirmRollback(version)
+        } catch {
+          return
+        }
+        if (disposed || rollbackVersion !== version) return
+        if (!confirmed) {
+          const previousState = state
+          state = state.lastPromptedVersion === undefined
+            ? EMPTY_STATE
+            : { version: 2, lastPromptedVersion: state.lastPromptedVersion }
+          try {
+            await persistRequiredState()
+          } catch {
+            state = previousState
+            return
+          }
+          rollbackVersion = undefined
+          refreshTray()
+          return
+        }
+        const controller = new AbortController()
+        downloadController = controller
+        downloadingVersion = version
+        refreshTray()
+        try {
+          await adapter.downloadAndOpen(version, controller.signal)
+        } catch {
+          // Rollback download and installer-opening failures remain retryable from the tray.
+        } finally {
+          if (downloadController === controller) downloadController = undefined
+          downloadingVersion = undefined
+          refreshTray()
+        }
+      })().finally(() => {
+        if (downloadTask === task) downloadTask = undefined
+      })
+      downloadTask = task
+      return task
+    }
+
+    const runTrayCommand = async (): Promise<void> => {
+      await stateReady
+      if (disposed) return
+      await (rollbackVersion === undefined ? runManualCheck() : runRollback())
+    }
+
     const runBackgroundCheck = async (): Promise<void> => {
-      if (inFlight !== undefined || disposed) return
+      await stateReady
+      if (inFlight !== undefined
+        || downloadTask !== undefined
+        || rollbackVersion !== undefined
+        || disposed) return
       try {
         const version = observeResult(await startCheck())
         if (version !== undefined) await offerDownload(version, true)
@@ -224,11 +360,13 @@ export function apply(ctx: Context, config: Config): void {
       group: 'status',
       order: 10,
       label: () => downloadingVersion === undefined
-        ? availableVersion === undefined
-          ? checking ? 'Checking for Updates…' : 'Check for Updates…'
-          : `Wan Code ${availableVersion} Available`
+        ? rollbackVersion === undefined
+          ? availableVersion === undefined
+            ? checking ? 'Checking for Updates…' : 'Check for Updates…'
+            : `Wan Code ${availableVersion} Available`
+          : `Rollback to Wan Code ${rollbackVersion}…`
         : `Downloading Wan Code ${downloadingVersion}…`,
-      invoke: runManualCheck,
+      invoke: runTrayCommand,
     })
     refreshTray = registration.refresh
 
@@ -244,22 +382,47 @@ export function apply(ctx: Context, config: Config): void {
       // Native dialogs are not cancellable. Await only file state and the abortable version request.
       const pending: Promise<unknown>[] = [stateReady]
       if (inFlight !== undefined) pending.push(inFlight)
+      if (requiredStateWrite !== undefined) pending.push(requiredStateWrite)
       await Promise.allSettled(pending)
     }
   }, 'dsh-plugin-desktop: update polling, confirmation, and installer handoff')
 }
 
-function parseState(text: string): UpdateStateV2 {
+function parseState(text: string): UpdateState {
   const value: unknown = JSON.parse(text)
-  if (!isRecord(value)
-    || value.version !== 2
-    || (value.lastPromptedVersion !== undefined && !isReleaseVersion(value.lastPromptedVersion))
-    || Object.keys(value).some(key => !['version', 'lastPromptedVersion'].includes(key))) {
-    throw new Error('invalid v2 update state')
+  if (!isRecord(value)) throw new Error('invalid update state')
+  if (value.version === 2) {
+    if ((value.lastPromptedVersion !== undefined && !isReleaseVersion(value.lastPromptedVersion))
+      || Object.keys(value).some(key => !['version', 'lastPromptedVersion'].includes(key))) {
+      throw new Error('invalid v2 update state')
+    }
+    return value.lastPromptedVersion === undefined
+      ? EMPTY_STATE
+      : { version: 2, lastPromptedVersion: value.lastPromptedVersion as string }
   }
-  return value.lastPromptedVersion === undefined
-    ? EMPTY_STATE
-    : { version: 2, lastPromptedVersion: value.lastPromptedVersion as string }
+  if (value.version !== 3
+    || (value.lastPromptedVersion !== undefined && !isReleaseVersion(value.lastPromptedVersion))
+    || !isRecord(value.rollback)
+    || !isReleaseVersion(value.rollback.fromVersion)
+    || !isReleaseVersion(value.rollback.toVersion)
+    || typeof value.rollback.status !== 'string'
+    || !['pending', 'available'].includes(value.rollback.status)
+    || (compareSemVerVersions(value.rollback.fromVersion, value.rollback.toVersion) ?? 0) >= 0
+    || Object.keys(value).some(key => !['version', 'lastPromptedVersion', 'rollback'].includes(key))
+    || Object.keys(value.rollback).some(key => !['fromVersion', 'toVersion', 'status'].includes(key))) {
+    throw new Error('invalid v3 update state')
+  }
+  return {
+    version: 3,
+    ...(value.lastPromptedVersion === undefined
+      ? {}
+      : { lastPromptedVersion: value.lastPromptedVersion as string }),
+    rollback: {
+      fromVersion: value.rollback.fromVersion,
+      toVersion: value.rollback.toVersion,
+      status: value.rollback.status as UpdateRollbackState['status'],
+    },
+  }
 }
 
 async function readState(filename: string): Promise<string> {
@@ -274,7 +437,7 @@ async function readState(filename: string): Promise<string> {
   }
 }
 
-function renderState(state: UpdateStateV2): string {
+function renderState(state: UpdateState): string {
   return `${JSON.stringify(state, null, 2)}\n`
 }
 

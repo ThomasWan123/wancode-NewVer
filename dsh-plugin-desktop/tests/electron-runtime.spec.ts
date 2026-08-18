@@ -654,6 +654,13 @@ describe('Electron compatibility runtime', () => {
 
     electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 0, checkboxChecked: false })
     await expect(runtime.updates.confirmDownload('2.1.0')).resolves.toBe(true)
+    electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 0, checkboxChecked: false })
+    await expect(runtime.updates.confirmRollback('2.0.0')).resolves.toBe(true)
+    expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
+      title: 'Roll Back Wan Code',
+      message: 'Reinstall Wan Code 2.0.0?',
+      buttons: ['Roll Back', 'Keep Current Version'],
+    }))
     const controller = new AbortController()
     await runtime.updates.downloadAndOpen('2.1.0', controller.signal)
     expect(updater.download).toHaveBeenCalledWith({

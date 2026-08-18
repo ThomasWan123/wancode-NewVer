@@ -147,9 +147,9 @@ npx dsh-plugin-desktop
 
 ## 桌面操作
 
-打包后的 macOS 与 Windows 应用会从 GitHub 的 `ThomasWan123/wancode-NewVer` 查询最新正式版本。只有规范的 `v<semver>` stable tag 会被接受；后台网络、HTTP、超时、无效响应、相同版本和旧版本结果保持静默。开发运行、未打包启动与 Linux 不会下载安装包。
+打包后的 macOS 与 Windows 应用会从 GitHub 的 `ThomasWan123/wancode-NewVer` 查询所选 stable 或 beta 更新流。只有与 GitHub Release 元数据一致的规范 `v<semver>` tag 会被接受；后台网络、HTTP、超时、无效响应、相同版本和旧版本结果保持静默。开发运行、未打包启动与 Linux 不会下载安装包。
 
-选择 **Download** 后，Wancode 会请求该 GitHub Release 中名称固定的安装包，并把不超过 1 GiB 的文件流式写入私有版本目录。Windows 安装器必须通过 PE 和 Authenticode 信任校验后才允许打开；**Restart and Install** 会在退出前请求 Cordis 有序 teardown。
+选择 **Download** 后，Wancode 会先持久化回滚转换，再请求该 GitHub Release 中名称固定的安装包，并把不超过 1 GiB 的文件流式写入私有版本目录。Windows 安装器必须通过 PE 和 Authenticode 信任校验后才允许打开。目标版本启动后，托盘会提供需确认的版本回退；旧安装包会重新下载并再次校验，回退完成后转换记录会被清除。**Restart and Install** 会在退出前请求 Cordis 有序 teardown。
 
 Release operator 必须先上传名称完全匹配的 Wancode 产物，再发布 GitHub Release。缺少对应产物的 Release 会在下载阶段安全失败。
 
@@ -201,7 +201,7 @@ corepack.cmd yarn dist:win
 - macOS 与 Windows 托盘终端会提供私有 `dsh`、`pnpm` 与 `node` shim。除此之外，Host runtime 会在当前 Electron 进程的 `PATH` 中公开内置 `pnpm` 命令作为 ambient compatibility，并提供受管 `desktopPnpm` service；这些命令都不会加入系统 `PATH`，Linux 目前也没有 desktop 终端命令。
 - 在 Windows 上，ambient `pnpm` 命令与 lifecycle Node helper 是 `.cmd` shim。`desktopPnpm.run()` 与 `runPlugin()` 会启动准确的已打包 entry，从而避免 manager process 的 shell lookup；上游 `dsh plugin`、PowerShell 与命令提示符则可通过 command interpreter 解析 ambient shim。第三方插件直接调用 Node `spawn('pnpm', { shell: false })`，或 lifecycle script 直接以 `shell: false` 执行其 `.cmd` `npm_node_execpath`，仍属于不可移植行为，应改用受管 service 或 shell-aware 启动路径。
 - `dshmarket@1.2.3` 仍是用户可选安装的第三方 package，而不是内置 marketplace。只有重新审计的版本同时消费可选 Desktop service、保留普通 DSH fallback，并包含再分发所需的完整 license notice 后，才会重新评估预装。
-- Windows 更新交接会验证 PE 与 Authenticode 信任；发布门禁负责校验预期 publisher 与证书一致性。运行时 publisher 固定、SmartScreen 信誉与原生升级测试仍在推进。
+- Windows 更新交接会验证 PE 与 Authenticode 信任；发布门禁负责校验预期 publisher 与证书一致性。运行时 publisher 固定与 SmartScreen 信誉仍在推进。
 - 共享 carrier 使用 loopback HTTP 与 WebSocket，而不是 Electron IPC。替换它需要上游 DSH 提供 transport 扩展点，不属于该独立包的范围。
 - 该项目目前固定使用已发布的 DSH `0.1.0-rc.6` family，而相邻的 `deepseek-harness/` 源码 checkout 早于该版本。因此，测试验证的是已发布包接口，而非上游未发布源码。
 - `package:dir` 是用于 smoke 的未封装产物。`dist:win` 会额外生成未签名的 NSIS 测试安装包，但不会建立 Authenticode 身份或 SmartScreen 信誉。安装与升级行为、原生通知与终端、Windows ACL sandbox，以及每台目标机器上的原生材质外观仍属于目标平台验证边界。

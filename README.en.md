@@ -33,6 +33,8 @@ provides:
   Windows installers must pass PE and Authenticode trust validation.
 - **Stable and beta channels** selectable through desktop settings, with an
   orderly restart and persisted prompted-version history.
+- **Version rollback** armed before installer handoff and exposed after the new
+  version starts; the older installer is downloaded again and revalidated.
 - **Signed release gates** that require an explicit certificate and expected
   publisher, then verify that the application and NSIS installer use the same
   signing certificate.

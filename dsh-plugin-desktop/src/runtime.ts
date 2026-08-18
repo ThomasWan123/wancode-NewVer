@@ -96,6 +96,8 @@ export interface DesktopUpdateAdapter {
   readonly request: UpdateRequest
   /** Ask whether one strictly newer version may be downloaded. */
   confirmDownload(version: string): Promise<boolean>
+  /** Ask whether the previously installed version may be downloaded and reinstalled. */
+  confirmRollback(version: string): Promise<boolean>
   /** Present the outcome of a user-triggered version check. */
   showManualCheckResult(result: UpdateCheckResult | null): Promise<void>
   /** Download and hand one confirmed update to the platform installer. */

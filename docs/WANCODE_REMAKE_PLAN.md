@@ -180,4 +180,7 @@ requires an older trusted installer and an explicitly disposable Windows runner,
 then verifies install, upgrade, rollback, current-version restore, and uninstall
 while pinning every executable transition to the expected Authenticode publisher.
 Executing that gate still requires the project's signing certificate and a
-signed previous release; user-facing automatic rollback remains active M1 work.
+signed previous release. Update handoff now persists a fail-closed v3 transition
+record; after the target version starts, the tray can re-download and revalidate
+the previous installer, and successful rollback clears the record. Automatic
+rollback triggered by failed application health checks remains active M1 work.

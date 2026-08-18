@@ -73,6 +73,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     get statePath() { return join(app.getPath('userData'), 'updates', 'state.json') },
     request: (url, init) => net.fetch(url, init),
     confirmDownload: version => this.confirmUpdateDownload(version),
+    confirmRollback: version => this.confirmUpdateRollback(version),
     showManualCheckResult: result => this.showManualUpdateCheckResult(result),
     downloadAndOpen: (version, signal) => this.downloadAndOpenUpdate(version, signal),
     notify: notification => { this.showNotification(notification) },
@@ -311,6 +312,21 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       message: `Wan Code ${version} is available.`,
       detail: 'Download this update now?',
       buttons: ['Download', 'Later'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    })
+    return result.response === 0
+  }
+
+  /** Ask before downloading and launching an older trusted release. */
+  private async confirmUpdateRollback(version: string): Promise<boolean> {
+    const result = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Roll Back Wan Code',
+      message: `Reinstall Wan Code ${version}?`,
+      detail: 'Rollback replaces the application version but keeps Wan Code user data. Continue only if the current version is not working correctly.',
+      buttons: ['Roll Back', 'Keep Current Version'],
       defaultId: 1,
       cancelId: 1,
       noLink: true,
