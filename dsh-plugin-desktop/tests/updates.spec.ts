@@ -20,6 +20,8 @@ const testConfig: UpdateConfig = {
   healthTimeoutMs: 30_000,
 }
 
+const persistWait = { timeout: 5_000 }
+
 function versionResponse(version: unknown): Response {
   return Response.json({ tag_name: typeof version === 'string' ? `v${version}` : version })
 }
@@ -128,7 +130,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('desktop update Host plugin', () => {
+describe('desktop update Host plugin', { timeout: 15_000 }, () => {
   it('automatically rolls back once when the updated renderer reports failed health', async () => {
     const harness = await createHarness({
       currentVersion: '2.1.0',
@@ -152,7 +154,7 @@ describe('desktop update Host plugin', () => {
           status: 'verifying',
         },
       })
-    })
+    }, persistWait)
     harness.reportHealth('failed')
 
     await vi.waitFor(() => {
@@ -189,7 +191,7 @@ describe('desktop update Host plugin', () => {
 
     await vi.waitFor(async () => {
       expect(JSON.parse(await readFile(harness.statePath, 'utf8')).rollback.status).toBe('verifying')
-    })
+    }, persistWait)
     harness.reportHealth('healthy')
 
     await vi.waitFor(async () => {
@@ -201,16 +203,15 @@ describe('desktop update Host plugin', () => {
           status: 'available',
         },
       })
-    })
+    }, persistWait)
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
   })
 
   it('automatically rolls back when the updated renderer misses its health deadline', async () => {
-    vi.useFakeTimers()
     const harness = await createHarness({
       currentVersion: '2.1.0',
-      config: { ...testConfig, enabled: false, healthTimeoutMs: 25 },
+      config: { ...testConfig, enabled: false, healthTimeoutMs: 3_000 },
       state: JSON.stringify({
         version: 4,
         rollback: {
@@ -223,8 +224,7 @@ describe('desktop update Host plugin', () => {
 
     await vi.waitFor(async () => {
       expect(JSON.parse(await readFile(harness.statePath, 'utf8')).rollback.status).toBe('verifying')
-    })
-    await vi.advanceTimersByTimeAsync(25)
+    }, persistWait)
 
     await vi.waitFor(() => {
       expect(harness.downloadAndOpen).toHaveBeenCalledWith(
@@ -232,9 +232,9 @@ describe('desktop update Host plugin', () => {
         expect.any(AbortSignal),
         'automatic-recovery',
       )
-    })
+    }, persistWait)
     expect(harness.confirmRollback).not.toHaveBeenCalled()
-  })
+  }, 10_000)
 
   it('does not abort automatic recovery when the Host disposes during download', async () => {
     let observedSignal: AbortSignal | undefined

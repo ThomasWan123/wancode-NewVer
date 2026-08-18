@@ -108,22 +108,35 @@ export function apply(ctx: Context, config: Config): void {
     let automaticRecoveryInFlight = false
     let refreshTray = (): void => {}
 
+    const persistStateFile = async (): Promise<void> => {
+      let attempt = 0
+      for (;;) {
+        try {
+          await writeFileAtomic(adapter.statePath, renderState(state), {
+            mode: 0o600,
+            dirMode: 0o700,
+          })
+          return
+        } catch (error) {
+          attempt += 1
+          if (!isTransientStateWriteError(error) || attempt >= 8) throw error
+          await new Promise<void>(resolve => {
+            setTimeout(resolve, 15 * attempt)
+          })
+        }
+      }
+    }
+
     const persistState = async (): Promise<void> => {
       try {
-        await writeFileAtomic(adapter.statePath, renderState(state), {
-          mode: 0o600,
-          dirMode: 0o700,
-        })
+        await persistStateFile()
       } catch {
         // Update state is optional; failures must not affect application startup or user activity.
       }
     }
 
     const persistRequiredState = async (): Promise<void> => {
-      const task = writeFileAtomic(adapter.statePath, renderState(state), {
-        mode: 0o600,
-        dirMode: 0o700,
-      })
+      const task = persistStateFile()
       requiredStateWrite = task
       try {
         await task
@@ -598,4 +611,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isEnoent(value: unknown): boolean {
   return isRecord(value) && value.code === 'ENOENT'
+}
+
+function isTransientStateWriteError(value: unknown): boolean {
+  return isRecord(value)
+    && (value.code === 'EPERM' || value.code === 'EACCES' || value.code === 'EBUSY')
 }
