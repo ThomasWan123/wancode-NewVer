@@ -20,6 +20,25 @@ declare module '@wancode/relay-protocol' {
     readonly userId: string
     readonly deviceId: string
     readonly grantedCapabilities: readonly string[]
+    send(input: {
+      readonly envelope: unknown
+      readonly destinationDeviceId: string
+      readonly timeoutMs?: number
+    }): Promise<{
+      readonly envelopeId: string
+      readonly toDeviceId: string
+      readonly outcome: 'delivered' | 'queued' | 'duplicate'
+    }>
+    reclaim(input?: { readonly timeoutMs?: number }): Promise<readonly unknown[]>
+    receive(input?: { readonly timeoutMs?: number }): Promise<readonly unknown[]>
+    acknowledge(input: {
+      readonly envelopeId: string
+      readonly timeoutMs?: number
+    }): Promise<{
+      readonly envelopeId: string
+      readonly toDeviceId: string
+      readonly outcome: 'delivered' | 'queued' | 'duplicate'
+    }>
     close(): void
   }
 

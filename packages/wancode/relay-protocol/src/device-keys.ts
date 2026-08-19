@@ -1,4 +1,4 @@
-/** Ed25519 device keys used to sign outbound Wan Code relay handshakes. */
+/** Ed25519 signing keys and X25519 encryption keys for Wan Code devices. */
 
 import {
   createPrivateKey,
@@ -9,21 +9,26 @@ import {
 } from 'node:crypto'
 import { RelayAuthorizationError } from './errors.ts'
 
-/** Desktop-held device identity. The private key never leaves the device. */
+/** Desktop-held device identity. Private keys never leave the device. */
 export interface DeviceKeyPair {
   readonly publicKey: string
   readonly privateKey: string
+  readonly encryptionPublicKey: string
+  readonly encryptionPrivateKey: string
 }
 
 /**
- * Create one Ed25519 device identity.
+ * Create one Ed25519 signing identity plus an X25519 encryption identity.
  * @returns SPKI/PKCS8 keys encoded as standard base64.
  */
 export function generateDeviceKeyPair(): DeviceKeyPair {
-  const pair = generateKeyPairSync('ed25519')
+  const signing = generateKeyPairSync('ed25519')
+  const encryption = generateKeyPairSync('x25519')
   return {
-    publicKey: pair.publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
-    privateKey: pair.privateKey.export({ type: 'pkcs8', format: 'der' }).toString('base64'),
+    publicKey: signing.publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
+    privateKey: signing.privateKey.export({ type: 'pkcs8', format: 'der' }).toString('base64'),
+    encryptionPublicKey: encryption.publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
+    encryptionPrivateKey: encryption.privateKey.export({ type: 'pkcs8', format: 'der' }).toString('base64'),
   }
 }
 
@@ -55,18 +60,38 @@ export function verifyDevicePayload(publicKey: string, payload: Uint8Array, sign
  * @param publicKey - SPKI Ed25519 key as standard base64.
  */
 export function assertDevicePublicKey(publicKey: string): void {
+  assertKey(publicKey, 'ed25519', 'relay device public key')
+}
+
+/**
+ * Refuse an encryption public key that is not a valid X25519 SPKI blob.
+ * @param publicKey - SPKI X25519 key as standard base64.
+ */
+export function assertDeviceEncryptionPublicKey(publicKey: string): void {
+  assertKey(publicKey, 'x25519', 'relay device encryption public key')
+}
+
+function assertKey(publicKey: string, type: 'ed25519' | 'x25519', label: string): void {
   if (typeof publicKey !== 'string' || publicKey.length === 0 || /[\0\r\n]/u.test(publicKey)) {
-    throw new RelayAuthorizationError('untrusted-key', 'relay device public key is required')
+    throw new RelayAuthorizationError('untrusted-key', `${label} is required`)
   }
   try {
     const key = publicKeyFrom(publicKey)
-    if (key.asymmetricKeyType !== 'ed25519') {
-      throw new Error('not ed25519')
+    if (key.asymmetricKeyType !== type) {
+      throw new Error(`not ${type}`)
     }
   } catch (cause) {
     if (cause instanceof RelayAuthorizationError) throw cause
-    throw new RelayAuthorizationError('untrusted-key', 'relay device public key is not a valid Ed25519 SPKI key')
+    throw new RelayAuthorizationError('untrusted-key', `${label} is not a valid ${type.toUpperCase()} SPKI key`)
   }
+}
+
+export function encryptionPrivateKeyFrom(privateKey: string): ReturnType<typeof createPrivateKey> {
+  return privateKeyFrom(privateKey)
+}
+
+export function encryptionPublicKeyFrom(publicKey: string): ReturnType<typeof createPublicKey> {
+  return publicKeyFrom(publicKey)
 }
 
 function privateKeyFrom(privateKey: string): ReturnType<typeof createPrivateKey> {

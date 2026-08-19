@@ -6,8 +6,10 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import { applyAdvancedShell } from './advanced-shell.ts'
+import { installBrandCopy } from './brand-copy.ts'
 import { startRendererBootReporter } from './boot-health.ts'
 import { parseDesktopClientEnvironment } from './environment.ts'
+import { installBrandStyles } from './styles.ts'
 
 export { applyAdvancedShell } from './advanced-shell.ts'
 export {
@@ -20,10 +22,8 @@ export type { RendererBootLoader, RendererBootReport } from './boot-health.ts'
 export { parseDesktopClientEnvironment } from './environment.ts'
 export type { DesktopClientEnvironment, DesktopClientMode, DesktopClientPlatform } from './environment.ts'
 
-/** Services required by advanced presentation. */
+/** Services required by advanced presentation. Brand restyle does not wait on them. */
 export const inject = [
-  'slots',
-  'sessions',
   'theme',
 ]
 
@@ -33,6 +33,14 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(
     () => startRendererBootReporter(ctx.loader),
     'dsh-plugin-desktop: renderer boot health report',
+  )
+  ctx.effect(
+    () => installBrandStyles(),
+    'dsh-plugin-desktop: product brand',
+  )
+  ctx.effect(
+    () => installBrandCopy(),
+    'dsh-plugin-desktop: product brand copy',
   )
   if (environment.mode === 'advanced') applyAdvancedShell(ctx, environment)
 }

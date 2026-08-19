@@ -10,13 +10,16 @@ Status: active
 - M1 desktop core is accepted on `master`. Signed production NSIS release remains
   deferred until a code-signing certificate and trusted previous installer exist.
 - M2 in progress: `@wancode/relay-protocol` encodes the fail-closed remote
-  protocol, Ed25519 device keys, desktop-only outbound handshake, the
-  outbound WebSocket dialer, short-lived device-bound access tokens, a
-  replaceable OIDC identity seam, immediate device registration/revocation,
-  same-account routing, per-device rate limits, a plaintext-free audit log,
+  protocol, Ed25519 device keys, X25519 device-to-device sealed payloads,
+  desktop-only outbound handshake, the outbound WebSocket dialer, short-lived
+  device-bound access tokens, a replaceable OIDC identity seam, immediate
+  device registration/revocation, same-account routing, per-device rate limits,
+  a plaintext-free audit log, sealed-box routing and offline mailbox delivery,
+  same-socket reconnect drain and ack, live sealed-box fan-out to an online
+  destination socket, a JWKS-backed OIDC verifier that never fetches a URL,
   and an opt-in desktop Host plugin that never listens and does not dial until
   connect is invoked.
-- The Windows package gate currently passes with 236 focused tests plus the
+- The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
 
@@ -172,26 +175,40 @@ device. Identical retries of the same message id stay idempotent; a mutated
 payload is replay and fails closed. Unknown protocol versions and plaintext
 prompt, credential, or tool-output fields are rejected before routing.
 
-A desktop device holds an Ed25519 keypair and opens a session with a signed
-outbound handshake. The relay verifies that signature against the registered
-public key, grants only the closed capability list, and refuses inbound claims,
-untrusted keys, unknown capabilities, and reused nonces. Handshake and ack
-ciphertext never include the private key or application plaintext. Desktop
+A desktop device holds an Ed25519 signing keypair and an X25519 encryption
+keypair, and opens a session with a signed outbound handshake. The relay
+verifies that signature against the registered public key, grants only the
+closed capability list, and refuses inbound claims, untrusted keys, unknown
+capabilities, and reused nonces. Handshake and ack ciphertext never include
+the private key or application plaintext. Application prompt, approval,
+cancel, session-event, and presence frames are sealed to the recipient
+encryption public key so the relay never opens the box. Desktop
 initiates the cloud connection over outbound WSS. The same package sends the
 signed handshake as the first JSON frame after presenting a short-lived token,
-waits for `handshake-ack`, and refuses non-loopback cleartext WebSocket. It
-does not listen on a public interface and does not declare a Harness plugin
+waits for `handshake-ack`, and refuses non-loopback cleartext WebSocket. After
+that handshake, the same outbound socket may send sealed application frames.
+The 127.0.0.1 loopback acceptor delivers or queues those boxes without opening
+them. An online destination receives a sealed push on its own outbound socket.
+The destination socket then reclaims any leftover mailbox and acknowledges each
+frame; device id comes from the presented token. Closing the socket marks the
+handshake device offline. The package does not listen on a public interface and
+does not declare a Harness plugin
 entry. A 127.0.0.1 loopback acceptor exists only as a test double under the
 `./loopback` export. A replaceable OIDC identity provider verifies issuer,
-audience, subject, and expiry before a device may register. Revoking that
-device fails closed immediately and the device id cannot be reused. Authorized
-envelopes route only to another device on the same account. Cross-account
+audience, subject, and expiry before a device may register. Production
+verifies compact ES256 or RS256 JWTs against a caller-supplied JWKS and
+never opens a JWKS socket itself. Revoking that
+device fails closed immediately and the device id cannot be reused. Sealed
+application envelopes route only to another device on the same account. Opaque
+prompt ciphertext and handshake frames are not routed. Cross-account
 destinations, unknown devices, and per-device rate-limit excess fail closed.
 Identical retries stay idempotent and do not consume the limiter. The audit log
 records route outcomes without prompt, credential, tool-output, or ciphertext
-fields. Desktop loads an opt-in `desktop-relay` Host row that stays idle by
-default, never binds a port, and only dials a fail-closed outbound URL when
-`connect` is called.
+fields. Offline destinations queue the same sealed box until the device
+reconnects and acknowledges each frame; identical reconnect drains stay
+idempotent. Desktop
+loads an opt-in `desktop-relay` Host row that stays idle by default, never binds
+a port, and only dials a fail-closed outbound URL when `connect` is called.
 
 M1 now includes Wancode application and installer identity,
 an isolated Harness home, telemetry-private defaults, GitHub release discovery,

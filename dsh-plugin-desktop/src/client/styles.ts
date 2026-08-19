@@ -7,6 +7,46 @@ import {
 } from '../window-chrome.ts'
 import { SIDEBAR_COLLAPSED } from './layout-state.ts'
 
+/** Boxed-W mark used as a CSS mask so ink follows the surrounding label color. */
+const WANCODE_W_MASK = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E\") center / contain no-repeat"
+
+/**
+ * Product-brand restyle for both presentation modes. Targets the upstream
+ * whale wordmark and fish mark by viewBox so compatibility keeps official
+ * layout, sidebar, and conversation rows.
+ */
+export const WANCODE_BRAND_STYLES = `
+button:has(svg[viewBox="0 0 182 24"]) {
+  display: inline-flex; align-items: center; gap: 8px; position: relative;
+  color: var(--dsw-alias-label-primary);
+}
+svg[viewBox="0 0 182 24"] {
+  position: absolute !important; width: 0 !important; height: 0 !important;
+  overflow: hidden !important; opacity: 0 !important;
+}
+button:has(svg[viewBox="0 0 182 24"])::before {
+  content: ""; width: 24px; height: 24px; flex: 0 0 24px; background: currentColor;
+  -webkit-mask: ${WANCODE_W_MASK};
+  mask: ${WANCODE_W_MASK};
+}
+button:has(svg[viewBox="0 0 182 24"])::after {
+  content: "Wan Code"; font-size: 14px; font-weight: 650; letter-spacing: 0.01em; white-space: nowrap;
+}
+svg[viewBox="0 0 23.16 17.04"] {
+  background: currentColor;
+  -webkit-mask: ${WANCODE_W_MASK};
+  mask: ${WANCODE_W_MASK};
+}
+svg[viewBox="0 0 23.16 17.04"] path,
+svg[viewBox="0 0 23.16 17.04"] g { opacity: 0 !important; }
+span:has(svg[viewBox="0 0 23.16 17.04"]) + span {
+  font-size: 0 !important; letter-spacing: 0 !important;
+}
+span:has(svg[viewBox="0 0 23.16 17.04"]) + span::after {
+  content: "Wan Code"; font-size: 26px; line-height: 32px; font-weight: 500; letter-spacing: 0.01em;
+}
+`
+
 /** Advanced-shell stylesheet kept as a plain string so the package client bundle stays self-contained. */
 export const ADVANCED_SHELL_STYLES = `
 html, body, #root { width: 100%; height: 100%; }
@@ -41,33 +81,24 @@ html:has([aria-modal="true"]) .dshDesktopWindowsCaptionRow::before,
 html:has([aria-modal="true"]) .dshDesktopMacCaptionRow::before,
 html:has([aria-modal="true"]) .dshDesktopSidebarSurface,
 html:has([aria-modal="true"]) .dshDesktopSidebarSurface::before { -webkit-app-region: no-drag !important; }
-.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"]) {
-  display: inline-flex; align-items: center; gap: 8px; color: var(--dsw-alias-label-primary);
-}
-.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"]) svg { position: absolute; width: 0; height: 0; overflow: hidden; }
-.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"])::before {
-  content: ""; width: 24px; height: 24px; flex: 0 0 24px; background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-.dshDesktopUpstreamSidebar button:has(svg[viewBox="0 0 182 24"])::after {
-  content: "Wan Code"; font-size: 14px; font-weight: 650; letter-spacing: 0.01em; white-space: nowrap;
-}
-.dshDesktopUpstreamSidebar svg[viewBox="0 0 23.16 17.04"] {
-  width: 24px !important; height: 24px !important; background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M10 3h30a7 7 0 0 1 7 7v30a7 7 0 0 1-7 7H10a7 7 0 0 1-7-7V10a7 7 0 0 1 7-7zm4.5 11h6.4L25 25.6 29.1 14h6.4L30.2 36h-6.1L25 29.2 25.9 36h-6.1L14.5 14z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-.dshDesktopUpstreamSidebar svg[viewBox="0 0 23.16 17.04"] path { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .dshDesktopFrame { transition: none !important; } }
 `
 
-/** Install and remove the advanced shell's global native-window styles. @returns the style disposer. */
-export function installAdvancedStyles(): () => void {
+function installStylesheet(css: string, pluginCss: string): () => void {
   const style = document.createElement('style')
   style.dataset.plugin = 'dsh-plugin-desktop'
-  style.dataset.pluginCss = 'dsh-plugin-desktop/advanced-shell'
-  style.textContent = ADVANCED_SHELL_STYLES
+  style.dataset.pluginCss = pluginCss
+  style.textContent = css
   document.head.appendChild(style)
   return () => { style.remove() }
+}
+
+/** Install and remove the Wan Code product-brand restyle. @returns the style disposer. */
+export function installBrandStyles(): () => void {
+  return installStylesheet(WANCODE_BRAND_STYLES, 'dsh-plugin-desktop/brand')
+}
+
+/** Install and remove the advanced shell's global native-window styles. @returns the style disposer. */
+export function installAdvancedStyles(): () => void {
+  return installStylesheet(ADVANCED_SHELL_STYLES, 'dsh-plugin-desktop/advanced-shell')
 }

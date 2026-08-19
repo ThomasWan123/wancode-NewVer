@@ -5,7 +5,8 @@ import { parseDesktopClientEnvironment } from '../src/client/environment.ts'
 import {
   computeDesktopColumns, DesktopLayoutState, MACOS_SIDEBAR_COLLAPSED, SIDEBAR_COLLAPSED,
 } from '../src/client/layout-state.ts'
-import { installAdvancedStyles } from '../src/client/styles.ts'
+import { apply } from '../src/client/index.ts'
+import { installAdvancedStyles, installBrandStyles } from '../src/client/styles.ts'
 import {
   MACOS_DRAG_REGION_HEIGHT,
   MACOS_TITLEBAR_HEIGHT,
@@ -74,15 +75,100 @@ describe('advanced desktop layout', () => {
       expect(css).toMatch(/\.dshDesktopWindowsCaptionRow \{[^}]*grid-column: 2 \/ -1;[^}]*grid-row: 1;/)
       expect(css).toMatch(new RegExp(`\\.dshDesktopWindowsCaptionRow::before \\{[^}]*inset: 0 ${WINDOWS_CAPTION_CONTROLS_WIDTH}px 0 0;[^}]*-webkit-app-region: drag;`))
       expect(css).not.toMatch(/data-desktop-platform="win32"[^{}]*header[^{}]*\{[^}]*padding-right/)
-      expect(css).toContain('content: "Wan Code"')
-      expect(css).toContain('svg[viewBox="0 0 182 24"]')
-      expect(css).toContain('svg[viewBox="0 0 23.16 17.04"]')
+      expect(css).not.toContain('content: "Wan Code"')
       expect(css).not.toContain('dsh-wordmark-whale')
       expect(appendChild).toHaveBeenCalledWith(style)
       dispose()
       expect(remove).toHaveBeenCalledOnce()
     }
     finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('restyles upstream brand marks to Wan Code without the advanced frame', () => {
+    let css = ''
+    const remove = vi.fn()
+    const style = {
+      dataset: {} as Record<string, string>,
+      get textContent() { return css },
+      set textContent(value: string) { css = value },
+      remove,
+    }
+    const appendChild = vi.fn()
+    vi.stubGlobal('document', {
+      createElement: () => style,
+      head: { appendChild },
+    })
+
+    try {
+      const dispose = installBrandStyles()
+      expect(style.dataset.pluginCss).toBe('dsh-plugin-desktop/brand')
+      expect(css).toContain('content: "Wan Code"')
+      expect(css).toContain('svg[viewBox="0 0 182 24"]')
+      expect(css).toContain('svg[viewBox="0 0 23.16 17.04"]')
+      expect(css).toContain('button:has(svg[viewBox="0 0 182 24"])::after')
+      expect(css).toContain('span:has(svg[viewBox="0 0 23.16 17.04"]) + span::after')
+      expect(css).not.toContain('.dshDesktopUpstreamSidebar')
+      expect(css).not.toContain('.dshDesktopFrame')
+      expect(css).not.toContain('dsh-wordmark-whale')
+      expect(appendChild).toHaveBeenCalledWith(style)
+      dispose()
+      expect(remove).toHaveBeenCalledOnce()
+    }
+    finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('installs Wan Code brand styles in compatibility without advanced presentation', () => {
+    vi.useFakeTimers()
+    let css = ''
+    const remove = vi.fn()
+    const style = {
+      dataset: {} as Record<string, string>,
+      get textContent() { return css },
+      set textContent(value: string) { css = value },
+      setAttribute: vi.fn(),
+      remove,
+    }
+    const link = {
+      dataset: {} as Record<string, string>,
+      setAttribute: vi.fn(),
+      remove: vi.fn(),
+    }
+    const appendChild = vi.fn()
+    const disposers: Array<() => void> = []
+    vi.stubGlobal('window', {
+      location: { search: '?dsh-desktop-mode=compatibility&dsh-desktop-platform=win32' },
+    })
+    vi.stubGlobal('document', {
+      title: 'DeepSeek Harness',
+      createElement: (tag: string) => tag === 'link' ? link : style,
+      head: { appendChild, querySelector: () => null },
+      body: { childNodes: [] },
+      documentElement: { childNodes: [] },
+    })
+    vi.stubGlobal('MutationObserver', class {
+      observe = vi.fn()
+      disconnect = vi.fn()
+    })
+    const ctx = {
+      loader: { await: async () => {}, * entries() {} },
+      effect: (factory: () => () => void) => { disposers.push(factory()) },
+    } as unknown as ClientContext
+
+    try {
+      apply(ctx)
+      expect(css).toContain('content: "Wan Code"')
+      expect(css).toContain('svg[viewBox="0 0 182 24"]')
+      expect(css).not.toContain('.dshDesktopFrame')
+      expect(style.dataset.pluginCss).toBe('dsh-plugin-desktop/brand')
+      expect((document as unknown as { title: string }).title).toBe('Wan Code')
+    }
+    finally {
+      for (const dispose of disposers) dispose()
+      vi.useRealTimers()
       vi.unstubAllGlobals()
     }
   })

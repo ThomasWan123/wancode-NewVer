@@ -6,7 +6,9 @@ import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import {
   WindowsCredentialVault,
   credentialTarget,
+  createWindowsCredentialStore,
   migrateLegacyCredentials,
+  writeWindowsCredential,
   type CredentialStore,
 } from '../src/credentials-win.ts'
 
@@ -99,5 +101,34 @@ describe('Windows credential vault', () => {
     expect([...store.values.values()].sort()).toEqual(['secret-one', 'secret-two'])
     await expect(readFile(filename, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
     await expect(migrateLegacyCredentials(root, store)).resolves.toBe(0)
+  })
+})
+
+describe('Windows credential persist fallback', () => {
+  it('tries local-machine, enterprise, then session until a write succeeds', () => {
+    const attempted: number[] = []
+    expect(writeWindowsCredential((persist) => {
+      attempted.push(persist)
+      return persist === 1
+    })).toBe(true)
+    expect(attempted).toEqual([2, 3, 1])
+  })
+
+  it('reports failure when every persist level is rejected', () => {
+    expect(writeWindowsCredential(() => false)).toBe(false)
+  })
+})
+
+describe('Windows Credential Manager round-trip', () => {
+  it.runIf(process.platform === 'win32')('stores and reads a throwaway generic credential', () => {
+    const store = createWindowsCredentialStore()
+    const target = `Wan Code/test-${String(process.pid)}-${String(Date.now())}/ROUND_TRIP`
+    try {
+      store.set(target, 'round-trip-value')
+      expect(store.get(target)).toBe('round-trip-value')
+    } finally {
+      store.delete(target)
+    }
+    expect(store.get(target)).toBeUndefined()
   })
 })

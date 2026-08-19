@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows desktop core (M1) | **Available**: identity, isolated data, credentials, updates, rollback, crash recovery |
 | Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package |
 | Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
-| Cloud relay protocol (M2) | **In progress**: fail-closed contract, OIDC seam, outbound WSS, routing, rate limits, audit, and an opt-in desktop dialer |
+| Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, device-sealed payloads, and an opt-in desktop dialer |
 | Mobile PWA, marketplace, channels | Roadmap; not published as available features |
 
 The desktop `master` branch currently includes:
@@ -60,7 +60,7 @@ The desktop `master` branch currently includes:
 - Stable / beta channels, confirmation-gated rollback, and one automatic Windows recovery after a failed health report
 - Renderer crash recovery, **Open Diagnostics Folder**, and `logs/wancode.log`
 
-The Windows-focused gate covers 236 desktop tests plus the runtime-closure verifier. Roadmap work is labeled as planned, not as shipping functionality.
+The Windows-focused gate covers 252 desktop tests plus the runtime-closure verifier. Roadmap work is labeled as planned, not as shipping functionality.
 
 ## Repository layout
 

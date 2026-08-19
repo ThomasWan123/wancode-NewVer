@@ -23,6 +23,7 @@ export {
   type RelayStore,
 } from './envelope.ts'
 export {
+  assertDeviceEncryptionPublicKey,
   assertDevicePublicKey,
   generateDeviceKeyPair,
   signDevicePayload,
@@ -36,6 +37,12 @@ export {
   type RelayIdentityClaims,
   type RelayIdentityProvider,
 } from './identity.ts'
+export {
+  assertOidcJwksUrl,
+  createJwksOidcIdentityProvider,
+  type JwksOidcIdentityProviderConfig,
+  type RelayJsonWebKeySet,
+} from './oidc-jwks.ts'
 export {
   registerRelayDevice,
   revokeRelayDevice,
@@ -56,7 +63,11 @@ export {
   type SignedHandshakeEnvelopeInput,
 } from './handshake.ts'
 export {
+  parseRelayWireCommand,
+  parseRelayWireDelivery,
   parseRelayWireHandshake,
+  type RelayWireCommand,
+  type RelayWireDelivery,
   type RelayWireHandshake,
 } from './wire.ts'
 export {
@@ -64,8 +75,10 @@ export {
 } from './url.ts'
 export {
   connectOutboundRelay,
+  type AcknowledgeOutboundRelayFrameInput,
   type ConnectOutboundRelayInput,
   type OutboundRelayConnection,
+  type SendOutboundRelayFrameInput,
 } from './outbound.ts'
 export {
   RELAY_ACCESS_TOKEN_TTL_MS,
@@ -96,3 +109,26 @@ export {
   type RelayAuditLog,
   type RelayAuditOutcome,
 } from './audit.ts'
+export {
+  acknowledgeRelayMailbox,
+  createMemoryRelayMailbox,
+  createMemoryRelayPresence,
+  deliverRelayEnvelope,
+  reclaimRelayMailbox,
+  type AcknowledgeRelayMailboxInput,
+  type DeliverRelayEnvelopeInput,
+  type ReclaimRelayMailboxInput,
+  type RelayDelivery,
+  type RelayDeliveryOutcome,
+  type RelayLiveSink,
+  type RelayMailbox,
+  type RelayPresence,
+} from './delivery.ts'
+export {
+  assertSealedApplicationEnvelope,
+  createSealedRelayEnvelope,
+  openSealedRelayPayload,
+  type RelayApplicationKind,
+  type RelayApplicationPayload,
+  type SealedRelayEnvelopeInput,
+} from './payload.ts'

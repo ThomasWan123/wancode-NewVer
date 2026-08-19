@@ -154,4 +154,49 @@ describe('replaceable OIDC identity and device registration', () => {
       store,
     }), 'cross-account')
   })
+
+  it('stores an optional X25519 encryption public key and refuses a later mismatch', () => {
+    const identity = createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE })
+    const store = createMemoryRelayStore()
+    const keys = generateDeviceKeyPair()
+    const other = generateDeviceKeyPair()
+    const claims = identity.verify(assertion(), NOW)
+    expect(registerRelayDevice({
+      identity: claims,
+      deviceId: 'device-a',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+      now: NOW,
+      store,
+    })).toEqual({
+      deviceId: 'device-a',
+      userId: 'user-a',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+    })
+    expect(registerRelayDevice({
+      identity: claims,
+      deviceId: 'device-a',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+      now: NOW,
+      store,
+    }).encryptionPublicKey).toBe(keys.encryptionPublicKey)
+    expectRelayError(() => registerRelayDevice({
+      identity: claims,
+      deviceId: 'device-a',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: other.encryptionPublicKey,
+      now: NOW,
+      store,
+    }), 'untrusted-key')
+    expectRelayError(() => registerRelayDevice({
+      identity: claims,
+      deviceId: 'device-b',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.publicKey,
+      now: NOW,
+      store,
+    }), 'untrusted-key')
+  })
 })

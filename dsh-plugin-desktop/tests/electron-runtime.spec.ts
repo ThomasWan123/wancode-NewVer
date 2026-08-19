@@ -632,6 +632,19 @@ describe('Electron compatibility runtime', () => {
     await vi.waitFor(() => { expect(restart).toHaveBeenCalledOnce() })
   })
 
+  it('restarts when a later show request finds the mounted window gone', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    const restart = vi.fn(async () => {})
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(restart)
+    runtime.schedule(spec)
+    await runtime.mountScheduled()
+
+    electron.browserWindows[0]?.isDestroyed.mockReturnValue(true)
+    runtime.show()
+    await vi.waitFor(() => { expect(restart).toHaveBeenCalledOnce() })
+  })
+
   it('opens the diagnostics folder from the native tray', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     const userDataPath = await mkdtemp(join(tmpdir(), 'dsh-desktop-diagnostics-'))

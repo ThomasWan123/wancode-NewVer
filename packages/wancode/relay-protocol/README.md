@@ -16,22 +16,37 @@ plugin entry.
 - Expired tokens, revoked devices, and cross-account actors fail closed.
 - The same message id with the same payload is idempotent; a mutated payload is
   treated as replay and rejected.
-- Device identity is an Ed25519 keypair. The private key never appears in
-  handshake or ack ciphertext.
+- Device identity is an Ed25519 signing keypair plus an X25519 encryption
+  keypair. Private keys never appear in handshake, ack, or sealed ciphertext.
+- Application prompt, approval, cancel, session-event, and presence frames are
+  sealed to the recipient encryption public key. The relay stores the box
+  opaquely; the wrong device key and handshake ciphertext fail closed.
 - A handshake must claim `direction: "outbound"` and verify against the
   registered device public key. Inbound claims, untrusted signatures, unknown
   capabilities, and reused nonces fail closed.
 - Production relay URLs must use `wss:`. Cleartext `ws:` is accepted only for
   loopback. The access token is the first JSON frame, not a query parameter.
+  After handshake, the same socket may send sealed application frames, reclaim
+  its own mailbox, and acknowledge drained boxes. Device id for reclaim and ack
+  comes from the token, never from the client. An online destination receives a
+  sealed push on its own outbound socket; the loopback acceptor never opens the
+  box. Offline destinations queue the same sealed box. Closing the socket marks
+  the handshake device offline.
 - Short-lived access tokens are minted per device after a replaceable OIDC
-  identity provider verifies the account. The static provider is the seam for a
-  later JWKS-backed factory. Expired assertions and tokens fail closed.
+  identity provider verifies the account. The JWKS provider accepts compact
+  ES256 or RS256 JWTs from a caller-supplied key set and never fetches a URL.
+  The static provider remains the object-shaped test double. Expired
+  assertions, unknown kids, and `none` / HMAC algorithms fail closed.
 - Device registration binds one Ed25519 public key to that account. Revocation
   is immediate and the device id cannot be reused.
-- Routing delivers an authorized envelope only to another device on the same
-  account. Cross-account destinations fail closed. Accepted frames consume a
+- Routing delivers a sealed application envelope only to another device on the
+  same account. Opaque prompt ciphertext and handshake frames are not routed.
+  Cross-account destinations fail closed. Accepted frames consume a
   per-device rate limit; identical retries do not. Audit records stay free of
   prompt, credential, tool-output, and ciphertext fields.
+- Offline destinations queue the same sealed box. A reconnecting device drains the
+  same mailbox until it acknowledges each frame. Revoked, expired, and
+  cross-account reclaim attempts fail closed and drop remaining mail.
 
 Desktop initiates the cloud connection with `connectOutboundRelay`. This package
 is not an inbound Host surface. `@wancode/relay-protocol/loopback` is a

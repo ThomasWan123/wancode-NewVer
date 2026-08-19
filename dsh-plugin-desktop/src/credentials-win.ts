@@ -19,10 +19,28 @@ import z from '@deepseek-ai/schemastery'
 import koffi from 'koffi'
 
 const CREDENTIAL_TYPE_GENERIC = 1
+const CREDENTIAL_PERSIST_SESSION = 1
 const CREDENTIAL_PERSIST_LOCAL_MACHINE = 2
+const CREDENTIAL_PERSIST_ENTERPRISE = 3
 const ERROR_NOT_FOUND = 1168
 const MAX_CREDENTIAL_BLOB_BYTES = 5 * 512
 const LEGACY_CREDENTIALS_FILENAME = '.credentials.yaml'
+
+/** Persist levels tried in order when Windows rejects a stronger store. */
+export const WINDOWS_CREDENTIAL_PERSIST_TRIES = [
+  CREDENTIAL_PERSIST_LOCAL_MACHINE,
+  CREDENTIAL_PERSIST_ENTERPRISE,
+  CREDENTIAL_PERSIST_SESSION,
+] as const
+
+/**
+ * Attempt a Credential Manager write across persist levels until one succeeds.
+ * @param write - returns true when CredWriteW accepted that persist level.
+ * @returns true when any persist level succeeded.
+ */
+export function writeWindowsCredential(write: (persist: number) => boolean): boolean {
+  return WINDOWS_CREDENTIAL_PERSIST_TRIES.some(persist => write(persist))
+}
 
 /** Minimal secure-store interface used by the provider and focused tests. */
 export interface CredentialStore {
@@ -137,6 +155,13 @@ export function createWindowsCredentialStore(
   if (platform !== 'win32') {
     throw new Error('credentials-win: Windows Credential Manager is available only on win32')
   }
+  productionStore ??= bindWindowsCredentialStore()
+  return productionStore
+}
+
+let productionStore: CredentialStore | undefined
+
+function bindWindowsCredentialStore(): CredentialStore {
 
   const FILETIME = koffi.struct('WANCODE_FILETIME', {
     dwLowDateTime: 'uint32',
@@ -175,6 +200,7 @@ export function createWindowsCredentialStore(
 
   return {
     get(target) {
+      process.stderr.write('credentials-win: CredReadW begin\n')
       const out: unknown[] = [null]
       if (credRead(target, CREDENTIAL_TYPE_GENERIC, 0, out) === 0) {
         if (getLastError() === ERROR_NOT_FOUND) return undefined
@@ -186,9 +212,13 @@ export function createWindowsCredentialStore(
           CredentialBlobSize: number
           CredentialBlob: unknown
         }
+        process.stderr.write(`credentials-win: CredReadW decoded blobBytes=${String(credential.CredentialBlobSize)}\n`)
         if (credential.CredentialBlobSize === 0) return undefined
         const bytes = Buffer.from(
-          koffi.view(credential.CredentialBlob, credential.CredentialBlobSize),
+          koffi.decode(
+            credential.CredentialBlob,
+            koffi.array('uint8_t', credential.CredentialBlobSize, 'Buffer'),
+          ) as Uint8Array,
         )
         const value = bytes.toString('utf16le')
         return value.length === 0 ? undefined : value
@@ -201,21 +231,28 @@ export function createWindowsCredentialStore(
       if (blob.byteLength > MAX_CREDENTIAL_BLOB_BYTES) {
         throw new Error(`credentials-win: credential for ${target} exceeds the Windows generic credential limit`)
       }
-      const written = credWrite({
-        Flags: 0,
-        Type: CREDENTIAL_TYPE_GENERIC,
-        TargetName: target,
-        Comment: null,
-        LastWritten: { dwLowDateTime: 0, dwHighDateTime: 0 },
-        CredentialBlobSize: blob.byteLength,
-        CredentialBlob: blob,
-        Persist: CREDENTIAL_PERSIST_LOCAL_MACHINE,
-        AttributeCount: 0,
-        Attributes: null,
-        TargetAlias: null,
-        UserName: 'Wan Code',
-      }, 0)
-      if (written === 0) throw failure('CredWriteW', target)
+      process.stderr.write(`credentials-win: CredWriteW begin blobBytes=${String(blob.byteLength)}\n`)
+      const blobPtr = koffi.alloc('uint8_t', blob.byteLength)
+      try {
+        Buffer.from(koffi.view(blobPtr, blob.byteLength)).set(blob)
+        const written = writeWindowsCredential(persist => credWrite({
+          Flags: 0,
+          Type: CREDENTIAL_TYPE_GENERIC,
+          TargetName: target,
+          Comment: null,
+          LastWritten: { dwLowDateTime: 0, dwHighDateTime: 0 },
+          CredentialBlobSize: blob.byteLength,
+          CredentialBlob: blobPtr,
+          Persist: persist,
+          AttributeCount: 0,
+          Attributes: null,
+          TargetAlias: null,
+          UserName: 'Wan Code',
+        }, 0) !== 0)
+        if (!written) throw failure('CredWriteW', target)
+      } finally {
+        koffi.free(blobPtr)
+      }
     },
     delete(target) {
       if (credDelete(target, CREDENTIAL_TYPE_GENERIC, 0) !== 0) return true

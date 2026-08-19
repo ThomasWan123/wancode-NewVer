@@ -13,6 +13,7 @@ export interface RelayWebSocket {
   once(event: 'message', listener: (data: unknown) => void): this
   once(event: 'error', listener: (cause: Error) => void): this
   once(event: 'close', listener: () => void): this
+  on(event: 'message', listener: (data: unknown) => void): this
   off(event: 'open', listener: () => void): this
   off(event: 'message', listener: (data: unknown) => void): this
   off(event: 'error', listener: (cause: Error) => void): this

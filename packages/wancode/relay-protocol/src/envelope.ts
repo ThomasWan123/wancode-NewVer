@@ -25,11 +25,12 @@ export interface RelayAccessToken {
   readonly expiresAt: number
 }
 
-/** Registered device whose public key encrypts sensitive relay payloads. */
+/** Registered device whose Ed25519 key verifies handshakes. */
 export interface RelayDevice {
   readonly deviceId: string
   readonly userId: string
   readonly publicKey: string
+  readonly encryptionPublicKey?: string
   readonly revokedAt?: number
 }
 

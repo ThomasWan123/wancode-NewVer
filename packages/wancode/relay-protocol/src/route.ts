@@ -2,10 +2,10 @@
 
 import {
   dispatchRelayEnvelope,
-  parseRelayEnvelope,
   type RelayRoute,
   type RelayStore,
 } from './envelope.ts'
+import { assertSealedApplicationEnvelope } from './payload.ts'
 import { RelayAuthorizationError } from './errors.ts'
 import type { RelayAuditLog } from './audit.ts'
 import type { RelayRateLimiter } from './rate-limit.ts'
@@ -45,7 +45,7 @@ function appendAudit(input: RouteRelayEnvelopeInput, event: Parameters<RelayAudi
  */
 export function routeRelayEnvelope(input: RouteRelayEnvelopeInput): RelayRoute {
   const destinationDeviceId = requiredId(input.destinationDeviceId, 'destinationDeviceId')
-  const envelope = parseRelayEnvelope(input.envelope)
+  const envelope = assertSealedApplicationEnvelope(input.envelope)
   const token = input.store.getAccessToken(input.accessToken)
   const userId = token?.userId ?? ''
   const deviceId = token?.deviceId ?? ''

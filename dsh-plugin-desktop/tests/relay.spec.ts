@@ -46,6 +46,10 @@ describe('desktop outbound relay Host plugin', () => {
       userId: 'user-a',
       deviceId: 'device-a',
       grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
       close: vi.fn(),
     }
     const connect = vi.fn(async () => connection)

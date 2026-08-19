@@ -1,6 +1,6 @@
 /** Wancode executable: minimal Electron bootstrap around the Host Cordis root. */
 
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import type { Context } from '@deepseek-ai/cordis'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -14,6 +14,10 @@ import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { defaultDshHome } from '@deepseek-ai/dsh-home-paths'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
 import { appendDesktopLog, installDesktopLogMirror } from './desktop-log.ts'
+import {
+  markDesktopCleanExit,
+  prepareDesktopCrashRecovery,
+} from './crash-recovery.ts'
 import {
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
@@ -109,12 +113,56 @@ function notifyWindowsVolumeConcerns(
   }
 }
 
+/** Show a visible status window until the Host tree can mount the real shell. */
+function openStartupStatusWindow(): BrowserWindow {
+  const window = new BrowserWindow({
+    width: 420,
+    height: 180,
+    show: true,
+    resizable: false,
+    autoHideMenuBar: true,
+    title: WANCODE_PRODUCT_NAME,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+  if (process.platform === 'win32') window.removeMenu()
+  void window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(
+    '<!doctype html><html><body style="margin:0;height:100%;display:flex;align-items:center;justify-content:center;font:14px Segoe UI,sans-serif;background:#f4f4f5;color:#18181b"><p>Starting Wan Code…</p></body></html>',
+  )}`)
+  return window
+}
+
+function closeStartupStatusWindow(window: BrowserWindow | undefined): void {
+  if (window === undefined || window.isDestroyed()) return
+  window.destroy()
+}
+
 /** Start one Electron process and leave lifetime to the mounted desktop plugin. */
 async function start(): Promise<void> {
   app.setName(WANCODE_PRODUCT_NAME)
+  const userDataPath = app.getPath('userData')
   if (!app.requestSingleInstanceLock()) {
+    appendDesktopLog(
+      userDataPath,
+      `${BIN_NAME}: another Wan Code process already holds the single-instance lock\n`,
+    )
     app.quit()
     return
+  }
+  let crashRecovery
+  try {
+    crashRecovery = prepareDesktopCrashRecovery(userDataPath)
+  } catch (cause) {
+    process.stderr.write(
+      `${BIN_NAME}: failed to inspect previous exit: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+    )
+    crashRecovery = { disableHardwareAcceleration: false, recoveredFromCrash: false }
+  }
+  if (crashRecovery.disableHardwareAcceleration) {
+    app.disableHardwareAcceleration()
   }
 
   let current: Context | undefined
@@ -125,9 +173,19 @@ async function start(): Promise<void> {
   let disposeDshRuntime: (() => void) | undefined
   let disposePnpmRuntime: (() => void) | undefined
   let runtime!: ElectronDesktopRuntime
+  let startupWindow: BrowserWindow | undefined
   const nativeExit = createDesktopExitCoordinator(
     {
-      prepareToQuit: () => { runtime.prepareToQuit() },
+      prepareToQuit: () => {
+        runtime.prepareToQuit()
+        try {
+          markDesktopCleanExit(app.getPath('userData'))
+        } catch (cause) {
+          process.stderr.write(
+            `${BIN_NAME}: failed to record a clean exit: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+          )
+        }
+      },
       relaunch: () => { app.relaunch() },
       exit: code => { app.exit(code) },
     },
@@ -167,14 +225,36 @@ async function start(): Promise<void> {
   const requestQuit = (code: number): void => { void shutdown.request(code) }
   removeShutdownRequests = installShutdownRequests(process, app, requestQuit)
 
-  app.on('second-instance', () => { runtime.show() })
+  app.on('second-instance', () => {
+    appendDesktopLog(app.getPath('userData'), `${BIN_NAME}: second launch requested; showing the existing window\n`)
+    runtime.show()
+  })
+  app.on('window-all-closed', () => {
+    // Tray sessions stay alive until the user quits from the tray.
+  })
   await app.whenReady()
+  app.on('child-process-gone', (_event, details) => {
+    process.stderr.write(
+      `${BIN_NAME}: child process gone: ${details.type} ${details.reason} (${String(details.exitCode)})\n`,
+    )
+  })
+  process.on('uncaughtException', (error) => {
+    process.stderr.write(
+      `${BIN_NAME}: uncaught exception: ${error.stack ?? error.message}\n`,
+    )
+  })
   try {
     installDesktopLogMirror(app.getPath('userData'))
     appendDesktopLog(
       app.getPath('userData'),
       `${BIN_NAME}: starting ${WANCODE_PRODUCT_NAME} on ${process.platform}\n`,
     )
+    if (crashRecovery.recoveredFromCrash) {
+      appendDesktopLog(
+        app.getPath('userData'),
+        `${BIN_NAME}: previous generation exited uncleanly; GPU cache cleared and hardware acceleration disabled\n`,
+      )
+    }
   } catch (cause) {
     process.stderr.write(
       `${BIN_NAME}: failed to install diagnostics log: ${cause instanceof Error ? cause.message : String(cause)}\n`,
@@ -284,6 +364,14 @@ async function start(): Promise<void> {
       dshBootstrapPath,
     }
     const releasePackageResolver = installProfilePackageResolver(prepared.bareModuleBaseUrl)
+    startupWindow = openStartupStatusWindow()
+    appendDesktopLog(
+      app.getPath('userData'),
+      `${BIN_NAME}: loading Host Cordis tree for profile ${activeProfileName}\n`,
+    )
+    const bootPulse = setInterval(() => {
+      appendDesktopLog(app.getPath('userData'), `${BIN_NAME}: Host boot still running\n`)
+    }, 5_000)
     const ctx = await boot(
       BIN_NAME,
       prepared.rootConfig,
@@ -325,6 +413,8 @@ async function start(): Promise<void> {
     ).catch((cause: unknown) => {
       releasePackageResolver()
       throw cause
+    }).finally(() => {
+      clearInterval(bootPulse)
     })
     current = ctx
     runtime.configureTerminal({
@@ -332,7 +422,15 @@ async function start(): Promise<void> {
       profileDir: prepared.profile.dir,
       homeDir: prepared.homeDir,
     })
+    appendDesktopLog(
+      app.getPath('userData'),
+      `${BIN_NAME}: Host Cordis tree is active with profile ${activeProfileName}\n`,
+    )
     await runtime.mountScheduled()
+    appendDesktopLog(app.getPath('userData'), `${BIN_NAME}: native window mounted\n`)
+    runtime.show()
+    closeStartupStatusWindow(startupWindow)
+    startupWindow = undefined
     notifySkippedOptionalEntries(runtime, prepared.skippedOptionalEntries)
     notifyWindowsVolumeConcerns(runtime, windowsVolumeConcerns)
     if (profileStartup.rolledBackFrom !== undefined) {
@@ -342,6 +440,7 @@ async function start(): Promise<void> {
       )
     }
   } catch (cause) {
+    closeStartupStatusWindow(startupWindow)
     process.stderr.write(`${BIN_NAME}: ${cause instanceof Error ? cause.stack ?? cause.message : String(cause)}\n`)
     await runtime.reportApplicationHealth('failed')
     if (runtime.hasRequestedQuit()) return

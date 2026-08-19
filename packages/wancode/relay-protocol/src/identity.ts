@@ -1,4 +1,4 @@
-/** Replaceable OIDC identity seam. Production swaps this for a JWKS verifier. */
+/** Replaceable OIDC identity seam. Production uses the JWKS verifier. */
 
 import { assertNoPlaintextRelayFields } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
@@ -38,7 +38,7 @@ function requiredIssuerAudience(value: unknown, field: string): string {
 
 /**
  * Parse one untrusted OIDC assertion object. `exp` is Unix seconds.
- * Signature verification belongs to the production JWKS provider.
+ * Signature verification belongs to `createJwksOidcIdentityProvider`.
  */
 export function parseOidcIdentityAssertion(
   value: unknown,
@@ -72,7 +72,7 @@ export function parseOidcIdentityAssertion(
 
 /**
  * In-memory OIDC verifier that accepts a parsed assertion object.
- * Replace this with a JWKS-backed JWT verifier in production.
+ * Object-shaped assertions for tests. Production verifies compact JWTs.
  */
 export function createStaticOidcIdentityProvider(
   config: OidcIdentityProviderConfig,

@@ -1,6 +1,6 @@
 /** Device registration and revocation after a verified identity. */
 
-import { assertDevicePublicKey } from './device-keys.ts'
+import { assertDeviceEncryptionPublicKey, assertDevicePublicKey } from './device-keys.ts'
 import type { RelayDevice, RelayStore } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
 import type { RelayIdentityClaims } from './identity.ts'
@@ -15,6 +15,7 @@ export interface RegisterRelayDeviceInput {
   readonly identity: RelayIdentityClaims
   readonly deviceId: string
   readonly publicKey: string
+  readonly encryptionPublicKey?: string
   readonly now: number
   readonly store: RelayDeviceStore
 }
@@ -45,6 +46,10 @@ export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevic
   const deviceId = requiredId(input.deviceId, 'deviceId')
   const userId = requiredId(input.identity.userId, 'userId')
   assertDevicePublicKey(input.publicKey)
+  const encryptionPublicKey = input.encryptionPublicKey
+  if (encryptionPublicKey !== undefined) {
+    assertDeviceEncryptionPublicKey(encryptionPublicKey)
+  }
   const existing = input.store.getDevice(deviceId)
   if (existing !== undefined) {
     if (existing.userId !== userId) {
@@ -56,13 +61,18 @@ export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevic
     if (existing.publicKey !== input.publicKey) {
       throw new RelayAuthorizationError('untrusted-key', 'relay device public key does not match the registered key')
     }
+    if (
+      encryptionPublicKey !== undefined &&
+      existing.encryptionPublicKey !== undefined &&
+      existing.encryptionPublicKey !== encryptionPublicKey
+    ) {
+      throw new RelayAuthorizationError('untrusted-key', 'relay device encryption public key does not match the registered key')
+    }
     return existing
   }
-  const device: RelayDevice = {
-    deviceId,
-    userId,
-    publicKey: input.publicKey,
-  }
+  const device: RelayDevice = encryptionPublicKey === undefined
+    ? { deviceId, userId, publicKey: input.publicKey }
+    : { deviceId, userId, publicKey: input.publicKey, encryptionPublicKey }
   input.store.putDevice(device)
   return device
 }

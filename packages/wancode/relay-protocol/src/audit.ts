@@ -3,7 +3,7 @@
 import { assertNoPlaintextRelayFields } from './envelope.ts'
 import { isRelayErrorCode, RelayAuthorizationError, type RelayErrorCode } from './errors.ts'
 
-const AUDIT_ACTIONS = ['route', 'register', 'revoke', 'issue-token'] as const
+const AUDIT_ACTIONS = ['route', 'register', 'revoke', 'issue-token', 'deliver', 'queue', 'reclaim', 'ack'] as const
 const AUDIT_OUTCOMES = ['accepted', 'duplicate', 'rejected'] as const
 
 export type RelayAuditAction = (typeof AUDIT_ACTIONS)[number]

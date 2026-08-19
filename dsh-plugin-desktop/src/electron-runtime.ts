@@ -83,6 +83,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   }
 
   private window: BrowserWindow | undefined
+  private windowMounted = false
   private tray: Tray | undefined
   private scheduled: DesktopShellSpec | undefined
   private mountTask: Promise<void> | undefined
@@ -149,7 +150,13 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   /** @inheritdoc */
   show(): void {
     const window = this.window
-    if (window === undefined || window.isDestroyed()) return
+    if (window === undefined || window.isDestroyed()) {
+      if (this.windowMounted && !this.quitting && !this.unmounting) {
+        process.stderr.write('dsh-plugin-desktop: window missing on show; requesting restart\n')
+        void this.requestRestart()
+      }
+      return
+    }
     if (window.isMinimized()) window.restore()
     window.show()
     window.focus()
@@ -721,11 +728,13 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       throw new Error('dsh-plugin-desktop: native tray did not mount')
     }
     const mountedTray = tray
+    this.windowMounted = true
 
     let released = false
     return async () => {
       if (released) return
       released = true
+      this.windowMounted = false
       this.unmounting = true
       app.off('activate', show)
       window.off('close', close)
