@@ -11,6 +11,7 @@ import {
   openSealedRelayPayload,
   publicDeviceIdentity,
   registerOutboundRelayDevice,
+  revokeOutboundRelayDevice,
   type OutboundRelayDevice,
   type RelayApplicationKind,
   type RelayApplicationPayload,
@@ -77,6 +78,10 @@ export interface PwaRelayController {
   }>
   sessions(): readonly PwaSessionSnapshot[]
   reconnect(): Promise<void>
+  revoke(): Promise<{
+    readonly deviceId: string
+    readonly revokedAt: number
+  }>
   project(payload: RelayApplicationPayload): RelaySessionView
   close(): void
 }
@@ -240,6 +245,14 @@ export async function createPwaRelayController(
     async reconnect() {
       connection.close()
       connection = await openSession(input, published, userId, now)
+    },
+    async revoke() {
+      connection.close()
+      return revokeOutboundRelayDevice({
+        httpUrl: input.httpUrl,
+        assertion: input.assertion,
+        deviceId: published.deviceId,
+      })
     },
     project: projectRelaySessionView,
     close() {

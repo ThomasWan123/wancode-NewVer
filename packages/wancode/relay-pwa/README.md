@@ -28,7 +28,8 @@ directory links.
   sealed to that desktop encryption public key. Presence frames are sealed the
   same way. `drain` reclaims queued mail
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so
-  the handshake is not replay. The returned object does not include private
+  the handshake is not replay. `revoke` closes the socket and revokes the PWA
+  device id immediately. The returned object does not include private
   keys.
 - `createPwaSessionBoard` folds views into one snapshot per session. Prompt
   text never appears. `notify.*` progress becomes the latest notification.

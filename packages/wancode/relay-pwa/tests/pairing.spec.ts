@@ -287,6 +287,40 @@ describe('PWA relay pairing', () => {
     controller.close()
   })
 
+  it('revokes the PWA device immediately so reconnect fails closed', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      url: cloud.url,
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+      now: NOW,
+    })
+    await expect(controller.revoke()).resolves.toEqual({
+      deviceId: pwa.deviceId,
+      revokedAt: NOW,
+    })
+    await expectRelayErrorAsync(() => controller.reconnect(), 'revoked-device')
+  })
+
   it('refuses to pair when a model credential is supplied', async () => {
     const pwa = createStoredDeviceIdentity()
     const desktop = createStoredDeviceIdentity()
