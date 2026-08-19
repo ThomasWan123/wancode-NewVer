@@ -47,7 +47,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包；预览资源见 [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned) |
 | 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
 | 云中继协议（M2） | **进行中**：fail-closed 契约、JWKS OIDC、仅出站 HTTPS 注册/令牌/撤销、Credential Manager 设备身份、仅出站 WSS、路由、速率限制、审计、离线邮箱、同 socket 重连 drain/ack、在线密封推送、回环控制面、设备间密封载荷与桌面 opt-in 拨号 |
-| 移动 PWA（M3） | **进行中**：会话快照、设备选择、密封控制、通知、重连 drain、可安装 Manifest 契约；模型凭据留在桌面；HTML/SW 尚未交付 |
+| 移动 PWA（M3） | **进行中**：会话快照、设备选择、密封控制、通知、重连 drain、静态 shell 已检入；模型凭据留在桌面；图标与托管尚未交付 |
 | 插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
 
 桌面 `master` 现已包含：
@@ -113,7 +113,7 @@ Windows SmartScreen 会警告。该标签不是 Latest，也不替换已发布�
 
 1. **Windows 桌面核心** — 已作为可独立使用的本地产品交付；签名正式包待证书。
 2. **Wan Code Cloud Relay** — 账号、设备注册、短期令牌、撤销、审计与端到端加密协议。
-3. **移动 PWA** — 进行中：会话快照、密封控制、可安装 Manifest 契约；HTML / service worker 尚未交付。
+3. **移动 PWA** — 进行中：会话快照、密封控制、已检入的静态 shell；图标与托管尚未交付。
 4. **审核制插件市场** — 签名 Manifest、权限声明、兼容性检查、原子安装与回滚。
 5. **消息渠道** — 通过官方 API 接入飞书、Discord、WhatsApp，以及合规可用的微信能力。
 

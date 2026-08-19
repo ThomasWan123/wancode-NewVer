@@ -419,4 +419,20 @@ describe('PWA relay pairing', () => {
       DEEPSEEK_API_KEY: 'sk-secret',
     } as never), 'plaintext')
   })
+
+  it('refuses a desktop object that carries a private key', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    await expectRelayErrorAsync(() => createPwaRelayController({
+      httpUrl: 'http://127.0.0.1:9',
+      url: 'ws://127.0.0.1:9',
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+        privateKey: desktop.keyPair.privateKey,
+      } as never,
+    }), 'plaintext')
+  })
 })
