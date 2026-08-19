@@ -84,6 +84,19 @@ export {
   type SendOutboundRelayFrameInput,
 } from './outbound.ts'
 export {
+  assertOutboundRelayHttpUrl,
+  httpUrlFromOutboundRelayUrl,
+  issueOutboundRelayToken,
+  registerOutboundRelayDevice,
+  revokeOutboundRelayDevice,
+  type OutboundRelayAccessToken,
+  type OutboundRelayControlInput,
+  type OutboundRelayDevice,
+  type OutboundRelayRevocation,
+  type RegisterOutboundRelayDeviceInput,
+  type RelayControlFetch,
+} from './control-client.ts'
+export {
   RELAY_ACCESS_TOKEN_TTL_MS,
   createMemoryRelayTokenIssuer,
   issueRelayAccessToken,

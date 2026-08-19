@@ -5,6 +5,10 @@ import z from '@deepseek-ai/schemastery'
 import {
   assertOutboundRelayUrl,
   connectOutboundRelay,
+  httpUrlFromOutboundRelayUrl,
+  issueOutboundRelayToken,
+  registerOutboundRelayDevice,
+  revokeOutboundRelayDevice,
 } from '@wancode/relay-protocol'
 
 /** Stable Cordis plugin name. */
@@ -32,6 +36,20 @@ export interface DesktopRelayConnectInput {
   readonly accessToken: string
   readonly envelope: unknown
   readonly timeoutMs?: number
+}
+
+/** Inputs for outbound HTTP device registration. */
+export interface DesktopRelayRegisterInput {
+  readonly assertion: unknown
+  readonly deviceId: string
+  readonly publicKey: string
+  readonly encryptionPublicKey?: string
+}
+
+/** Inputs for outbound HTTP token mint or revocation. */
+export interface DesktopRelayDeviceInput {
+  readonly assertion: unknown
+  readonly deviceId: string
 }
 
 /** Live outbound session returned after a successful handshake. */
@@ -65,6 +83,21 @@ export interface DesktopRelayConnection {
 /** Prepared outbound session that still does not dial until `connect` runs. */
 export interface DesktopRelayHandle {
   readonly url: URL
+  readonly httpUrl: URL
+  register(input: DesktopRelayRegisterInput): Promise<{
+    readonly deviceId: string
+    readonly userId: string
+    readonly publicKey: string
+    readonly encryptionPublicKey?: string
+  }>
+  issueToken(input: DesktopRelayDeviceInput): Promise<{
+    readonly accessToken: string
+    readonly expiresAt: number
+  }>
+  revoke(input: DesktopRelayDeviceInput): Promise<{
+    readonly deviceId: string
+    readonly revokedAt: number
+  }>
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
   dispose(): void
 }
@@ -73,6 +106,18 @@ export type DesktopRelayConnect = (
   input: DesktopRelayConnectInput & { readonly url: string },
 ) => Promise<DesktopRelayConnection>
 
+export interface DesktopRelayControl {
+  register: typeof registerOutboundRelayDevice
+  issueToken: typeof issueOutboundRelayToken
+  revoke: typeof revokeOutboundRelayDevice
+}
+
+const defaultControl: DesktopRelayControl = {
+  register: registerOutboundRelayDevice,
+  issueToken: issueOutboundRelayToken,
+  revoke: revokeOutboundRelayDevice,
+}
+
 /**
  * Validate an opt-in relay URL without opening a socket.
  * Disabled or empty-URL configs stay idle. Cleartext non-loopback URLs fail closed.
@@ -80,12 +125,38 @@ export type DesktopRelayConnect = (
 export function prepareDesktopRelay(
   config: Config,
   connect: DesktopRelayConnect = connectOutboundRelay,
+  control: DesktopRelayControl = defaultControl,
 ): DesktopRelayHandle | undefined {
   if (!config.enabled || config.url.length === 0) return undefined
   const url = assertOutboundRelayUrl(config.url)
+  const httpUrl = httpUrlFromOutboundRelayUrl(config.url)
   let connection: DesktopRelayConnection | undefined
   return {
     url,
+    httpUrl,
+    async register(input) {
+      return control.register({
+        httpUrl: httpUrl.href,
+        assertion: input.assertion,
+        deviceId: input.deviceId,
+        publicKey: input.publicKey,
+        ...(input.encryptionPublicKey === undefined ? {} : { encryptionPublicKey: input.encryptionPublicKey }),
+      })
+    },
+    async issueToken(input) {
+      return control.issueToken({
+        httpUrl: httpUrl.href,
+        assertion: input.assertion,
+        deviceId: input.deviceId,
+      })
+    },
+    async revoke(input) {
+      return control.revoke({
+        httpUrl: httpUrl.href,
+        assertion: input.assertion,
+        deviceId: input.deviceId,
+      })
+    },
     async connect(input) {
       const next = await connect({ ...input, url: url.href })
       connection?.close()

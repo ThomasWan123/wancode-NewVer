@@ -16,11 +16,12 @@ Status: active
   device registration/revocation, same-account routing, per-device rate limits,
   a plaintext-free audit log, sealed-box routing and offline mailbox delivery,
   same-socket reconnect drain and ack, live sealed-box fan-out to an online
-  destination socket, a JWKS-backed OIDC verifier plus an opt-in HTTPS JWKS
+  destination socket,   a JWKS-backed OIDC verifier plus an opt-in HTTPS JWKS
   fetch that never carries credentials, a loopback HTTP control plane for
   register/token/revoke plus the same outbound
-  WebSocket acceptor, and an opt-in desktop Host plugin that never listens and
-  does not dial until connect is invoked.
+  WebSocket acceptor, an outbound HTTPS client for the same control routes,
+  and an opt-in desktop Host plugin that never listens, derives the HTTPS
+  origin from its WebSocket URL, and does not dial until connect is invoked.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
@@ -213,6 +214,8 @@ reconnects and acknowledges each frame; identical reconnect drains stay
 idempotent. Desktop
 loads an opt-in `desktop-relay` Host row that stays idle by default, never binds
 a port, and only dials a fail-closed outbound URL when `connect` is called.
+The same handle can register, mint a token, or revoke over outbound HTTPS
+derived from that WebSocket URL before any socket is opened.
 
 M1 now includes Wancode application and installer identity,
 an isolated Harness home, telemetry-private defaults, GitHub release discovery,

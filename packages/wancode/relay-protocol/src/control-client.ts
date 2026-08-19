@@ -1,0 +1,283 @@
+/** Outbound HTTP client for device registration, tokens, and revocation. Never listens. */
+
+import { assertNoPlaintextRelayFields } from './envelope.ts'
+import { RelayAuthorizationError, isRelayErrorCode } from './errors.ts'
+import { assertOutboundRelayUrl } from './url.ts'
+
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
+const MAX_BODY_BYTES = 65_536
+const MAX_REDIRECTS = 3
+const PRIVATE_KEY_FIELDS = ['privateKey', 'encryptionPrivateKey'] as const
+
+/**
+ * Accept a desktop-dialed relay control-plane URL.
+ * `https:` is allowed for any host. `http:` is allowed only to loopback.
+ * Credentials must not appear in the URL.
+ */
+export function assertOutboundRelayHttpUrl(url: string): URL {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'relay control url is not a valid http url')
+  }
+  if (parsed.username !== '' || parsed.password !== '') {
+    throw new RelayAuthorizationError('plaintext', 'relay control url must not embed credentials')
+  }
+  for (const key of parsed.searchParams.keys()) {
+    if (/token|secret|credential|password|authorization/iu.test(key)) {
+      throw new RelayAuthorizationError('plaintext', 'relay control url must not carry credentials')
+    }
+  }
+  if (parsed.protocol === 'https:') return parsed
+  if (parsed.protocol === 'http:' && LOOPBACK_HOSTS.has(parsed.hostname)) return parsed
+  if (parsed.protocol === 'http:') {
+    throw new RelayAuthorizationError(
+      'cleartext-transport',
+      'cleartext relay control is only allowed to loopback',
+    )
+  }
+  throw new RelayAuthorizationError('malformed', 'relay control url must use https or loopback http')
+}
+
+/**
+ * Derive the outbound HTTP origin from a fail-closed WebSocket relay URL.
+ * `wss:` maps to `https:`. Loopback `ws:` maps to `http:`.
+ */
+export function httpUrlFromOutboundRelayUrl(url: string): URL {
+  const websocket = assertOutboundRelayUrl(url)
+  const protocol = websocket.protocol === 'wss:' ? 'https:' : 'http:'
+  return assertOutboundRelayHttpUrl(`${protocol}//${websocket.host}`)
+}
+
+/** Minimal POST used by the outbound control client. Tests inject a fake transport. */
+export interface RelayControlFetch {
+  (
+    url: string,
+    init: {
+      readonly method: 'POST'
+      readonly redirect: 'manual'
+      readonly headers: {
+        readonly accept: string
+        readonly 'content-type': string
+      }
+      readonly body: string
+    },
+  ): Promise<{
+    readonly ok: boolean
+    readonly status: number
+    readonly headers: { get(name: string): string | null }
+    arrayBuffer(): Promise<ArrayBuffer>
+  }>
+}
+
+/** Inputs shared by outbound device, token, and revoke calls. */
+export interface OutboundRelayControlInput {
+  readonly httpUrl: string
+  readonly assertion: unknown
+  readonly deviceId: string
+  readonly fetchImpl?: RelayControlFetch
+}
+
+/** Inputs used to register one device over outbound HTTPS. */
+export interface RegisterOutboundRelayDeviceInput extends OutboundRelayControlInput {
+  readonly publicKey: string
+  readonly encryptionPublicKey?: string
+}
+
+/** Public device returned after a successful outbound registration. */
+export interface OutboundRelayDevice {
+  readonly deviceId: string
+  readonly userId: string
+  readonly publicKey: string
+  readonly encryptionPublicKey?: string
+}
+
+/** Short-lived token returned after a successful outbound mint. */
+export interface OutboundRelayAccessToken {
+  readonly accessToken: string
+  readonly expiresAt: number
+}
+
+/** Revocation receipt returned after a successful outbound revoke. */
+export interface OutboundRelayRevocation {
+  readonly deviceId: string
+  readonly revokedAt: number
+}
+
+/**
+ * POST `/v1/devices` over HTTPS (or loopback HTTP). Redirects are re-checked
+ * and the request never carries credentials or private keys.
+ */
+export async function registerOutboundRelayDevice(
+  input: RegisterOutboundRelayDeviceInput,
+): Promise<OutboundRelayDevice> {
+  const json = await postRelayControl(input, '/v1/devices', {
+    assertion: input.assertion,
+    deviceId: input.deviceId,
+    publicKey: input.publicKey,
+    ...(input.encryptionPublicKey === undefined ? {} : { encryptionPublicKey: input.encryptionPublicKey }),
+  })
+  const device = json.device
+  if (device === null || typeof device !== 'object' || Array.isArray(device)) {
+    throw new RelayAuthorizationError('malformed', 'relay control device is required')
+  }
+  return parsePublicDevice(device as Record<string, unknown>)
+}
+
+/**
+ * POST `/v1/tokens` over HTTPS (or loopback HTTP) for one registered device.
+ */
+export async function issueOutboundRelayToken(
+  input: OutboundRelayControlInput,
+): Promise<OutboundRelayAccessToken> {
+  const json = await postRelayControl(input, '/v1/tokens', {
+    assertion: input.assertion,
+    deviceId: input.deviceId,
+  })
+  if (typeof json.accessToken !== 'string' || json.accessToken.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control access token is required')
+  }
+  if (typeof json.expiresAt !== 'number' || !Number.isFinite(json.expiresAt)) {
+    throw new RelayAuthorizationError('malformed', 'relay control token expiry is required')
+  }
+  return { accessToken: json.accessToken, expiresAt: json.expiresAt }
+}
+
+/**
+ * POST `/v1/devices/revoke` over HTTPS (or loopback HTTP). The device id
+ * cannot be reused after a successful revoke.
+ */
+export async function revokeOutboundRelayDevice(
+  input: OutboundRelayControlInput,
+): Promise<OutboundRelayRevocation> {
+  const json = await postRelayControl(input, '/v1/devices/revoke', {
+    assertion: input.assertion,
+    deviceId: input.deviceId,
+  })
+  if (typeof json.deviceId !== 'string' || json.deviceId.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control revoked device id is required')
+  }
+  if (typeof json.revokedAt !== 'number' || !Number.isFinite(json.revokedAt)) {
+    throw new RelayAuthorizationError('malformed', 'relay control revokedAt is required')
+  }
+  return { deviceId: json.deviceId, revokedAt: json.revokedAt }
+}
+
+async function postRelayControl(
+  input: OutboundRelayControlInput,
+  path: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  refusePrivateKeyMaterial(input as unknown as Record<string, unknown>, 'relay control request')
+  refusePrivateKeyMaterial(body, 'relay control request')
+  if (body.assertion !== null && typeof body.assertion === 'object' && !Array.isArray(body.assertion)) {
+    assertNoPlaintextRelayFields(body.assertion as Record<string, unknown>, 'relay control assertion')
+    refusePrivateKeyMaterial(body.assertion as Record<string, unknown>, 'relay control assertion')
+  }
+  assertNoPlaintextRelayFields(body, 'relay control request')
+  const payload = JSON.stringify(body)
+  if (Buffer.byteLength(payload) > MAX_BODY_BYTES) {
+    throw new RelayAuthorizationError('malformed', 'relay control request body is too large')
+  }
+  const fetchImpl = input.fetchImpl ?? (globalThis.fetch as RelayControlFetch)
+  let current = new URL(path, assertOutboundRelayHttpUrl(input.httpUrl))
+  current = assertOutboundRelayHttpUrl(current.href)
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    let response: Awaited<ReturnType<RelayControlFetch>>
+    try {
+      response = await fetchImpl(current.href, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+        },
+        body: payload,
+      })
+    } catch (cause) {
+      if (cause instanceof RelayAuthorizationError) throw cause
+      throw new RelayAuthorizationError('malformed', 'relay control request could not be sent')
+    }
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location')
+      if (typeof location !== 'string' || location.length === 0) {
+        throw new RelayAuthorizationError('malformed', 'relay control redirect is missing')
+      }
+      current = assertOutboundRelayHttpUrl(new URL(location, current).href)
+      continue
+    }
+    const json = await readJsonResponse(response)
+    if (!response.ok) throw controlFailure(json)
+    return json
+  }
+  throw new RelayAuthorizationError('malformed', 'relay control redirected too many times')
+}
+
+async function readJsonResponse(
+  response: Awaited<ReturnType<RelayControlFetch>>,
+): Promise<Record<string, unknown>> {
+  const bytes = Buffer.from(await response.arrayBuffer())
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_BODY_BYTES) {
+    throw new RelayAuthorizationError('malformed', 'relay control response body is invalid')
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(bytes.toString('utf8'))
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'relay control response is not json')
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new RelayAuthorizationError('malformed', 'relay control response must be an object')
+  }
+  const record = parsed as Record<string, unknown>
+  assertNoPlaintextRelayFields(record, 'relay control response')
+  refusePrivateKeyMaterial(record, 'relay control response')
+  return record
+}
+
+function controlFailure(json: Record<string, unknown>): RelayAuthorizationError {
+  const error = json.error
+  if (error !== null && typeof error === 'object' && !Array.isArray(error)) {
+    const record = error as Record<string, unknown>
+    if (typeof record.code === 'string' && isRelayErrorCode(record.code)) {
+      const message = typeof record.message === 'string' && record.message.length > 0
+        ? record.message
+        : 'relay control request failed'
+      return new RelayAuthorizationError(record.code, message)
+    }
+  }
+  return new RelayAuthorizationError('malformed', 'relay control request failed')
+}
+
+function parsePublicDevice(record: Record<string, unknown>): OutboundRelayDevice {
+  assertNoPlaintextRelayFields(record, 'relay control device')
+  refusePrivateKeyMaterial(record, 'relay control device')
+  if (typeof record.deviceId !== 'string' || record.deviceId.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control device id is required')
+  }
+  if (typeof record.userId !== 'string' || record.userId.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control user id is required')
+  }
+  if (typeof record.publicKey !== 'string' || record.publicKey.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control public key is required')
+  }
+  const device: OutboundRelayDevice = {
+    deviceId: record.deviceId,
+    userId: record.userId,
+    publicKey: record.publicKey,
+  }
+  if (record.encryptionPublicKey === undefined) return device
+  if (typeof record.encryptionPublicKey !== 'string' || record.encryptionPublicKey.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control encryption public key is required')
+  }
+  return { ...device, encryptionPublicKey: record.encryptionPublicKey }
+}
+
+function refusePrivateKeyMaterial(record: Record<string, unknown>, label: string): void {
+  for (const field of PRIVATE_KEY_FIELDS) {
+    if (field in record) {
+      throw new RelayAuthorizationError('plaintext', `${label} must not carry ${field}`)
+    }
+  }
+}

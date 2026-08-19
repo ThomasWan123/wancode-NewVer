@@ -44,9 +44,9 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Area | Status |
 | --- | --- |
 | Windows desktop core (M1) | **Available**: identity, isolated data, credentials, updates, rollback, crash recovery |
-| Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package |
+| Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package; preview asset is [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned) |
 | Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
-| Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC with HTTPS fetch, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, loopback control plane, device-sealed payloads, and an opt-in desktop dialer |
+| Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC with HTTPS fetch, outbound HTTPS register/token/revoke, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, loopback control plane, device-sealed payloads, and an opt-in desktop dialer |
 | Mobile PWA, marketplace, channels | Roadmap; not published as available features |
 
 The desktop `master` branch currently includes:
@@ -97,6 +97,13 @@ Build an unsigned local test installer:
 ```powershell
 corepack yarn dist:win
 ```
+
+The unsigned preview installer is also published as GitHub prerelease
+[v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned)
+(`Wan-Code-2.0.1-x64-Setup.exe`, SHA-256
+`61798CE6E3CC4426C021582A6174A1809F48AAA366AE68292C70A31D07B9BB26`).
+Windows SmartScreen will warn. That tag is not Latest and does not replace
+published `v2.0.1`. The ~197 MB installer is not committed to Git.
 
 Production signing uses `dist:win-release` and requires a code-signing certificate plus `WANCODE_WINDOWS_PUBLISHER`. This repository never supplies or commits signing secrets.
 

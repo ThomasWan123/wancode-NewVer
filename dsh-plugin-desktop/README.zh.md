@@ -6,7 +6,7 @@
 
 ## 架构
 
-Electron 可执行文件只包含最小启动代码。它获取单实例锁、解析当前选中的 DSH profile、提供原生运行时能力，并在 Electron main 进程中启动 Host Cordis 根。`desktop-shell` Host 插件通过 Cordis effect 拥有 `BrowserWindow`、导航策略、settings namespace，以及关闭与退出生命周期。原生 runtime 拥有实体托盘，包括 **Open Diagnostics Folder**；`desktop-shell`、`desktop-profiles`、`desktop-terminal`、`desktop-updates` 与 `desktop-relay` 则通过有序 item registry 提供额外的 effect-scoped 命令。`desktop-relay` 默认关闭，从不监听，只有在显式 connect 之后才会拨出站 WSS。
+Electron 可执行文件只包含最小启动代码。它获取单实例锁、解析当前选中的 DSH profile、提供原生运行时能力，并在 Electron main 进程中启动 Host Cordis 根。`desktop-shell` Host 插件通过 Cordis effect 拥有 `BrowserWindow`、导航策略、settings namespace，以及关闭与退出生命周期。原生 runtime 拥有实体托盘，包括 **Open Diagnostics Folder**；`desktop-shell`、`desktop-profiles`、`desktop-terminal`、`desktop-updates` 与 `desktop-relay` 则通过有序 item registry 提供额外的 effect-scoped 命令。`desktop-relay` 默认关闭，从不监听，只有在显式 connect 之后才会拨出站 WSS。启用后，它从该 URL 推导 HTTPS 控制面源，设备注册、令牌签发和撤销都走仅出站 HTTP。
 
 两种呈现模式都复用现有 loopback Web carrier。profile 挂载普通 `dsh-base` 与 `dsh-web-app` bundle；Host 把 HTTP 与 WebSocket surface 绑定到 `127.0.0.1` 的临时端口；Electron 在沙箱 renderer 中加载该同源页面。Electron 不维护自有插件 roster，不使用 preload bridge，renderer 也不会获得原始 Electron API。
 

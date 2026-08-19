@@ -50,10 +50,16 @@ plugin entry.
   same mailbox until it acknowledges each frame. Revoked, expired, and
   cross-account reclaim attempts fail closed and drop remaining mail.
 
-Desktop initiates the cloud connection with `connectOutboundRelay`. This package
+Desktop initiates the cloud connection with `connectOutboundRelay`. Before
+that handshake, the same default export can `registerOutboundRelayDevice`,
+`issueOutboundRelayToken`, and `revokeOutboundRelayDevice` over HTTPS (or
+loopback HTTP). Redirects are re-checked, credentials never appear on the
+URL or request, and private keys are refused. This package
 is not an inbound Host surface. `@wancode/relay-protocol/loopback` is a
 127.0.0.1 test acceptor only. `@wancode/relay-protocol/cloud` adds loopback
 HTTP device registration, token minting, and the same outbound WebSocket
 acceptor; it refuses non-loopback binds and is not part of the default export.
 The desktop Host loads `dsh-plugin-desktop/relay` disabled by default and
-bundles this dialer without declaring a Yarn workspace link.
+bundles this dialer without declaring a Yarn workspace link. When enabled, the
+plugin derives an HTTPS control origin from the WebSocket URL, then registers,
+mints a token, or revokes over outbound HTTP before `connect` opens a socket.

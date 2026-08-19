@@ -58,6 +58,7 @@ describe('desktop outbound relay Host plugin', () => {
       url: 'wss://relay.example.invalid/v1',
     }), connect)
     expect(handle?.url.href).toBe('wss://relay.example.invalid/v1')
+    expect(handle?.httpUrl.href).toBe('https://relay.example.invalid/')
     expect(connect).not.toHaveBeenCalled()
 
     await handle?.connect({
@@ -71,5 +72,57 @@ describe('desktop outbound relay Host plugin', () => {
     })
     handle?.dispose()
     expect(connection.close).toHaveBeenCalledOnce()
+  })
+
+  it('registers, mints a token, and revokes over HTTP without opening a socket', async () => {
+    const connect = vi.fn()
+    const register = vi.fn(async () => ({
+      deviceId: 'device-a',
+      userId: 'user-a',
+      publicKey: 'pub-a',
+    }))
+    const issueToken = vi.fn(async () => ({
+      accessToken: 'tok-live',
+      expiresAt: 1_700_000_900_000,
+    }))
+    const revoke = vi.fn(async () => ({
+      deviceId: 'device-a',
+      revokedAt: 1_700_000_000_000,
+    }))
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), connect, { register, issueToken, revoke })
+
+    await expect(handle?.register({
+      assertion: { sub: 'user-a' },
+      deviceId: 'device-a',
+      publicKey: 'pub-a',
+    })).resolves.toEqual({
+      deviceId: 'device-a',
+      userId: 'user-a',
+      publicKey: 'pub-a',
+    })
+    await expect(handle?.issueToken({
+      assertion: { sub: 'user-a' },
+      deviceId: 'device-a',
+    })).resolves.toEqual({
+      accessToken: 'tok-live',
+      expiresAt: 1_700_000_900_000,
+    })
+    await expect(handle?.revoke({
+      assertion: { sub: 'user-a' },
+      deviceId: 'device-a',
+    })).resolves.toEqual({
+      deviceId: 'device-a',
+      revokedAt: 1_700_000_000_000,
+    })
+    expect(register).toHaveBeenCalledWith({
+      httpUrl: 'https://relay.example.invalid/',
+      assertion: { sub: 'user-a' },
+      deviceId: 'device-a',
+      publicKey: 'pub-a',
+    })
+    expect(connect).not.toHaveBeenCalled()
   })
 })

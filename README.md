@@ -44,9 +44,9 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | 范围 | 状态 |
 | --- | --- |
 | Windows 桌面核心（M1） | **可用**：身份、隔离数据、凭据、更新、回退、崩溃恢复 |
-| 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包 |
+| 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包；预览资源见 [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned) |
 | 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
-| 云中继协议（M2） | **进行中**：fail-closed 契约、JWKS OIDC（含 HTTPS 拉取）、仅出站 WSS、路由、速率限制、审计、离线邮箱、同 socket 重连 drain/ack、在线密封推送、回环控制面、设备间密封载荷与桌面 opt-in 拨号 |
+| 云中继协议（M2） | **进行中**：fail-closed 契约、JWKS OIDC（含 HTTPS 拉取）、仅出站 HTTPS 注册/令牌/撤销、仅出站 WSS、路由、速率限制、审计、离线邮箱、同 socket 重连 drain/ack、在线密封推送、回环控制面、设备间密封载荷与桌面 opt-in 拨号 |
 | 移动 PWA、插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
 
 桌面 `master` 现已包含：
@@ -97,6 +97,13 @@ corepack yarn dev
 ```powershell
 corepack yarn dist:win
 ```
+
+未签名预览安装包也发布为 GitHub prerelease
+[v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned)
+（`Wan-Code-2.0.1-x64-Setup.exe`，SHA-256
+`61798CE6E3CC4426C021582A6174A1809F48AAA366AE68292C70A31D07B9BB26`）。
+Windows SmartScreen 会警告。该标签不是 Latest，也不替换已发布的 `v2.0.1`。
+安装包约 197 MB，不提交进 Git。
 
 正式签名发布使用 `dist:win-release`，需要代码签名证书和 `WANCODE_WINDOWS_PUBLISHER`。仓库不会提供或提交任何签名密钥。
 

@@ -45,4 +45,45 @@ declare module '@wancode/relay-protocol' {
   export function connectOutboundRelay(
     input: ConnectOutboundRelayInput,
   ): Promise<OutboundRelayConnection>
+
+  export function assertOutboundRelayHttpUrl(url: string): URL
+  export function httpUrlFromOutboundRelayUrl(url: string): URL
+
+  export interface OutboundRelayControlInput {
+    readonly httpUrl: string
+    readonly assertion: unknown
+    readonly deviceId: string
+  }
+
+  export interface RegisterOutboundRelayDeviceInput extends OutboundRelayControlInput {
+    readonly publicKey: string
+    readonly encryptionPublicKey?: string
+  }
+
+  export interface OutboundRelayDevice {
+    readonly deviceId: string
+    readonly userId: string
+    readonly publicKey: string
+    readonly encryptionPublicKey?: string
+  }
+
+  export interface OutboundRelayAccessToken {
+    readonly accessToken: string
+    readonly expiresAt: number
+  }
+
+  export interface OutboundRelayRevocation {
+    readonly deviceId: string
+    readonly revokedAt: number
+  }
+
+  export function registerOutboundRelayDevice(
+    input: RegisterOutboundRelayDeviceInput,
+  ): Promise<OutboundRelayDevice>
+  export function issueOutboundRelayToken(
+    input: OutboundRelayControlInput,
+  ): Promise<OutboundRelayAccessToken>
+  export function revokeOutboundRelayDevice(
+    input: OutboundRelayControlInput,
+  ): Promise<OutboundRelayRevocation>
 }
