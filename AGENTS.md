@@ -4,7 +4,7 @@ This repository owns the desktop product around an unmodified DeepSeek Harness c
 
 - `deepseek-harness/` is a pinned upstream Git submodule. Never edit files inside it from a desktop feature branch.
 - `dsh-plugin-desktop/` owns the Cordis Host and Client faces, Electron bootstrap, packaging, and release tests.
-- `packages/wancode/` owns Wan Code protocol and cloud modules. `@wancode/relay-protocol` is the fail-closed remote-control contract and outbound-only WebSocket dialer. It must not declare a loadable DSH plugin entry or listen on a public interface.
+- `packages/wancode/` owns Wan Code protocol, cloud, and mobile PWA modules. `@wancode/relay-protocol` is the fail-closed remote-control contract and outbound-only WebSocket dialer. It must not declare a loadable DSH plugin entry or listen on a public interface. `@wancode/relay-pwa` is the mobile pairing and session-projection surface. It must not declare a loadable DSH plugin entry, listen on a public interface, store model credentials, or depend on `@wancode/*` through `workspace:` ranges.
 - `dsh-community-fabric/` owns the community interoperability RFC. Until schemas and a reviewed reference adapter exist, it remains a private documentation scaffold and must not declare loadable DSH or package entry points.
 - `dsh-community-market/` owns the community-market shell. Until its runtime is implemented, it remains a private documentation scaffold and must not declare loadable DSH or package entry points.
 - The outer repository and all owned packages use the root Yarn release with `nodeLinker: node-modules`.

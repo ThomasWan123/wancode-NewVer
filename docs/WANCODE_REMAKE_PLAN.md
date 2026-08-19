@@ -24,6 +24,10 @@ Status: active
   origin from its WebSocket URL, and does not dial until connect is invoked.
   The local device identity is generated once, stored in Windows Credential
   Manager, and used to enroll and sign handshakes without exposing private keys.
+- M3 started: `@wancode/relay-pwa` projects session events without prompt text
+  or model credentials, and can enroll as a PWA device then send a sealed
+  follow-up to a paired desktop over outbound HTTPS/WSS. It does not listen
+  and is not yet an installable iOS or Android PWA.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
@@ -221,6 +225,14 @@ derived from that WebSocket URL before any socket is opened. The local device
 identity is created once, stored under Windows Credential Manager, and used to
 enroll the public keys and mint a signed handshake without putting private keys
 on the returned object or in settings files.
+
+M3 starts with `@wancode/relay-pwa`. A paired PWA device reuses the relay
+application payload types and projects them into a UI-neutral session view.
+Prompt text and model credential fields stay off that view. The PWA enrolls
+over outbound HTTPS, dials outbound WSS, and seals follow-ups to the desktop
+encryption public key. Model credentials remain on the desktop. The package
+does not listen, does not declare a Harness plugin entry, and is not yet an
+installable iOS or Android application.
 
 M1 now includes Wancode application and installer identity,
 an isolated Harness home, telemetry-private defaults, GitHub release discovery,

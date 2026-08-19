@@ -47,7 +47,8 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包；预览资源见 [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned) |
 | 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
 | 云中继协议（M2） | **进行中**：fail-closed 契约、JWKS OIDC、仅出站 HTTPS 注册/令牌/撤销、Credential Manager 设备身份、仅出站 WSS、路由、速率限制、审计、离线邮箱、同 socket 重连 drain/ack、在线密封推送、回环控制面、设备间密封载荷与桌面 opt-in 拨号 |
-| 移动 PWA、插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
+| 移动 PWA（M3） | **进行中**：会话投影、仅出站配对与密封 follow-up；模型凭据留在桌面；尚不可安装 |
+| 插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
 
 桌面 `master` 现已包含：
 
@@ -69,7 +70,7 @@ Windows 聚焦门禁覆盖 252 项桌面测试，外加完整运行时依赖闭�
 | --- | --- |
 | `deepseek-harness/` | 只读、固定版本的官方上游 Git 子模块 |
 | `dsh-plugin-desktop/` | Electron、Host/Client 插件、Windows 安全与打包 |
-| `packages/wancode/` | Wan Code 自有协议与云模块；当前为 relay 契约与仅出站客户端 |
+| `packages/wancode/` | Wan Code 自有协议、云模块与移动 PWA 配对面 |
 | `dsh-community-fabric/` | 社区互操作规范（文档骨架，不可加载） |
 | `dsh-community-market/` | 审核制插件市场契约（文档骨架，不可加载） |
 
@@ -112,7 +113,7 @@ Windows SmartScreen 会警告。该标签不是 Latest，也不替换已发布�
 
 1. **Windows 桌面核心** — 已作为可独立使用的本地产品交付；签名正式包待证书。
 2. **Wan Code Cloud Relay** — 账号、设备注册、短期令牌、撤销、审计与端到端加密协议。
-3. **移动 PWA** — 查看会话、发送后续指令、审批工具、取消任务与通知。
+3. **移动 PWA** — 进行中：会话投影与仅出站配对；可安装的 iOS / Android 应用尚未交付。
 4. **审核制插件市场** — 签名 Manifest、权限声明、兼容性检查、原子安装与回滚。
 5. **消息渠道** — 通过官方 API 接入飞书、Discord、WhatsApp，以及合规可用的微信能力。
 

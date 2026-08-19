@@ -5705,6 +5705,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@wancode/relay-pwa@workspace:packages/wancode/relay-pwa":
+  version: 0.0.0-use.local
+  resolution: "@wancode/relay-pwa@workspace:packages/wancode/relay-pwa"
+  dependencies:
+    "@types/node": "npm:^22.20.0"
+    typescript: "npm:6.0.3"
+    vitest: "npm:4.1.8"
+  languageName: unknown
+  linkType: soft
+
 "@xmldom/xmldom@npm:^0.8.8":
   version: 0.8.14
   resolution: "@xmldom/xmldom@npm:0.8.14"
