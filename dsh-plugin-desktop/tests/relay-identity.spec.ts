@@ -188,5 +188,12 @@ describe('desktop relay device identity', () => {
     expect(JSON.stringify(desktop)).not.toContain(parseStoredDeviceIdentity(
       store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
     ).keyPair.privateKey)
+    try {
+      desktop.openSealed(envelope)
+      expect.unreachable('expected a relay authorization error')
+    } catch (cause) {
+      expect(cause).toBeInstanceOf(RelayAuthorizationError)
+      expect((cause as RelayAuthorizationError).code).toBe('untrusted-key')
+    }
   })
 })
