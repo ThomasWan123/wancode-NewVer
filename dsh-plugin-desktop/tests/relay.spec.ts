@@ -180,6 +180,39 @@ describe('desktop outbound relay Host plugin', () => {
     expect(connection.acknowledge).toHaveBeenCalledWith({ envelopeId: 'msg-1' })
   })
 
+  it('opens a duplicated live push once and acks only the queued copy', async () => {
+    const queued = { id: 'msg-1', kind: 'prompt' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => [queued]),
+      receive: vi.fn(async () => [queued]),
+      acknowledge: vi.fn(async () => ({
+        envelopeId: 'msg-1',
+        toDeviceId: 'device-a',
+        outcome: 'delivered' as const,
+      })),
+      close: vi.fn(),
+    }
+    const identity = {
+      openSealed: vi.fn(() => ({
+        kind: 'prompt' as const,
+        sessionId: 'sess-1',
+        text: 'review the login form',
+      })),
+    }
+    await expect(drainDesktopRelayMail({ connection, identity })).resolves.toEqual({
+      payloads: [
+        { kind: 'prompt', sessionId: 'sess-1', text: 'review the login form' },
+      ],
+    })
+    expect(identity.openSealed).toHaveBeenCalledOnce()
+    expect(connection.acknowledge).toHaveBeenCalledOnce()
+  })
+
   it('refuses to drain mail that has no envelope id', async () => {
     const connection = {
       sessionId: 'sess-1',
