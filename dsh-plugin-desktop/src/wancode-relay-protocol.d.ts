@@ -86,4 +86,43 @@ declare module '@wancode/relay-protocol' {
   export function revokeOutboundRelayDevice(
     input: OutboundRelayControlInput,
   ): Promise<OutboundRelayRevocation>
+
+  export interface DeviceKeyPair {
+    readonly publicKey: string
+    readonly privateKey: string
+    readonly encryptionPublicKey: string
+    readonly encryptionPrivateKey: string
+  }
+
+  export interface StoredDeviceIdentity {
+    readonly deviceId: string
+    readonly keyPair: DeviceKeyPair
+  }
+
+  export interface PublicDeviceIdentity {
+    readonly deviceId: string
+    readonly publicKey: string
+    readonly encryptionPublicKey: string
+  }
+
+  export function createStoredDeviceIdentity(
+    keyPair?: DeviceKeyPair,
+    deviceId?: string,
+  ): StoredDeviceIdentity
+  export function serializeStoredDeviceIdentity(identity: StoredDeviceIdentity): string
+  export function parseStoredDeviceIdentity(raw: string): StoredDeviceIdentity
+  export function publicDeviceIdentity(identity: StoredDeviceIdentity): PublicDeviceIdentity
+
+  export interface SignedHandshakeEnvelopeInput {
+    readonly id: string
+    readonly sentAt: number
+    readonly actor: { readonly userId: string, readonly deviceId: string }
+    readonly keyPair: DeviceKeyPair
+    readonly nonce: string
+    readonly capabilities: readonly string[]
+  }
+
+  export function createSignedHandshakeEnvelope(
+    input: SignedHandshakeEnvelopeInput,
+  ): Record<string, unknown>
 }

@@ -25,10 +25,16 @@ export {
 export {
   assertDeviceEncryptionPublicKey,
   assertDevicePublicKey,
+  createStoredDeviceIdentity,
   generateDeviceKeyPair,
+  parseStoredDeviceIdentity,
+  publicDeviceIdentity,
+  serializeStoredDeviceIdentity,
   signDevicePayload,
   verifyDevicePayload,
   type DeviceKeyPair,
+  type PublicDeviceIdentity,
+  type StoredDeviceIdentity,
 } from './device-keys.ts'
 export {
   createStaticOidcIdentityProvider,

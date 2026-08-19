@@ -14,7 +14,8 @@ Wan Code Cloud Relay（M2）的 fail-closed 远程控制契约和仅出站 WebSo
 - 过期令牌、已撤销设备和跨账号 actor 一律失败关闭。
 - 相同消息 id 且载荷不变时幂等；载荷被改写则视为重放并拒绝。
 - 设备身份是 Ed25519 签名密钥对，外加一把 X25519 加密密钥。私钥不会出现在
-  handshake、ack 或密封 ciphertext 中。
+  handshake、ack 或密封 ciphertext 中。安全存储可以保存含私钥的身份 blob；
+  `publicDeviceIdentity` 不含私钥，公钥与私钥不匹配一律失败关闭。
 - 应用层的 prompt、approval、cancel、session-event 和 presence 帧会按目的设备
   加密公钥密封。Relay 只保存密文盒；错误设备密钥和 handshake ciphertext 一律
   失败关闭。
@@ -48,3 +49,5 @@ URL 策略检查，请求从不携带凭据，私钥一律拒绝。本包不是�
 默认关闭 `dsh-plugin-desktop/relay`，并把该拨号器打包进桌面包，不使用 Yarn
 workspace 链接。启用后，插件从 WebSocket URL 推导 HTTPS 控制面源，先通过出站
 HTTP 注册、签发令牌或撤销，再在 `connect` 时打开 socket。
+`createStoredDeviceIdentity` 把 Ed25519 与 X25519 密钥对编码进安全存储。
+公开视图不含私钥；被改写的公钥一律失败关闭。

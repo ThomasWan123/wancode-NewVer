@@ -10,6 +10,15 @@ import {
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
 } from '@wancode/relay-protocol'
+import type { DesktopRelayIdentity } from './relay-identity.ts'
+
+export {
+  RELAY_DEVICE_CREDENTIAL_REF,
+  loadDesktopRelayIdentity,
+  type DesktopRelayHandshakeInput,
+  type DesktopRelayIdentity,
+  type LoadDesktopRelayIdentityInput,
+} from './relay-identity.ts'
 
 /** Stable Cordis plugin name. */
 export const name = 'desktop-relay'
@@ -52,6 +61,12 @@ export interface DesktopRelayDeviceInput {
   readonly deviceId: string
 }
 
+/** Inputs for registering the stored local identity without a socket. */
+export interface DesktopRelayEnrollInput {
+  readonly assertion: unknown
+  readonly identity: Pick<DesktopRelayIdentity, 'deviceId' | 'publicKey' | 'encryptionPublicKey'>
+}
+
 /** Live outbound session returned after a successful handshake. */
 export interface DesktopRelayConnection {
   readonly sessionId: string
@@ -84,6 +99,12 @@ export interface DesktopRelayConnection {
 export interface DesktopRelayHandle {
   readonly url: URL
   readonly httpUrl: URL
+  enroll(input: DesktopRelayEnrollInput): Promise<{
+    readonly deviceId: string
+    readonly userId: string
+    readonly publicKey: string
+    readonly encryptionPublicKey?: string
+  }>
   register(input: DesktopRelayRegisterInput): Promise<{
     readonly deviceId: string
     readonly userId: string
@@ -134,6 +155,15 @@ export function prepareDesktopRelay(
   return {
     url,
     httpUrl,
+    async enroll(input) {
+      return control.register({
+        httpUrl: httpUrl.href,
+        assertion: input.assertion,
+        deviceId: input.identity.deviceId,
+        publicKey: input.identity.publicKey,
+        encryptionPublicKey: input.identity.encryptionPublicKey,
+      })
+    },
     async register(input) {
       return control.register({
         httpUrl: httpUrl.href,

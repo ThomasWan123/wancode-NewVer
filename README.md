@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows 桌面核心（M1） | **可用**：身份、隔离数据、凭据、更新、回退、崩溃恢复 |
 | 本地测试安装包 | **可用**：`yarn dist:win` 生成未签名 NSIS 包；预览资源见 [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned) |
 | 签名正式发布 | **延后**：等待代码签名证书与受信旧版安装包 |
-| 云中继协议（M2） | **进行中**：fail-closed 契约、JWKS OIDC（含 HTTPS 拉取）、仅出站 HTTPS 注册/令牌/撤销、仅出站 WSS、路由、速率限制、审计、离线邮箱、同 socket 重连 drain/ack、在线密封推送、回环控制面、设备间密封载荷与桌面 opt-in 拨号 |
+| 云中继协议（M2） | **进行中**：fail-closed 契约、JWKS OIDC、仅出站 HTTPS 注册/令牌/撤销、Credential Manager 设备身份、仅出站 WSS、路由、速率限制、审计、离线邮箱、同 socket 重连 drain/ack、在线密封推送、回环控制面、设备间密封载荷与桌面 opt-in 拨号 |
 | 移动 PWA、插件市场、消息渠道 | 路线图，尚未作为可用功能发布 |
 
 桌面 `master` 现已包含：
@@ -56,6 +56,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 - 独立的 Electron user-data 目录；首次启动可选择从 `~/.dsh` 拷贝设置、会话与凭据，源目录保持不变
 - 默认关闭上游遥测；新会话默认 `read-only` 权限预设
 - 模型密钥写入 Windows Credential Manager，并在安全写入成功后删除旧的明文 `.credentials.yaml`
+- 中继设备私钥同样只写入 Credential Manager；注册与握手只使用公钥
 - 从本仓库 GitHub Releases 下载更新；Windows 安装器必须通过 PE 与 Authenticode 信任校验
 - Stable / Beta 通道、确认后回退，以及一次健康检查失败后的自动 Windows 恢复
 - Renderer 崩溃恢复、托盘「打开诊断目录」，以及 `logs/wancode.log`

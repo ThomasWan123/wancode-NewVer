@@ -18,6 +18,9 @@ plugin entry.
   treated as replay and rejected.
 - Device identity is an Ed25519 signing keypair plus an X25519 encryption
   keypair. Private keys never appear in handshake, ack, or sealed ciphertext.
+  A stored identity blob may hold those private keys for a secure store;
+  `publicDeviceIdentity` omits them, and a public key that does not match the
+  private material fails closed.
 - Application prompt, approval, cancel, session-event, and presence frames are
   sealed to the recipient encryption public key. The relay stores the box
   opaquely; the wrong device key and handshake ciphertext fail closed.
@@ -63,3 +66,5 @@ The desktop Host loads `dsh-plugin-desktop/relay` disabled by default and
 bundles this dialer without declaring a Yarn workspace link. When enabled, the
 plugin derives an HTTPS control origin from the WebSocket URL, then registers,
 mints a token, or revokes over outbound HTTP before `connect` opens a socket.
+`createStoredDeviceIdentity` encodes the Ed25519 and X25519 pair for a secure
+store. Public views omit private keys; a mutated public key fails closed.

@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows desktop core (M1) | **Available**: identity, isolated data, credentials, updates, rollback, crash recovery |
 | Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package; preview asset is [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned) |
 | Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
-| Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC with HTTPS fetch, outbound HTTPS register/token/revoke, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, loopback control plane, device-sealed payloads, and an opt-in desktop dialer |
+| Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC, outbound HTTPS register/token/revoke, Credential Manager device identity, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, loopback control plane, device-sealed payloads, and an opt-in desktop dialer |
 | Mobile PWA, marketplace, channels | Roadmap; not published as available features |
 
 The desktop `master` branch currently includes:
@@ -56,6 +56,7 @@ The desktop `master` branch currently includes:
 - Isolated Electron user data; first launch can copy settings, sessions, and credentials from `~/.dsh` without changing the source
 - Telemetry off by default and new sessions pinned to the `read-only` permission preset
 - Model keys stored in Windows Credential Manager, with one-time removal of plaintext `.credentials.yaml` after every secure write succeeds
+- Relay device private keys stored only in Credential Manager; registration and handshake use the public identity
 - Updates from this repository's GitHub Releases; Windows installers must pass PE and Authenticode trust validation
 - Stable / beta channels, confirmation-gated rollback, and one automatic Windows recovery after a failed health report
 - Renderer crash recovery, **Open Diagnostics Folder**, and `logs/wancode.log`
