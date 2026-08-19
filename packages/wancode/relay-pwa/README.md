@@ -26,7 +26,8 @@ directory links.
   token, and dials the relay. The desktop may be selected later via
   `listDesktops` / `selectDesktop`. Follow-ups, approvals, and cancels are
   sealed to that desktop encryption public key. Presence frames are sealed the
-  same way. `drain` reclaims queued mail
+  same way. Follow-up text is required and capped so low-bandwidth links stay
+  bounded. `drain` reclaims queued mail
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so
   the handshake is not replay. `revoke` closes the socket and revokes the PWA
   device id immediately. The returned object does not include private

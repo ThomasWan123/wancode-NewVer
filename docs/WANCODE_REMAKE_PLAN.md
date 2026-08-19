@@ -34,7 +34,8 @@ Status: active
   Manifest and fail-closed cache policy exist; `createPwaServiceWorkerSource`
   emits the matching worker. `createPwaShellFiles` returns the static index,
   manifest, and worker. The PWA can also send sealed presence and revoke itself
-  immediately. The HTML/icons runtime is not hosted here. Desktop identity can
+  immediately. Follow-up text is required and capped. The HTML/icons runtime is
+  not hosted here. Desktop identity can
   open sealed PWA follow-ups without exposing private keys, and can `sealTo` a
   PWA encryption public key. `drainDesktopRelayMail` reclaims queued boxes
   and acks only queued ids. It does not listen.

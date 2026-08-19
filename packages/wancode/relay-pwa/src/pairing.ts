@@ -92,6 +92,8 @@ interface PwaRelayDelivery {
   readonly outcome: 'delivered' | 'queued' | 'duplicate'
 }
 
+const MAX_PWA_FOLLOW_UP_CHARS = 8_192
+
 /**
  * Register the PWA device, mint a token, and dial the relay outbound.
  * Model credentials are refused. The desktop keeps those keys locally.
@@ -167,6 +169,12 @@ export async function createPwaRelayController(
     },
     async sendFollowUp(followUp) {
       assertPwaRelayRecord(followUp as unknown as Record<string, unknown>, 'pwa follow-up')
+      if (typeof followUp.text !== 'string' || followUp.text.length === 0) {
+        throw new RelayAuthorizationError('malformed', 'pwa follow-up text is required')
+      }
+      if (followUp.text.length > MAX_PWA_FOLLOW_UP_CHARS) {
+        throw new RelayAuthorizationError('malformed', 'pwa follow-up text is too large')
+      }
       const delivery = await sendSealed('prompt', followUp.id, {
         kind: 'prompt',
         sessionId: followUp.sessionId,

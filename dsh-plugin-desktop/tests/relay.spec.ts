@@ -179,4 +179,25 @@ describe('desktop outbound relay Host plugin', () => {
     expect(connection.acknowledge).toHaveBeenCalledOnce()
     expect(connection.acknowledge).toHaveBeenCalledWith({ envelopeId: 'msg-1' })
   })
+
+  it('refuses to drain mail that has no envelope id', async () => {
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => [{ kind: 'prompt' }]),
+      receive: vi.fn(async () => {
+        throw new Error('timeout')
+      }),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    await expect(drainDesktopRelayMail({
+      connection,
+      identity: { openSealed: vi.fn() },
+    })).rejects.toMatchObject({ code: 'malformed' })
+    expect(connection.acknowledge).not.toHaveBeenCalled()
+  })
 })
