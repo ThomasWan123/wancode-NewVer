@@ -9,7 +9,9 @@ import {
   issueOutboundRelayToken,
   listOutboundRelayDevices,
   registerOutboundRelayDevice,
+  RelayAuthorizationError,
   revokeOutboundRelayDevice,
+  type RelayApplicationPayload,
 } from '@wancode/relay-protocol'
 import type { DesktopRelayIdentity } from './relay-identity.ts'
 
@@ -221,6 +223,46 @@ export function prepareDesktopRelay(
       connection = undefined
     },
   }
+}
+
+/**
+ * Drain queued and live sealed mail, then open it with the stored identity.
+ * Only queued ids are acknowledged. Private keys stay inside `openSealed`.
+ */
+export async function drainDesktopRelayMail(input: {
+  readonly connection: DesktopRelayConnection
+  readonly identity: Pick<DesktopRelayIdentity, 'openSealed'>
+}): Promise<{
+  readonly payloads: readonly RelayApplicationPayload[]
+}> {
+  const queued = [...await input.connection.reclaim()]
+  let live: readonly unknown[] = []
+  try {
+    live = await input.connection.receive({ timeoutMs: 25 })
+  } catch {
+    live = []
+  }
+  const seen = new Set<string>()
+  const payloads: RelayApplicationPayload[] = []
+  const queuedIds = new Set(queued.map(relayEnvelopeId))
+  for (const envelope of [...queued, ...live]) {
+    const envelopeId = relayEnvelopeId(envelope)
+    if (seen.has(envelopeId)) continue
+    seen.add(envelopeId)
+    payloads.push(input.identity.openSealed(envelope))
+    if (queuedIds.has(envelopeId)) {
+      await input.connection.acknowledge({ envelopeId })
+    }
+  }
+  return { payloads }
+}
+
+function relayEnvelopeId(envelope: unknown): string {
+  if (envelope !== null && typeof envelope === 'object' && !Array.isArray(envelope)) {
+    const id = (envelope as { id?: unknown }).id
+    if (typeof id === 'string' && id.length > 0 && !/[\0\r\n]/u.test(id)) return id
+  }
+  throw new RelayAuthorizationError('malformed', 'relay envelope id is required')
 }
 
 /**

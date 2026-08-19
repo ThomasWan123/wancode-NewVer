@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import {
   apply,
+  drainDesktopRelayMail,
   prepareDesktopRelay,
   type Config as RelayConfig,
 } from '../src/relay.ts'
@@ -142,5 +143,40 @@ describe('desktop outbound relay Host plugin', () => {
       assertion: { sub: 'user-a' },
     })
     expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('drains queued sealed mail, opens it, and acks only queued ids', async () => {
+    const queued = { id: 'msg-1', kind: 'prompt' }
+    const live = { id: 'msg-2', kind: 'presence' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => [queued]),
+      receive: vi.fn(async () => [live]),
+      acknowledge: vi.fn(async () => ({
+        envelopeId: 'msg-1',
+        toDeviceId: 'device-a',
+        outcome: 'delivered' as const,
+      })),
+      close: vi.fn(),
+    }
+    const identity = {
+      openSealed: vi.fn((envelope: unknown) => (
+        envelope === queued
+          ? { kind: 'prompt' as const, sessionId: 'sess-1', text: 'review the login form' }
+          : { kind: 'presence' as const, state: 'online' as const }
+      )),
+    }
+    await expect(drainDesktopRelayMail({ connection, identity })).resolves.toEqual({
+      payloads: [
+        { kind: 'prompt', sessionId: 'sess-1', text: 'review the login form' },
+        { kind: 'presence', state: 'online' },
+      ],
+    })
+    expect(connection.acknowledge).toHaveBeenCalledOnce()
+    expect(connection.acknowledge).toHaveBeenCalledWith({ envelopeId: 'msg-1' })
   })
 })
