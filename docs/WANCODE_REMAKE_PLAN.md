@@ -16,8 +16,9 @@ Status: active
   device registration/revocation, same-account routing, per-device rate limits,
   a plaintext-free audit log, sealed-box routing and offline mailbox delivery,
   same-socket reconnect drain and ack, live sealed-box fan-out to an online
-  destination socket, a JWKS-backed OIDC verifier that never fetches a URL,
-  a loopback HTTP control plane for register/token/revoke plus the same outbound
+  destination socket, a JWKS-backed OIDC verifier plus an opt-in HTTPS JWKS
+  fetch that never carries credentials, a loopback HTTP control plane for
+  register/token/revoke plus the same outbound
   WebSocket acceptor, and an opt-in desktop Host plugin that never listens and
   does not dial until connect is invoked.
 - The Windows package gate currently passes with 252 focused tests plus the
@@ -198,8 +199,9 @@ entry. A 127.0.0.1 loopback acceptor exists only as a test double under the
 `./loopback` export. `./cloud` adds loopback HTTP registration, token minting,
 and revocation on the same acceptor and still refuses non-loopback binds. A replaceable OIDC identity provider verifies issuer,
 audience, subject, and expiry before a device may register. Production
-verifies compact ES256 or RS256 JWTs against a caller-supplied JWKS and
-never opens a JWKS socket itself. Revoking that
+verifies compact ES256 or RS256 JWTs against a caller-supplied JWKS.
+`fetchOidcJwks` may load that JWKS over HTTPS; redirects are re-checked and
+the request never carries credentials. Revoking that
 device fails closed immediately and the device id cannot be reused. Sealed
 application envelopes route only to another device on the same account. Opaque
 prompt ciphertext and handshake frames are not routed. Cross-account

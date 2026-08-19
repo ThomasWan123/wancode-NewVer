@@ -34,9 +34,11 @@ plugin entry.
   the handshake device offline.
 - Short-lived access tokens are minted per device after a replaceable OIDC
   identity provider verifies the account. The JWKS provider accepts compact
-  ES256 or RS256 JWTs from a caller-supplied key set and never fetches a URL.
-  The static provider remains the object-shaped test double. Expired
-  assertions, unknown kids, and `none` / HMAC algorithms fail closed.
+  ES256 or RS256 JWTs from a caller-supplied key set. `fetchOidcJwks` may load
+  that set over HTTPS (or loopback HTTP); redirects are re-checked and the
+  request never carries credentials. The static provider remains the
+  object-shaped test double. Expired assertions, unknown kids, and `none` /
+  HMAC algorithms fail closed.
 - Device registration binds one Ed25519 public key to that account. Revocation
   is immediate and the device id cannot be reused.
 - Routing delivers a sealed application envelope only to another device on the

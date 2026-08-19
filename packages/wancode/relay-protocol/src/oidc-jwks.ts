@@ -1,4 +1,4 @@
-/** JWKS-backed OIDC verifier. This module never fetches a URL or binds a port. */
+/** JWKS-backed OIDC verifier. JWT verify stays synchronous; fetch is opt-in. */
 
 import { createPublicKey, verify as verifySignature, type KeyObject } from 'node:crypto'
 import { assertNoPlaintextRelayFields } from './envelope.ts'
@@ -53,10 +53,100 @@ export function assertOidcJwksUrl(url: string): URL {
   throw new RelayAuthorizationError('malformed', 'relay identity jwks url must use https or loopback http')
 }
 
+const MAX_JWKS_BYTES = 65_536
+const MAX_JWKS_REDIRECTS = 3
+
+/** Minimal GET used by `fetchOidcJwks`. Tests inject a fake transport. */
+export interface RelayJwksFetch {
+  (
+    url: string,
+    init: {
+      readonly method: 'GET'
+      readonly redirect: 'manual'
+      readonly headers: { readonly accept: string }
+    },
+  ): Promise<{
+    readonly ok: boolean
+    readonly status: number
+    readonly headers: { get(name: string): string | null }
+    arrayBuffer(): Promise<ArrayBuffer>
+  }>
+}
+
+/**
+ * Load one JWKS over HTTPS (or loopback HTTP). Redirects are re-checked
+ * against the same URL policy. The request never carries credentials.
+ */
+export async function fetchOidcJwks(
+  url: string,
+  fetchImpl: RelayJwksFetch = globalThis.fetch as RelayJwksFetch,
+): Promise<RelayJsonWebKeySet> {
+  let current = assertOidcJwksUrl(url)
+  for (let hop = 0; hop <= MAX_JWKS_REDIRECTS; hop++) {
+    let response: Awaited<ReturnType<RelayJwksFetch>>
+    try {
+      response = await fetchImpl(current.href, {
+        method: 'GET',
+        redirect: 'manual',
+        headers: { accept: 'application/json, application/jwk-set+json' },
+      })
+    } catch {
+      throw new RelayAuthorizationError('untrusted-identity', 'relay identity jwks could not be fetched')
+    }
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location')
+      if (typeof location !== 'string' || location.length === 0) {
+        throw new RelayAuthorizationError('malformed', 'relay identity jwks redirect is missing')
+      }
+      current = assertOidcJwksUrl(new URL(location, current).href)
+      continue
+    }
+    if (!response.ok) {
+      throw new RelayAuthorizationError('untrusted-identity', 'relay identity jwks fetch was not successful')
+    }
+    const bytes = Buffer.from(await response.arrayBuffer())
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_JWKS_BYTES) {
+      throw new RelayAuthorizationError('malformed', 'relay identity jwks body is invalid')
+    }
+    return parseRelayJsonWebKeySet(bytes.toString('utf8'))
+  }
+  throw new RelayAuthorizationError('untrusted-identity', 'relay identity jwks redirected too many times')
+}
+
+/** Parse one JWKS JSON document. Private key material fails closed. */
+export function parseRelayJsonWebKeySet(raw: string): RelayJsonWebKeySet {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'relay identity jwks is not json')
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new RelayAuthorizationError('malformed', 'relay identity jwks must be an object')
+  }
+  const record = parsed as Record<string, unknown>
+  assertNoPlaintextRelayFields(record, 'relay identity jwks')
+  if (!Array.isArray(record.keys)) {
+    throw new RelayAuthorizationError('untrusted-identity', 'relay identity jwks is invalid')
+  }
+  const keys = record.keys.map(key => {
+    if (key === null || typeof key !== 'object' || Array.isArray(key)) {
+      throw new RelayAuthorizationError('untrusted-identity', 'relay identity jwk is invalid')
+    }
+    const jwk = key as Record<string, unknown>
+    assertNoPlaintextRelayFields(jwk, 'relay identity jwk')
+    if ('d' in jwk || 'p' in jwk || 'q' in jwk || 'dp' in jwk || 'dq' in jwk || 'qi' in jwk || 'k' in jwk) {
+      throw new RelayAuthorizationError('untrusted-identity', 'relay identity jwk must be a public signing key')
+    }
+    return jwk
+  })
+  return { keys }
+}
+
 /**
  * Verify a compact OIDC JWT against a caller-supplied JWKS.
  * Unknown algorithms, unknown kids, and bad signatures fail closed. The
- * resolver is synchronous so this package never opens a network socket.
+ * resolver is synchronous; callers load JWKS with `fetchOidcJwks` first.
  */
 export function createJwksOidcIdentityProvider(
   config: JwksOidcIdentityProviderConfig,

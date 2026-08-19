@@ -22,6 +22,7 @@ describe('relay-protocol package surface', () => {
     expect(manifest.exports).toHaveProperty('./cloud')
     expect(protocol).toHaveProperty('createJwksOidcIdentityProvider')
     expect(protocol).toHaveProperty('assertOidcJwksUrl')
+    expect(protocol).toHaveProperty('fetchOidcJwks')
     expect(protocol).toHaveProperty('connectOutboundRelay')
     expect(protocol).toHaveProperty('parseRelayWireCommand')
     expect(protocol).toHaveProperty('parseRelayWireDelivery')

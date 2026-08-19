@@ -40,8 +40,11 @@ export {
 export {
   assertOidcJwksUrl,
   createJwksOidcIdentityProvider,
+  fetchOidcJwks,
+  parseRelayJsonWebKeySet,
   type JwksOidcIdentityProviderConfig,
   type RelayJsonWebKeySet,
+  type RelayJwksFetch,
 } from './oidc-jwks.ts'
 export {
   registerRelayDevice,

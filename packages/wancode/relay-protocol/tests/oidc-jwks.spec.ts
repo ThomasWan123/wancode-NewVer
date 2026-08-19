@@ -5,13 +5,45 @@ import {
   assertOidcJwksUrl,
   createJwksOidcIdentityProvider,
   createMemoryRelayStore,
+  fetchOidcJwks,
   generateDeviceKeyPair,
+  parseRelayJsonWebKeySet,
   registerRelayDevice,
 } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
 const AUDIENCE = 'wancode-relay'
+
+async function expectRelayErrorAsync(run: () => Promise<unknown>, code: string): Promise<void> {
+  try {
+    await run()
+    expect.unreachable('expected a relay authorization error')
+  } catch (cause) {
+    expect(cause).toBeInstanceOf(RelayAuthorizationError)
+    expect((cause as RelayAuthorizationError).code).toBe(code)
+  }
+}
+
+function jsonResponse(
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  const bytes = Buffer.from(typeof body === 'string' ? body : JSON.stringify(body))
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get(name: string) {
+        return headers[name.toLowerCase()] ?? null
+      },
+    },
+    async arrayBuffer() {
+      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    },
+  }
+}
 
 function expectRelayError(run: () => unknown, code: string): void {
   try {
@@ -216,5 +248,35 @@ describe('jwks-backed oidc identity', () => {
       alg: 'ES256',
       kid: 'ec-1',
     }, claims(), 'ieee-p1363'), NOW), 'untrusted-identity')
+  })
+})
+
+describe('oidc jwks fetch', () => {
+  it('loads a public jwks over https without following an untrusted redirect', async () => {
+    const keys = es256Pair()
+    const jwks = { keys: [keys.jwk] }
+    expect(parseRelayJsonWebKeySet(JSON.stringify(jwks))).toEqual(jwks)
+    expect(await fetchOidcJwks('https://idp.wancode.example/jwks', async () => jsonResponse(200, jwks))).toEqual(jwks)
+    await expectRelayErrorAsync(() => fetchOidcJwks('https://user:tok@idp.example.invalid/jwks', async () => {
+      throw new Error('fetch must not run')
+    }), 'plaintext')
+    await expectRelayErrorAsync(() => fetchOidcJwks('https://idp.wancode.example/jwks', async () => jsonResponse(302, '', {
+      location: 'http://evil.example.invalid/jwks',
+    })), 'cleartext-transport')
+  })
+
+  it('follows an https redirect and refuses private key material', async () => {
+    const keys = es256Pair()
+    const jwks = { keys: [keys.jwk] }
+    const fetched = await fetchOidcJwks('https://idp.wancode.example/start', async (url) => {
+      if (url === 'https://idp.wancode.example/start') {
+        return jsonResponse(302, '', { location: 'https://idp.wancode.example/jwks' })
+      }
+      return jsonResponse(200, jwks)
+    })
+    expect(fetched).toEqual(jwks)
+    await expectRelayErrorAsync(() => fetchOidcJwks('https://idp.wancode.example/jwks', async () => jsonResponse(200, {
+      keys: [{ ...keys.jwk, d: 'private' }],
+    })), 'untrusted-identity')
   })
 })
