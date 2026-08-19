@@ -134,4 +134,26 @@ declare module '@wancode/relay-protocol' {
   export function createSignedHandshakeEnvelope(
     input: SignedHandshakeEnvelopeInput,
   ): Record<string, unknown>
+
+  export type RelayApplicationPayload =
+    | { readonly kind: 'prompt', readonly sessionId: string, readonly text: string }
+    | { readonly kind: 'approval', readonly sessionId: string, readonly requestId: string, readonly approved: boolean }
+    | { readonly kind: 'cancel', readonly sessionId: string, readonly requestId: string }
+    | { readonly kind: 'session-event', readonly sessionId: string, readonly type: string, readonly detail: string }
+    | { readonly kind: 'presence', readonly state: 'online' | 'offline' }
+
+  export function createSealedRelayEnvelope(input: {
+    readonly id: string
+    readonly sentAt: number
+    readonly actor: { readonly userId: string, readonly deviceId: string }
+    readonly kind: string
+    readonly sender: DeviceKeyPair
+    readonly recipientEncryptionPublicKey: string
+    readonly payload: RelayApplicationPayload
+  }): Record<string, unknown>
+
+  export function openSealedRelayPayload(
+    envelope: unknown,
+    recipient: DeviceKeyPair,
+  ): RelayApplicationPayload
 }

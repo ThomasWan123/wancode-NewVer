@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
 import {
+  createPwaServiceWorkerSource,
   createPwaWebManifest,
   decidePwaCacheAction,
   PWA_SHELL_CACHE,
@@ -64,5 +65,16 @@ describe('PWA installable shell', () => {
       } as never),
       'plaintext',
     )
+  })
+
+  it('emits a service worker that caches the shell and never listens', () => {
+    const source = createPwaServiceWorkerSource()
+    expect(source).toContain(PWA_SHELL_CACHE)
+    expect(source).toContain("self.addEventListener('install'")
+    expect(source).toContain("self.addEventListener('fetch'")
+    expect(source).toContain('CREDENTIAL_QUERY')
+    expect(source).not.toContain('listen(')
+    expect(source).not.toContain('createServer')
+    expect(source).not.toMatch(/access_token|DEEPSEEK_API_KEY/)
   })
 })

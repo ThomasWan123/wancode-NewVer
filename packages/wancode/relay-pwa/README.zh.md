@@ -26,6 +26,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
 - `createPwaWebManifest` 返回 `display: standalone` 且 `start_url` 为相对路径
   的安装记录。`decidePwaCacheAction` 只缓存 shell GET 资源；令牌查询参数和
   模型凭据失败关闭。控制面 POST 保持 network-only。
+  `createPwaServiceWorkerSource` 生成对应的 worker 源码，从不监听。
 - 默认导出没有监听器，也没有 loopback/cloud 接收端。
 
 这还不是已交付的 iOS / Android 安装包。HTML shell、图标与 service worker

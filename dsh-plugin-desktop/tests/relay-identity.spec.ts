@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   RelayAuthorizationError,
+  createSealedRelayEnvelope,
+  createStoredDeviceIdentity,
   parseStoredDeviceIdentity,
 } from '@wancode/relay-protocol'
 import { credentialTarget, type CredentialStore } from '../src/credentials-win.ts'
@@ -127,5 +129,34 @@ describe('desktop relay device identity', () => {
       encryptionPublicKey: identity.encryptionPublicKey,
     })
     expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('opens a sealed PWA follow-up without exposing private keys', () => {
+    const store = new MemoryStore()
+    const desktop = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const pwa = createStoredDeviceIdentity()
+    const secret = 'review the login form'
+    const envelope = createSealedRelayEnvelope({
+      id: 'msg-1',
+      sentAt: 1_700_000_000_000,
+      actor: { userId: 'user-a', deviceId: pwa.deviceId },
+      kind: 'prompt',
+      sender: pwa.keyPair,
+      recipientEncryptionPublicKey: desktop.encryptionPublicKey,
+      payload: {
+        kind: 'prompt',
+        sessionId: 'sess-1',
+        text: secret,
+      },
+    })
+    expect(desktop.openSealed(envelope)).toEqual({
+      kind: 'prompt',
+      sessionId: 'sess-1',
+      text: secret,
+    })
+    expect(JSON.stringify(desktop)).not.toContain(parseStoredDeviceIdentity(
+      store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
+    ).keyPair.privateKey)
+    expect(JSON.stringify(envelope)).not.toContain(secret)
   })
 })

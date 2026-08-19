@@ -13,6 +13,7 @@ export {
   type PwaSessionStatus,
 } from './session-board.ts'
 export {
+  createPwaServiceWorkerSource,
   createPwaWebManifest,
   decidePwaCacheAction,
   PWA_SHELL_CACHE,

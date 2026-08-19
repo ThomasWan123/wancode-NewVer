@@ -4,9 +4,11 @@ import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import {
   createSignedHandshakeEnvelope,
   createStoredDeviceIdentity,
+  openSealedRelayPayload,
   parseStoredDeviceIdentity,
   publicDeviceIdentity,
   serializeStoredDeviceIdentity,
+  type RelayApplicationPayload,
 } from '@wancode/relay-protocol'
 import { credentialTarget, type CredentialStore } from './credentials-win.ts'
 
@@ -19,6 +21,7 @@ export interface DesktopRelayIdentity {
   readonly publicKey: string
   readonly encryptionPublicKey: string
   createHandshake(input: DesktopRelayHandshakeInput): Record<string, unknown>
+  openSealed(envelope: unknown): RelayApplicationPayload
 }
 
 /** Inputs used to mint one outbound handshake from the stored identity. */
@@ -62,6 +65,9 @@ export function loadDesktopRelayIdentity(
         nonce: handshake.nonce,
         capabilities: [...handshake.capabilities],
       })
+    },
+    openSealed(envelope) {
+      return openSealedRelayPayload(envelope, stored.keyPair)
     },
   }
 }

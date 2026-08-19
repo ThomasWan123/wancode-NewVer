@@ -34,7 +34,8 @@ directory links.
 - `createPwaWebManifest` returns a standalone install record with a relative
   `start_url`. `decidePwaCacheAction` caches only shell GET assets; token query
   keys and model credentials fail closed. POST control-plane calls stay
-  network-only.
+  network-only. `createPwaServiceWorkerSource` emits the matching worker; it
+  never listens.
 - The default export has no listener and no loopback/cloud acceptor.
 
 This is not yet a shipped iOS or Android install. The HTML shell, icons, and
