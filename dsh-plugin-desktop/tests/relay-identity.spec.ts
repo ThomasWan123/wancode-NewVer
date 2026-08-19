@@ -3,6 +3,7 @@ import {
   RelayAuthorizationError,
   createSealedRelayEnvelope,
   createStoredDeviceIdentity,
+  openSealedRelayPayload,
   parseStoredDeviceIdentity,
 } from '@wancode/relay-protocol'
 import { credentialTarget, type CredentialStore } from '../src/credentials-win.ts'
@@ -158,5 +159,34 @@ describe('desktop relay device identity', () => {
       store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
     ).keyPair.privateKey)
     expect(JSON.stringify(envelope)).not.toContain(secret)
+  })
+
+  it('seals a session event to a PWA without exposing private keys', () => {
+    const store = new MemoryStore()
+    const desktop = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const pwa = createStoredDeviceIdentity()
+    const detail = 'Looking at the form'
+    const envelope = desktop.sealTo({
+      id: 'evt-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: pwa.keyPair.encryptionPublicKey,
+      payload: {
+        kind: 'session-event',
+        sessionId: 'sess-1',
+        type: 'assistant.delta',
+        detail,
+      },
+    })
+    expect(openSealedRelayPayload(envelope, pwa.keyPair)).toEqual({
+      kind: 'session-event',
+      sessionId: 'sess-1',
+      type: 'assistant.delta',
+      detail,
+    })
+    expect(JSON.stringify(envelope)).not.toContain(detail)
+    expect(JSON.stringify(desktop)).not.toContain(parseStoredDeviceIdentity(
+      store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
+    ).keyPair.privateKey)
   })
 })

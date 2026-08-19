@@ -20,6 +20,7 @@ export {
   loadDesktopRelayIdentity,
   type DesktopRelayHandshakeInput,
   type DesktopRelayIdentity,
+  type DesktopRelaySealInput,
   type LoadDesktopRelayIdentityInput,
 } from './relay-identity.ts'
 

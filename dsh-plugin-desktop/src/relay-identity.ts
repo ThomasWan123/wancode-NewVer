@@ -2,6 +2,7 @@
 
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import {
+  createSealedRelayEnvelope,
   createSignedHandshakeEnvelope,
   createStoredDeviceIdentity,
   openSealedRelayPayload,
@@ -22,6 +23,7 @@ export interface DesktopRelayIdentity {
   readonly encryptionPublicKey: string
   createHandshake(input: DesktopRelayHandshakeInput): Record<string, unknown>
   openSealed(envelope: unknown): RelayApplicationPayload
+  sealTo(input: DesktopRelaySealInput): Record<string, unknown>
 }
 
 /** Inputs used to mint one outbound handshake from the stored identity. */
@@ -31,6 +33,15 @@ export interface DesktopRelayHandshakeInput {
   readonly userId: string
   readonly nonce: string
   readonly capabilities: readonly string[]
+}
+
+/** Inputs used to seal one application payload to a peer encryption public key. */
+export interface DesktopRelaySealInput {
+  readonly id: string
+  readonly sentAt: number
+  readonly userId: string
+  readonly recipientEncryptionPublicKey: string
+  readonly payload: RelayApplicationPayload
 }
 
 /** Inputs for loading or creating the local relay device identity. */
@@ -68,6 +79,17 @@ export function loadDesktopRelayIdentity(
     },
     openSealed(envelope) {
       return openSealedRelayPayload(envelope, stored.keyPair)
+    },
+    sealTo(input) {
+      return createSealedRelayEnvelope({
+        id: input.id,
+        sentAt: input.sentAt,
+        actor: { userId: input.userId, deviceId: stored.deviceId },
+        kind: input.payload.kind,
+        sender: stored.keyPair,
+        recipientEncryptionPublicKey: input.recipientEncryptionPublicKey,
+        payload: input.payload,
+      })
     },
   }
 }
