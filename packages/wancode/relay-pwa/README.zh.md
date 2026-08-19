@@ -19,7 +19,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   会在配对或发送前失败关闭。
 - `createPwaRelayController` 会注册 PWA 设备、签发短期令牌并拨 Relay。桌面可
   稍后通过 `listDesktops` / `selectDesktop` 选择。follow-up、approval 和
-  cancel 按该桌面加密公钥密封。`drain` 领取排队邮件和在线推送，只 ack 排队
+  cancel 按该桌面加密公钥密封。presence 帧同样密封。`drain` 领取排队邮件和在线推送，只 ack 排队
   id。`reconnect` 使用新 nonce，避免握手被当成重放。返回对象不含私钥。
 - `createPwaSessionBoard` 把视图折成每个会话一份快照。prompt 正文不会出现。
   `notify.*` 进度成为最新通知。
@@ -27,6 +27,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   的安装记录。`decidePwaCacheAction` 只缓存 shell GET 资源；令牌查询参数和
   模型凭据失败关闭。控制面 POST 保持 network-only。
   `createPwaServiceWorkerSource` 生成对应的 worker 源码，从不监听。
+  `createPwaShellFiles` 返回 `index.html`、manifest 和 `sw.js`，供静态托管写入，
+  本包自己不监听。
 - 默认导出没有监听器，也没有 loopback/cloud 接收端。
 
 这还不是已交付的 iOS / Android 安装包。HTML shell、图标与 service worker

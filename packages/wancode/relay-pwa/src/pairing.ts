@@ -66,6 +66,10 @@ export interface PwaRelayController {
     readonly sessionId: string
     readonly requestId: string
   }): Promise<PwaRelayDelivery>
+  sendPresence(input: {
+    readonly id: string
+    readonly state: 'online' | 'offline'
+  }): Promise<PwaRelayDelivery>
   drain(): Promise<{
     readonly views: readonly RelaySessionView[]
     readonly notifications: readonly RelayNotificationView[]
@@ -195,6 +199,13 @@ export async function createPwaRelayController(
         requestId: cancel.requestId,
       })
       return delivery
+    },
+    async sendPresence(presence) {
+      assertPwaRelayRecord(presence as unknown as Record<string, unknown>, 'pwa presence')
+      return sendSealed('presence', presence.id, {
+        kind: 'presence',
+        state: presence.state,
+      })
     },
     async drain() {
       const queued = [...await connection.reclaim()]

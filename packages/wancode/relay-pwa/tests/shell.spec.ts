@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
 import {
+  createPwaIndexHtml,
   createPwaServiceWorkerSource,
+  createPwaShellFiles,
   createPwaWebManifest,
   decidePwaCacheAction,
   PWA_SHELL_CACHE,
@@ -76,5 +78,17 @@ describe('PWA installable shell', () => {
     expect(source).not.toContain('listen(')
     expect(source).not.toContain('createServer')
     expect(source).not.toMatch(/access_token|DEEPSEEK_API_KEY/)
+  })
+
+  it('emits static shell files that match the manifest and never embed secrets', () => {
+    const files = createPwaShellFiles()
+    expect(JSON.parse(files['manifest.webmanifest'])).toEqual(createPwaWebManifest())
+    expect(files['sw.js']).toBe(createPwaServiceWorkerSource())
+    expect(files['index.html']).toContain('rel="manifest"')
+    expect(files['index.html']).toContain("navigator.serviceWorker.register('./sw.js')")
+    expect(files['index.html']).toContain('<title>Wan Code</title>')
+    expect(files['index.html']).toBe(createPwaIndexHtml())
+    expect(JSON.stringify(files)).not.toMatch(/access_token|DEEPSEEK_API_KEY|privateKey/)
+    expect(JSON.stringify(files)).not.toContain('listen(')
   })
 })

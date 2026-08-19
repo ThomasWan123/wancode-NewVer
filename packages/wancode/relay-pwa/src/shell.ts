@@ -153,3 +153,47 @@ export function createPwaServiceWorkerSource(): string {
     '',
   ].join('\n')
 }
+
+/**
+ * Return the installable index document. It registers the shell worker and
+ * never embeds tokens or model credentials.
+ */
+export function createPwaIndexHtml(): string {
+  return [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '  <meta charset="utf-8">',
+    '  <meta name="viewport" content="width=device-width, initial-scale=1">',
+    '  <meta name="theme-color" content="#0b0f14">',
+    '  <link rel="manifest" href="./manifest.webmanifest">',
+    '  <title>Wan Code</title>',
+    '</head>',
+    '<body>',
+    '  <main>',
+    '    <h1>Wan Code</h1>',
+    '    <p>Pair a desktop. Model keys stay on that machine.</p>',
+    '  </main>',
+    '  <script>',
+    "    if ('serviceWorker' in navigator) {",
+    "      navigator.serviceWorker.register('./sw.js');",
+    '    }',
+    '  </script>',
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n')
+}
+
+/** Static files a host can write without starting a listener in this package. */
+export function createPwaShellFiles(): {
+  readonly 'index.html': string
+  readonly 'manifest.webmanifest': string
+  readonly 'sw.js': string
+} {
+  return {
+    'index.html': createPwaIndexHtml(),
+    'manifest.webmanifest': `${JSON.stringify(createPwaWebManifest(), null, 2)}\n`,
+    'sw.js': createPwaServiceWorkerSource(),
+  }
+}

@@ -25,7 +25,8 @@ directory links.
 - `createPwaRelayController` registers the PWA device, mints a short-lived
   token, and dials the relay. The desktop may be selected later via
   `listDesktops` / `selectDesktop`. Follow-ups, approvals, and cancels are
-  sealed to that desktop encryption public key. `drain` reclaims queued mail
+  sealed to that desktop encryption public key. Presence frames are sealed the
+  same way. `drain` reclaims queued mail
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so
   the handshake is not replay. The returned object does not include private
   keys.
@@ -35,7 +36,8 @@ directory links.
   `start_url`. `decidePwaCacheAction` caches only shell GET assets; token query
   keys and model credentials fail closed. POST control-plane calls stay
   network-only. `createPwaServiceWorkerSource` emits the matching worker; it
-  never listens.
+  never listens. `createPwaShellFiles` returns `index.html`, the manifest, and
+  `sw.js` so a static host can write them without this package listening.
 - The default export has no listener and no loopback/cloud acceptor.
 
 This is not yet a shipped iOS or Android install. The HTML shell, icons, and

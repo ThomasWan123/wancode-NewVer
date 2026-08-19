@@ -99,6 +99,18 @@ describe('PWA relay pairing', () => {
       sessionId: 'sess-1',
       text: secret,
     })
+    expect(await controller.sendPresence({
+      id: 'msg-presence',
+      state: 'online',
+    })).toEqual({
+      envelopeId: 'msg-presence',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+    expect(openSealedRelayPayload(cloud.mailbox.list(desktop.deviceId)[1], desktop.keyPair)).toEqual({
+      kind: 'presence',
+      state: 'online',
+    })
     expect(controller.project({
       kind: 'session-event',
       sessionId: 'sess-1',

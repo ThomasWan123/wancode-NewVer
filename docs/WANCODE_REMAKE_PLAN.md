@@ -32,9 +32,10 @@ Status: active
   HTTPS/WSS. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. The installable Web App
   Manifest and fail-closed cache policy exist; `createPwaServiceWorkerSource`
-  emits the matching worker. The HTML/icons runtime is not shipped. Desktop
-  identity can open sealed PWA follow-ups without exposing private keys. It
-  does not listen.
+  emits the matching worker. `createPwaShellFiles` returns the static index,
+  manifest, and worker. The PWA can also send sealed presence. The HTML/icons
+  runtime is not hosted here. Desktop identity can open sealed PWA follow-ups
+  without exposing private keys. It does not listen.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.

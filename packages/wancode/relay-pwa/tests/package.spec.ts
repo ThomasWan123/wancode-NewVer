@@ -27,6 +27,8 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('createPwaRelayController')
     expect(pwa).toHaveProperty('createPwaSessionBoard')
     expect(pwa).toHaveProperty('createPwaWebManifest')
+    expect(pwa).toHaveProperty('createPwaIndexHtml')
+    expect(pwa).toHaveProperty('createPwaShellFiles')
     expect(pwa).toHaveProperty('createPwaServiceWorkerSource')
     expect(pwa).toHaveProperty('decidePwaCacheAction')
     expect(pwa).not.toHaveProperty('startRelayCloud')
