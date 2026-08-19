@@ -162,6 +162,7 @@ export async function createPwaRelayController(
       return selected?.deviceId
     },
     async listDesktops() {
+      // Outbound HTTPS; this still works after close() because it does not use the socket.
       const devices = await listOutboundRelayDevices({
         httpUrl: input.httpUrl,
         assertion: input.assertion,
