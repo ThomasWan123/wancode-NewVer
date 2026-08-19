@@ -397,6 +397,12 @@ describe('PWA relay pairing', () => {
       deviceId: pwa.deviceId,
       revokedAt: NOW,
     })
+    expect(await controller.listDesktops()).toEqual([{
+      deviceId: desktop.deviceId,
+      userId: 'user-a',
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }])
     await expectRelayErrorAsync(() => controller.reconnect(), 'revoked-device')
   })
 
