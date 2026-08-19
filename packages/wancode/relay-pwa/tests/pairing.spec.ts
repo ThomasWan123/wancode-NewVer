@@ -134,6 +134,12 @@ describe('PWA relay pairing', () => {
       text: 'too late',
     }), 'malformed')
     await expectRelayErrorAsync(() => controller.drain(), 'malformed')
+    expect(await controller.listDesktops()).toEqual([{
+      deviceId: desktop.deviceId,
+      userId: 'user-a',
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }])
   })
 
   it('lists same-account desktops, sends approval and cancel, and drains reconnect mail', async () => {
@@ -305,6 +311,15 @@ describe('PWA relay pairing', () => {
       views: [],
       notifications: [],
       sessions: drained.sessions,
+    })
+    expect(await controller.sendFollowUp({
+      id: 'msg-after-reconnect',
+      sessionId: 'sess-1',
+      text: 'again',
+    })).toEqual({
+      envelopeId: 'msg-after-reconnect',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
     })
     controller.close()
   })
