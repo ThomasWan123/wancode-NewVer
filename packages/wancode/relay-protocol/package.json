@@ -13,6 +13,10 @@
     "./loopback": {
       "types": "./src/loopback.ts",
       "default": "./src/loopback.ts"
+    },
+    "./cloud": {
+      "types": "./src/cloud.ts",
+      "default": "./src/cloud.ts"
     }
   },
   "files": [

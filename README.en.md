@@ -46,7 +46,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Windows desktop core (M1) | **Available**: identity, isolated data, credentials, updates, rollback, crash recovery |
 | Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package |
 | Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
-| Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, device-sealed payloads, and an opt-in desktop dialer |
+| Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, loopback control plane, device-sealed payloads, and an opt-in desktop dialer |
 | Mobile PWA, marketplace, channels | Roadmap; not published as available features |
 
 The desktop `master` branch currently includes:

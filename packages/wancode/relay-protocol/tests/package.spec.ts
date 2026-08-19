@@ -19,6 +19,7 @@ describe('relay-protocol package surface', () => {
   it('keeps the loopback acceptor off the default protocol export', () => {
     expect(manifest.exports).toHaveProperty('.')
     expect(manifest.exports).toHaveProperty('./loopback')
+    expect(manifest.exports).toHaveProperty('./cloud')
     expect(protocol).toHaveProperty('createJwksOidcIdentityProvider')
     expect(protocol).toHaveProperty('assertOidcJwksUrl')
     expect(protocol).toHaveProperty('connectOutboundRelay')
@@ -32,6 +33,7 @@ describe('relay-protocol package surface', () => {
     expect(protocol).toHaveProperty('createSealedRelayEnvelope')
     expect(protocol).toHaveProperty('openSealedRelayPayload')
     expect(protocol).not.toHaveProperty('startLoopbackRelay')
+    expect(protocol).not.toHaveProperty('startRelayCloud')
     expect(protocol).not.toHaveProperty('listen')
     expect(protocol).not.toHaveProperty('createServer')
   })

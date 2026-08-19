@@ -50,6 +50,8 @@ plugin entry.
 
 Desktop initiates the cloud connection with `connectOutboundRelay`. This package
 is not an inbound Host surface. `@wancode/relay-protocol/loopback` is a
-127.0.0.1 test acceptor only and is not part of the default export. The desktop
-Host loads `dsh-plugin-desktop/relay` disabled by default and bundles this
-dialer without declaring a Yarn workspace link.
+127.0.0.1 test acceptor only. `@wancode/relay-protocol/cloud` adds loopback
+HTTP device registration, token minting, and the same outbound WebSocket
+acceptor; it refuses non-loopback binds and is not part of the default export.
+The desktop Host loads `dsh-plugin-desktop/relay` disabled by default and
+bundles this dialer without declaring a Yarn workspace link.

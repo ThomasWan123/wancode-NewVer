@@ -38,6 +38,8 @@ Wan Code Cloud Relay（M2）的 fail-closed 远程控制契约和仅出站 WebSo
   已撤销、过期和跨账号的 reclaim 一律失败关闭，并丢弃剩余邮件。
 
 桌面用 `connectOutboundRelay` 主动发起云连接。本包不是入站 Host surface。
-`@wancode/relay-protocol/loopback` 只用于 `127.0.0.1` 测试接收端，不在默认
-导出中。桌面 Host 默认关闭 `dsh-plugin-desktop/relay`，并把该拨号器打包进
-桌面包，不使用 Yarn workspace 链接。
+`@wancode/relay-protocol/loopback` 只用于 `127.0.0.1` 测试接收端。
+`@wancode/relay-protocol/cloud` 在回环地址上提供设备注册、令牌签发和同一套
+出站 WebSocket 接收端；非回环绑定一律失败关闭，且不在默认导出中。桌面 Host
+默认关闭 `dsh-plugin-desktop/relay`，并把该拨号器打包进桌面包，不使用 Yarn
+workspace 链接。

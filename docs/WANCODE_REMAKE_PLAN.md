@@ -17,8 +17,9 @@ Status: active
   a plaintext-free audit log, sealed-box routing and offline mailbox delivery,
   same-socket reconnect drain and ack, live sealed-box fan-out to an online
   destination socket, a JWKS-backed OIDC verifier that never fetches a URL,
-  and an opt-in desktop Host plugin that never listens and does not dial until
-  connect is invoked.
+  a loopback HTTP control plane for register/token/revoke plus the same outbound
+  WebSocket acceptor, and an opt-in desktop Host plugin that never listens and
+  does not dial until connect is invoked.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
@@ -194,7 +195,8 @@ frame; device id comes from the presented token. Closing the socket marks the
 handshake device offline. The package does not listen on a public interface and
 does not declare a Harness plugin
 entry. A 127.0.0.1 loopback acceptor exists only as a test double under the
-`./loopback` export. A replaceable OIDC identity provider verifies issuer,
+`./loopback` export. `./cloud` adds loopback HTTP registration, token minting,
+and revocation on the same acceptor and still refuses non-loopback binds. A replaceable OIDC identity provider verifies issuer,
 audience, subject, and expiry before a device may register. Production
 verifies compact ES256 or RS256 JWTs against a caller-supplied JWKS and
 never opens a JWKS socket itself. Revoking that
