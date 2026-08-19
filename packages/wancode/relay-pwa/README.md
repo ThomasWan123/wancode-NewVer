@@ -21,7 +21,8 @@ directory links.
 - `projectRelaySessionView` maps opened application payloads to a UI-neutral
   view. Prompt text is omitted so logs and snapshots cannot leak it.
 - Model credential field names (`DEEPSEEK_API_KEY`, `apiKey`, and the shared
-  plaintext envelope fields) fail closed before pairing or send.
+  plaintext envelope fields) fail closed before pairing or send. Device
+  private keys on PWA JSON also fail closed.
 - `createPwaRelayController` registers the PWA device, mints a short-lived
   token, and dials the relay. The desktop may be selected later via
   `listDesktops` / `selectDesktop`. Revoked desktops are omitted. Follow-ups, approvals, and cancels are
