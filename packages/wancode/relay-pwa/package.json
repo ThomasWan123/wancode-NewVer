@@ -13,6 +13,7 @@
   },
   "files": [
     "src/**",
+    "public/**",
     "README.md",
     "README.zh.md"
   ],

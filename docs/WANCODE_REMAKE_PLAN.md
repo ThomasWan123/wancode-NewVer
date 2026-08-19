@@ -34,11 +34,11 @@ Status: active
   Manifest and fail-closed cache policy exist; `createPwaServiceWorkerSource`
   emits the matching worker. `createPwaShellFiles` returns the static index,
   manifest, and worker. The PWA can also send sealed presence and revoke itself
-  immediately. Follow-up text is required and capped. The HTML/icons runtime is
-  not hosted here. Desktop identity can
-  open sealed PWA follow-ups without exposing private keys, and can `sealTo` a
-  PWA encryption public key. `drainDesktopRelayMail` reclaims queued boxes
-  and acks only queued ids. It does not listen.
+  immediately. Follow-up text is required and capped. Checked-in `public/`
+  shell files match the generators. The HTML/icons runtime is not hosted here.
+  Desktop identity can open sealed PWA follow-ups without exposing private keys,
+  and can `sealTo` a PWA encryption public key. `drainDesktopRelayMail` reclaims
+  queued boxes and acks only queued ids. It does not listen.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
 import {
@@ -90,5 +91,8 @@ describe('PWA installable shell', () => {
     expect(files['index.html']).toBe(createPwaIndexHtml())
     expect(JSON.stringify(files)).not.toMatch(/access_token|DEEPSEEK_API_KEY|privateKey/)
     expect(JSON.stringify(files)).not.toContain('listen(')
+    for (const name of ['index.html', 'manifest.webmanifest', 'sw.js'] as const) {
+      expect(readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8')).toBe(files[name])
+    }
   })
 })

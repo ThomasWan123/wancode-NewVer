@@ -31,7 +31,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   模型凭据失败关闭。控制面 POST 保持 network-only。
   `createPwaServiceWorkerSource` 生成对应的 worker 源码，从不监听。
   `createPwaShellFiles` 返回 `index.html`、manifest 和 `sw.js`，供静态托管写入，
-  本包自己不监听。
+  本包自己不监听。检入的副本在 `public/`，必须与生成器一致。
 - 默认导出没有监听器，也没有 loopback/cloud 接收端。
 
 这还不是已交付的 iOS / Android 安装包。HTML shell、图标与 service worker

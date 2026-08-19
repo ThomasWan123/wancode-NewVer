@@ -41,6 +41,7 @@ directory links.
   network-only. `createPwaServiceWorkerSource` emits the matching worker; it
   never listens. `createPwaShellFiles` returns `index.html`, the manifest, and
   `sw.js` so a static host can write them without this package listening.
+  Checked-in copies live under `public/` and must match those generators.
 - The default export has no listener and no loopback/cloud acceptor.
 
 This is not yet a shipped iOS or Android install. The HTML shell, icons, and

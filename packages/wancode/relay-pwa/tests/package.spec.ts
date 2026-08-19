@@ -8,6 +8,7 @@ const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.
   packageManager?: unknown
   dependencies?: Record<string, unknown>
   exports?: Record<string, unknown>
+  files?: unknown
 }
 
 describe('relay-pwa package surface', () => {
@@ -15,7 +16,12 @@ describe('relay-pwa package surface', () => {
     expect(manifest.name).toBe('@wancode/relay-pwa')
     expect(manifest.dsh).toBeUndefined()
     expect(manifest.packageManager).toBeUndefined()
-    expect(manifest.dependencies).toBeUndefined()
+    expect(manifest.files).toEqual([
+      'src/**',
+      'public/**',
+      'README.md',
+      'README.zh.md',
+    ])
     expect(manifest.exports).toEqual({
       '.': {
         types: './src/index.ts',
