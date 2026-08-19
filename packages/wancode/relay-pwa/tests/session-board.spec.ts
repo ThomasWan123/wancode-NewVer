@@ -78,6 +78,24 @@ describe('PWA session board', () => {
       pendingRequestId: 'req-1',
     })
     expect(board.list()).toHaveLength(1)
+    expect(board.apply({
+      kind: 'follow-up',
+      sessionId: 'sess-1',
+    })).toEqual({
+      sessionId: 'sess-1',
+      status: 'running',
+    })
+    expect(board.apply({
+      kind: 'progress',
+      sessionId: 'sess-1',
+      type: 'assistant.done',
+      detail: 'Finished',
+    })).toEqual({
+      sessionId: 'sess-1',
+      status: 'complete',
+      lastType: 'assistant.done',
+      lastDetail: 'Finished',
+    })
   })
 
   it('refuses model credential fields on a session view', () => {

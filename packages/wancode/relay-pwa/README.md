@@ -33,6 +33,7 @@ directory links.
   keys.
 - `createPwaSessionBoard` folds views into one snapshot per session. Prompt
   text never appears. `notify.*` progress becomes the latest notification.
+  `assistant.done` and `session.complete` mark the snapshot complete.
 - `createPwaWebManifest` returns a standalone install record with a relative
   `start_url`. `decidePwaCacheAction` caches only shell GET assets; token query
   keys and model credentials fail closed. POST control-plane calls stay

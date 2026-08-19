@@ -8,7 +8,7 @@ import {
 } from './session-view.ts'
 
 /** Compact status for one desktop session the PWA is watching. */
-export type PwaSessionStatus = 'idle' | 'running' | 'awaiting-approval' | 'cancelled'
+export type PwaSessionStatus = 'idle' | 'running' | 'awaiting-approval' | 'cancelled' | 'complete'
 
 /** Latest known state for one session. This is a snapshot, not an event log. */
 export interface PwaSessionSnapshot {
@@ -71,15 +71,14 @@ function foldView(current: MutableSession, view: RelaySessionView): MutableSessi
   switch (view.kind) {
     case 'follow-up':
       return {
-        ...current,
-        status: current.status === 'cancelled' ? 'cancelled' : 'running',
+        ...omitPending(current),
+        status: 'running',
       }
     case 'progress': {
       const notification = projectRelayNotification(view)
-      const awaiting = view.type === 'notify.tool' || view.type === 'notify.approval'
       return {
         ...current,
-        status: awaiting ? 'awaiting-approval' : 'running',
+        status: progressStatus(view.type),
         lastType: view.type,
         lastDetail: view.detail,
         ...(notification === undefined ? {} : { notification }),
@@ -99,6 +98,12 @@ function foldView(current: MutableSession, view: RelaySessionView): MutableSessi
     default:
       return current
   }
+}
+
+function progressStatus(type: string): PwaSessionStatus {
+  if (type === 'notify.tool' || type === 'notify.approval') return 'awaiting-approval'
+  if (type === 'assistant.done' || type === 'session.complete') return 'complete'
+  return 'running'
 }
 
 function omitPending(session: MutableSession): MutableSession {
