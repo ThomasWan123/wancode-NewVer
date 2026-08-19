@@ -18,7 +18,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
 - 模型凭据字段名（`DEEPSEEK_API_KEY`、`apiKey` 以及共用的明文 envelope 字段）
   会在配对或发送前失败关闭。
 - `createPwaRelayController` 会注册 PWA 设备、签发短期令牌并拨 Relay。桌面可
-  稍后通过 `listDesktops` / `selectDesktop` 选择。follow-up、approval 和
+  稍后通过 `listDesktops` / `selectDesktop` 选择。已撤销桌面不会出现。follow-up、approval 和
   cancel 按该桌面加密公钥密封。presence 帧同样密封。follow-up 正文必填且有上限，
   避免低带宽链路被撑爆。`drain` 领取排队邮件和在线推送，只 ack 排队
   id。`reconnect` 使用新 nonce，避免握手被当成重放。`revoke` 关闭 socket 并立即

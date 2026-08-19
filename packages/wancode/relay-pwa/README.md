@@ -24,7 +24,7 @@ directory links.
   plaintext envelope fields) fail closed before pairing or send.
 - `createPwaRelayController` registers the PWA device, mints a short-lived
   token, and dials the relay. The desktop may be selected later via
-  `listDesktops` / `selectDesktop`. Follow-ups, approvals, and cancels are
+  `listDesktops` / `selectDesktop`. Revoked desktops are omitted. Follow-ups, approvals, and cancels are
   sealed to that desktop encryption public key. Presence frames are sealed the
   same way. Follow-up text is required and capped so low-bandwidth links stay
   bounded. `drain` reclaims queued mail

@@ -10,6 +10,7 @@ import {
   issueOutboundRelayToken,
   openSealedRelayPayload,
   registerOutboundRelayDevice,
+  revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
 import { createPwaRelayController } from '../src/index.ts'
@@ -284,6 +285,48 @@ describe('PWA relay pairing', () => {
       notifications: [],
       sessions: drained.sessions,
     })
+    controller.close()
+  })
+
+  it('omits a revoked desktop and refuses to send follow-ups to it', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      url: cloud.url,
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+      now: NOW,
+    })
+    expect(await controller.listDesktops()).toHaveLength(1)
+    await revokeOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+    })
+    expect(await controller.listDesktops()).toEqual([])
+    await expectRelayErrorAsync(() => controller.sendFollowUp({
+      id: 'msg-revoked',
+      sessionId: 'sess-1',
+      text: 'too late',
+    }), 'revoked-device')
     controller.close()
   })
 
