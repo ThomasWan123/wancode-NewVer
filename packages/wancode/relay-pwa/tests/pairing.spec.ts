@@ -168,6 +168,21 @@ describe('PWA relay pairing', () => {
       sessionId: 'sess-1',
       text: 'too early',
     }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendApproval({
+      id: 'msg-0a',
+      sessionId: 'sess-1',
+      requestId: 'req-0',
+      approved: true,
+    }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendCancel({
+      id: 'msg-0b',
+      sessionId: 'sess-1',
+      requestId: 'req-0',
+    }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendPresence({
+      id: 'msg-0c',
+      state: 'online',
+    }), 'malformed')
 
     const desktops = await controller.listDesktops()
     expect(desktops).toEqual([{
