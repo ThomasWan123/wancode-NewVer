@@ -55,8 +55,11 @@ plugin entry.
 
 Desktop initiates the cloud connection with `connectOutboundRelay`. Before
 that handshake, the same default export can `registerOutboundRelayDevice`,
-`issueOutboundRelayToken`, and `revokeOutboundRelayDevice` over HTTPS (or
-loopback HTTP). Redirects are re-checked, credentials never appear on the
+`issueOutboundRelayToken`, `listOutboundRelayDevices`, and
+`revokeOutboundRelayDevice` over HTTPS (or loopback HTTP). Device list uses
+POST `/v1/devices/list` with the assertion in the body, never on the query
+string. Only live devices on the presented account are returned; private
+keys are omitted. Redirects are re-checked, credentials never appear on the
 URL or request, and private keys are refused. This package
 is not an inbound Host surface. `@wancode/relay-protocol/loopback` is a
 127.0.0.1 test acceptor only. `@wancode/relay-protocol/cloud` adds loopback

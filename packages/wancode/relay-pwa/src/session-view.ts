@@ -14,6 +14,14 @@ export type RelaySessionView =
   | { readonly kind: 'cancel', readonly sessionId: string, readonly requestId: string }
   | { readonly kind: 'presence', readonly state: 'online' | 'offline' }
 
+/** Low-bandwidth notification derived from a progress event. */
+export type RelayNotificationView = {
+  readonly kind: 'notification'
+  readonly sessionId: string
+  readonly type: string
+  readonly detail: string
+}
+
 /**
  * Project one opened application payload for the mobile PWA.
  * Prompt text stays off the view so logs and UI snapshots cannot leak it.
@@ -52,5 +60,19 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
       const exhaustive: never = payload
       throw new RelayAuthorizationError('malformed', `pwa session payload kind is not supported: ${String(exhaustive)}`)
     }
+  }
+}
+
+/**
+ * Derive a notification from a progress view. Only `notify.*` types qualify.
+ * Prompt text never appears on this object.
+ */
+export function projectRelayNotification(view: RelaySessionView): RelayNotificationView | undefined {
+  if (view.kind !== 'progress' || !view.type.startsWith('notify.')) return undefined
+  return {
+    kind: 'notification',
+    sessionId: view.sessionId,
+    type: view.type,
+    detail: view.detail,
   }
 }

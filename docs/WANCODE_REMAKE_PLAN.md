@@ -24,10 +24,13 @@ Status: active
   origin from its WebSocket URL, and does not dial until connect is invoked.
   The local device identity is generated once, stored in Windows Credential
   Manager, and used to enroll and sign handshakes without exposing private keys.
+  Same-account device list is available over POST `/v1/devices/list` without
+  private keys or query-string tokens.
 - M3 started: `@wancode/relay-pwa` projects session events without prompt text
-  or model credentials, and can enroll as a PWA device then send a sealed
-  follow-up to a paired desktop over outbound HTTPS/WSS. It does not listen
-  and is not yet an installable iOS or Android PWA.
+  or model credentials, lists same-account desktops, and can enroll as a PWA
+  device then send sealed follow-ups, approvals, and cancels over outbound
+  HTTPS/WSS. Reconnect drains mailbox mail and projects `notify.*` events.
+  It does not listen and is not yet an installable iOS or Android PWA.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.

@@ -164,8 +164,36 @@ export async function revokeOutboundRelayDevice(
   return { deviceId: json.deviceId, revokedAt: json.revokedAt }
 }
 
+/** Inputs used to list same-account devices over outbound HTTPS. */
+export interface ListOutboundRelayDevicesInput {
+  readonly httpUrl: string
+  readonly assertion: unknown
+  readonly fetchImpl?: RelayControlFetch
+}
+
+/**
+ * POST `/v1/devices/list` over HTTPS (or loopback HTTP). Only live devices on
+ * the presented account are returned. Private keys are refused.
+ */
+export async function listOutboundRelayDevices(
+  input: ListOutboundRelayDevicesInput,
+): Promise<readonly OutboundRelayDevice[]> {
+  const json = await postRelayControl(input, '/v1/devices/list', {
+    assertion: input.assertion,
+  })
+  if (!Array.isArray(json.devices)) {
+    throw new RelayAuthorizationError('malformed', 'relay control device list is required')
+  }
+  return json.devices.map(item => {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+      throw new RelayAuthorizationError('malformed', 'relay control device is required')
+    }
+    return parsePublicDevice(item as Record<string, unknown>)
+  })
+}
+
 async function postRelayControl(
-  input: OutboundRelayControlInput,
+  input: { readonly httpUrl: string, readonly fetchImpl?: RelayControlFetch },
   path: string,
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {

@@ -7,7 +7,7 @@ import {
   type RelayMailbox,
   type RelayPresence,
 } from './delivery.ts'
-import { registerRelayDevice, revokeRelayDevice, type RelayDeviceStore } from './devices.ts'
+import { registerRelayDevice, revokeRelayDevice, listRelayAccountDevices, type RelayDeviceStore } from './devices.ts'
 import { assertNoPlaintextRelayFields, type RelayAccessToken, type RelayDevice } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
 import type { RelayIdentityProvider } from './identity.ts'
@@ -138,6 +138,17 @@ async function handleCloudHttp(
       throw new RelayAuthorizationError('malformed', 'relay cloud method is not supported')
     }
     const body = await readJsonBody(request)
+    if (path === '/v1/devices/list') {
+      const identity = context.identity.verify(body.assertion, context.now)
+      writeJson(response, 200, {
+        devices: listRelayAccountDevices({
+          userId: identity.userId,
+          now: context.now,
+          store: context.store,
+        }).map(publicDevice),
+      })
+      return
+    }
     if (path === '/v1/devices') {
       writeJson(response, 201, { device: publicDevice(registerCloudDevice(body, context)) })
       return

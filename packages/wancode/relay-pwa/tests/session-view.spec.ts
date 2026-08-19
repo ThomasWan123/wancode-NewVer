@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
-import { projectRelaySessionView } from '../src/index.ts'
+import { projectRelayNotification, projectRelaySessionView } from '../src/index.ts'
 
 function expectRelayError(run: () => unknown, code: string): void {
   try {
@@ -58,6 +58,22 @@ describe('PWA session projections', () => {
       kind: 'presence',
       state: 'online',
     })).toEqual({ kind: 'presence', state: 'online' })
+  })
+
+  it('derives notifications from notify.* progress without prompt text', () => {
+    const view = projectRelaySessionView({
+      kind: 'session-event',
+      sessionId: 'sess-1',
+      type: 'notify.tool',
+      detail: 'Waiting for approval',
+    })
+    expect(projectRelayNotification(view)).toEqual({
+      kind: 'notification',
+      sessionId: 'sess-1',
+      type: 'notify.tool',
+      detail: 'Waiting for approval',
+    })
+    expect(projectRelayNotification({ kind: 'follow-up', sessionId: 'sess-1' })).toBeUndefined()
   })
 
   it('refuses model credential fields on a projection payload', () => {

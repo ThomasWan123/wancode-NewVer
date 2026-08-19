@@ -53,6 +53,7 @@ export {
   type RelayJwksFetch,
 } from './oidc-jwks.ts'
 export {
+  listRelayAccountDevices,
   registerRelayDevice,
   revokeRelayDevice,
   type RegisterRelayDeviceInput,
@@ -93,6 +94,7 @@ export {
   assertOutboundRelayHttpUrl,
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
+  listOutboundRelayDevices,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
   type OutboundRelayAccessToken,

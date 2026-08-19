@@ -28,6 +28,8 @@ describe('relay-protocol package surface', () => {
     expect(protocol).toHaveProperty('registerOutboundRelayDevice')
     expect(protocol).toHaveProperty('issueOutboundRelayToken')
     expect(protocol).toHaveProperty('revokeOutboundRelayDevice')
+    expect(protocol).toHaveProperty('listOutboundRelayDevices')
+    expect(protocol).toHaveProperty('listRelayAccountDevices')
     expect(protocol).toHaveProperty('httpUrlFromOutboundRelayUrl')
     expect(protocol).toHaveProperty('parseRelayWireCommand')
     expect(protocol).toHaveProperty('parseRelayWireDelivery')

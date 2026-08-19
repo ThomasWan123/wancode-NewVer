@@ -8,6 +8,7 @@ import type { RelayIdentityClaims } from './identity.ts'
 /** Store that can persist registered devices. */
 export type RelayDeviceStore = RelayStore & {
   putDevice(device: RelayDevice): void
+  listDevices(): readonly RelayDevice[]
 }
 
 /** Inputs for binding one device public key to a verified account. */
@@ -75,6 +76,22 @@ export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevic
     : { deviceId, userId, publicKey: input.publicKey, encryptionPublicKey }
   input.store.putDevice(device)
   return device
+}
+
+/**
+ * List live devices for one account. Revoked rows are omitted. Device records
+ * never carry private keys.
+ */
+export function listRelayAccountDevices(input: {
+  readonly userId: string
+  readonly now: number
+  readonly store: RelayDeviceStore
+}): readonly RelayDevice[] {
+  const userId = requiredId(input.userId, 'userId')
+  return input.store.listDevices().filter(device => (
+    device.userId === userId
+    && (device.revokedAt === undefined || device.revokedAt > input.now)
+  ))
 }
 
 /**

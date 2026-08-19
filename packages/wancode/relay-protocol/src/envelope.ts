@@ -188,6 +188,7 @@ export function dispatchRelayEnvelope(input: RelayDispatchInput): RelayDispatchR
 export function createMemoryRelayStore(): RelayStore & {
   putAccessToken(token: RelayAccessToken): void
   putDevice(device: RelayDevice): void
+  listDevices(): readonly RelayDevice[]
   getRoute(envelopeId: string): RelayRoute | undefined
   putRoute(route: RelayRoute): void
 } {
@@ -200,6 +201,7 @@ export function createMemoryRelayStore(): RelayStore & {
   return {
     putAccessToken(token) { tokens.set(token.tokenId, token) },
     putDevice(device) { devices.set(device.deviceId, device) },
+    listDevices() { return [...devices.values()] },
     getAccessToken(tokenId) { return tokens.get(tokenId) },
     getDevice(deviceId) { return devices.get(deviceId) },
     getDispatch(id) { return dispatches.get(id) },

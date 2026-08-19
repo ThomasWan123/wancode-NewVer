@@ -7,6 +7,7 @@ import {
   generateDeviceKeyPair,
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
+  listOutboundRelayDevices,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
 } from '../src/index.ts'
@@ -119,6 +120,59 @@ describe('outbound relay control client', () => {
       assertion: assertion(),
       deviceId: DEVICE_ID,
     }), 'revoked-device')
+  })
+
+  it('lists live same-account devices and omits revoked or foreign rows', async () => {
+    const own = generateDeviceKeyPair()
+    const peer = generateDeviceKeyPair()
+    const foreign = generateDeviceKeyPair()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: 'device-a',
+      publicKey: own.publicKey,
+      encryptionPublicKey: own.encryptionPublicKey,
+    })
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: 'desktop-b',
+      publicKey: peer.publicKey,
+      encryptionPublicKey: peer.encryptionPublicKey,
+    })
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion({ sub: 'user-b' }),
+      deviceId: 'device-b',
+      publicKey: foreign.publicKey,
+      encryptionPublicKey: foreign.encryptionPublicKey,
+    })
+    await revokeOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: 'device-a',
+    })
+
+    const listed = await listOutboundRelayDevices({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+    })
+    expect(listed).toEqual([{
+      deviceId: 'desktop-b',
+      userId: 'user-a',
+      publicKey: peer.publicKey,
+      encryptionPublicKey: peer.encryptionPublicKey,
+    }])
+    expect(JSON.stringify(listed)).not.toContain(peer.privateKey)
+    expect(listed.map(device => device.deviceId)).not.toContain('device-a')
+    expect(listed.map(device => device.deviceId)).not.toContain('device-b')
   })
 
   it('refuses to send private key material and public cleartext control URLs', async () => {

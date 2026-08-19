@@ -23,6 +23,7 @@ describe('relay-pwa package surface', () => {
       },
     })
     expect(pwa).toHaveProperty('projectRelaySessionView')
+    expect(pwa).toHaveProperty('projectRelayNotification')
     expect(pwa).toHaveProperty('createPwaRelayController')
     expect(pwa).not.toHaveProperty('startRelayCloud')
     expect(pwa).not.toHaveProperty('startLoopbackRelay')

@@ -1,18 +1,28 @@
 /** Outbound PWA pairing. The controller never listens and never stores model credentials. */
 
+import { randomBytes } from 'node:crypto'
 import {
   RelayAuthorizationError,
   connectOutboundRelay,
   createSealedRelayEnvelope,
   createSignedHandshakeEnvelope,
   issueOutboundRelayToken,
+  listOutboundRelayDevices,
+  openSealedRelayPayload,
   publicDeviceIdentity,
   registerOutboundRelayDevice,
+  type OutboundRelayDevice,
+  type RelayApplicationKind,
   type RelayApplicationPayload,
   type StoredDeviceIdentity,
 } from '../../relay-protocol/src/index.ts'
 import { assertPwaRelayRecord } from './credentials.ts'
-import { projectRelaySessionView, type RelaySessionView } from './session-view.ts'
+import {
+  projectRelayNotification,
+  projectRelaySessionView,
+  type RelayNotificationView,
+  type RelaySessionView,
+} from './session-view.ts'
 
 /** Inputs used to enroll a PWA device and open an outbound session. */
 export interface CreatePwaRelayControllerInput {
@@ -20,28 +30,54 @@ export interface CreatePwaRelayControllerInput {
   readonly url: string
   readonly assertion: unknown
   readonly identity: StoredDeviceIdentity
-  readonly desktop: {
+  readonly desktop?: {
     readonly deviceId: string
     readonly encryptionPublicKey: string
   }
   readonly now?: number
 }
 
+/** Public desktop a PWA may select. Private keys never appear here. */
+export type PwaRelayDesktop = Pick<OutboundRelayDevice, 'deviceId' | 'userId' | 'publicKey' | 'encryptionPublicKey'>
+
 /** Paired outbound controller. Private keys stay inside the closure. */
 export interface PwaRelayController {
   readonly deviceId: string
-  readonly desktopDeviceId: string
+  readonly desktopDeviceId: string | undefined
+  listDesktops(): Promise<readonly PwaRelayDesktop[]>
+  selectDesktop(desktop: {
+    readonly deviceId: string
+    readonly encryptionPublicKey: string
+  }): void
   sendFollowUp(input: {
     readonly id: string
     readonly sessionId: string
     readonly text: string
-  }): Promise<{
-    readonly envelopeId: string
-    readonly toDeviceId: string
-    readonly outcome: 'delivered' | 'queued' | 'duplicate'
+  }): Promise<PwaRelayDelivery>
+  sendApproval(input: {
+    readonly id: string
+    readonly sessionId: string
+    readonly requestId: string
+    readonly approved: boolean
+  }): Promise<PwaRelayDelivery>
+  sendCancel(input: {
+    readonly id: string
+    readonly sessionId: string
+    readonly requestId: string
+  }): Promise<PwaRelayDelivery>
+  drain(): Promise<{
+    readonly views: readonly RelaySessionView[]
+    readonly notifications: readonly RelayNotificationView[]
   }>
+  reconnect(): Promise<void>
   project(payload: RelayApplicationPayload): RelaySessionView
   close(): void
+}
+
+interface PwaRelayDelivery {
+  readonly envelopeId: string
+  readonly toDeviceId: string
+  readonly outcome: 'delivered' | 'queued' | 'duplicate'
 }
 
 /**
@@ -55,7 +91,9 @@ export async function createPwaRelayController(
   if (input.assertion !== null && typeof input.assertion === 'object' && !Array.isArray(input.assertion)) {
     assertPwaRelayRecord(input.assertion as Record<string, unknown>, 'pwa relay assertion')
   }
-  assertPwaRelayRecord(input.desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
+  if (input.desktop !== undefined) {
+    assertPwaRelayRecord(input.desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
+  }
   const userId = assertionUserId(input.assertion)
   const published = publicDeviceIdentity(input.identity)
   const now = input.now ?? Date.now()
@@ -66,50 +104,140 @@ export async function createPwaRelayController(
     publicKey: published.publicKey,
     encryptionPublicKey: published.encryptionPublicKey,
   })
-  const token = await issueOutboundRelayToken({
-    httpUrl: input.httpUrl,
-    assertion: input.assertion,
-    deviceId: published.deviceId,
-  })
-  const connection = await connectOutboundRelay({
-    url: input.url,
-    accessToken: token.accessToken,
-    envelope: createSignedHandshakeEnvelope({
-      id: `hs:${published.deviceId}`,
-      sentAt: now,
-      actor: { userId, deviceId: published.deviceId },
-      keyPair: input.identity.keyPair,
-      nonce: `pwa:${published.deviceId}`,
-      capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
-    }),
-  })
+  let selected = input.desktop
+  let connection = await openSession(input, published, userId, now)
+
+  async function sendSealed(
+    kind: RelayApplicationKind,
+    id: string,
+    payload: RelayApplicationPayload,
+  ): Promise<PwaRelayDelivery> {
+    const desktop = selected
+    if (desktop === undefined) {
+      throw new RelayAuthorizationError('malformed', 'pwa relay desktop is required')
+    }
+    if (payload.kind !== kind) {
+      throw new RelayAuthorizationError('malformed', 'pwa sealed payload kind must match the frame')
+    }
+    return connection.send({
+      envelope: createSealedRelayEnvelope({
+        id,
+        sentAt: now,
+        actor: { userId: connection.userId, deviceId: connection.deviceId },
+        kind,
+        sender: input.identity.keyPair,
+        recipientEncryptionPublicKey: desktop.encryptionPublicKey,
+        payload,
+      }),
+      destinationDeviceId: desktop.deviceId,
+    })
+  }
+
   return {
     deviceId: published.deviceId,
-    desktopDeviceId: input.desktop.deviceId,
+    get desktopDeviceId() {
+      return selected?.deviceId
+    },
+    async listDesktops() {
+      const devices = await listOutboundRelayDevices({
+        httpUrl: input.httpUrl,
+        assertion: input.assertion,
+      })
+      return devices.filter(device => (
+        device.deviceId !== published.deviceId
+        && typeof device.encryptionPublicKey === 'string'
+      ))
+    },
+    selectDesktop(desktop) {
+      assertPwaRelayRecord(desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
+      selected = desktop
+    },
     async sendFollowUp(followUp) {
       assertPwaRelayRecord(followUp as unknown as Record<string, unknown>, 'pwa follow-up')
-      return connection.send({
-        envelope: createSealedRelayEnvelope({
-          id: followUp.id,
-          sentAt: now,
-          actor: { userId: connection.userId, deviceId: connection.deviceId },
-          kind: 'prompt',
-          sender: input.identity.keyPair,
-          recipientEncryptionPublicKey: input.desktop.encryptionPublicKey,
-          payload: {
-            kind: 'prompt',
-            sessionId: followUp.sessionId,
-            text: followUp.text,
-          },
-        }),
-        destinationDeviceId: input.desktop.deviceId,
+      return sendSealed('prompt', followUp.id, {
+        kind: 'prompt',
+        sessionId: followUp.sessionId,
+        text: followUp.text,
       })
+    },
+    async sendApproval(approval) {
+      assertPwaRelayRecord(approval as unknown as Record<string, unknown>, 'pwa approval')
+      return sendSealed('approval', approval.id, {
+        kind: 'approval',
+        sessionId: approval.sessionId,
+        requestId: approval.requestId,
+        approved: approval.approved,
+      })
+    },
+    async sendCancel(cancel) {
+      assertPwaRelayRecord(cancel as unknown as Record<string, unknown>, 'pwa cancel')
+      return sendSealed('cancel', cancel.id, {
+        kind: 'cancel',
+        sessionId: cancel.sessionId,
+        requestId: cancel.requestId,
+      })
+    },
+    async drain() {
+      const queued = [...await connection.reclaim()]
+      let live: Awaited<ReturnType<typeof connection.receive>> = []
+      try {
+        live = await connection.receive({ timeoutMs: 25 })
+      } catch {
+        live = []
+      }
+      const seen = new Set<string>()
+      const views: RelaySessionView[] = []
+      const notifications: RelayNotificationView[] = []
+      const queuedIds = new Set(queued.map(envelope => envelope.id))
+      for (const envelope of [...queued, ...live]) {
+        if (seen.has(envelope.id)) continue
+        seen.add(envelope.id)
+        const payload = openSealedRelayPayload(envelope, input.identity.keyPair)
+        const view = projectRelaySessionView(payload)
+        views.push(view)
+        const notification = projectRelayNotification(view)
+        if (notification !== undefined) notifications.push(notification)
+        if (queuedIds.has(envelope.id)) {
+          await connection.acknowledge({ envelopeId: envelope.id })
+        }
+      }
+      return { views, notifications }
+    },
+    async reconnect() {
+      connection.close()
+      connection = await openSession(input, published, userId, now)
     },
     project: projectRelaySessionView,
     close() {
       connection.close()
     },
   }
+}
+
+async function openSession(
+  input: CreatePwaRelayControllerInput,
+  published: { readonly deviceId: string },
+  userId: string,
+  now: number,
+) {
+  const token = await issueOutboundRelayToken({
+    httpUrl: input.httpUrl,
+    assertion: input.assertion,
+    deviceId: published.deviceId,
+  })
+  const nonce = randomBytes(16).toString('hex')
+  return connectOutboundRelay({
+    url: input.url,
+    accessToken: token.accessToken,
+    envelope: createSignedHandshakeEnvelope({
+      id: `hs:${published.deviceId}:${nonce}`,
+      sentAt: now,
+      actor: { userId, deviceId: published.deviceId },
+      keyPair: input.identity.keyPair,
+      nonce,
+      capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
+    }),
+  })
 }
 
 function assertionUserId(assertion: unknown): string {

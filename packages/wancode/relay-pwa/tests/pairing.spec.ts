@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   RelayAuthorizationError,
+  connectOutboundRelay,
   createMemoryRelayStore,
+  createSealedRelayEnvelope,
+  createSignedHandshakeEnvelope,
   createStaticOidcIdentityProvider,
   createStoredDeviceIdentity,
+  issueOutboundRelayToken,
   openSealedRelayPayload,
+  registerOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
 import { createPwaRelayController } from '../src/index.ts'
@@ -13,12 +18,13 @@ const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
 const AUDIENCE = 'wancode-relay'
 
-function assertion(): Record<string, unknown> {
+function assertion(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     iss: ISSUER,
     aud: AUDIENCE,
     sub: 'user-a',
     exp: Math.floor((NOW + 60_000) / 1000),
+    ...overrides,
   }
 }
 
@@ -104,6 +110,147 @@ describe('PWA relay pairing', () => {
       type: 'assistant.delta',
       detail: 'Looking at the form',
     })
+    controller.close()
+  })
+
+  it('lists same-account desktops, sends approval and cancel, and drains reconnect mail', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const foreign = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion({ sub: 'user-b' }),
+      deviceId: foreign.deviceId,
+      publicKey: foreign.keyPair.publicKey,
+      encryptionPublicKey: foreign.keyPair.encryptionPublicKey,
+    })
+
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      url: cloud.url,
+      assertion: assertion(),
+      identity: pwa,
+      now: NOW,
+    })
+    await expectRelayErrorAsync(() => controller.sendFollowUp({
+      id: 'msg-0',
+      sessionId: 'sess-1',
+      text: 'too early',
+    }), 'malformed')
+
+    const desktops = await controller.listDesktops()
+    expect(desktops).toEqual([{
+      deviceId: desktop.deviceId,
+      userId: 'user-a',
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }])
+    expect(JSON.stringify(desktops)).not.toContain(desktop.keyPair.privateKey)
+    controller.selectDesktop({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    expect(controller.desktopDeviceId).toBe(desktop.deviceId)
+
+    expect(await controller.sendApproval({
+      id: 'msg-2',
+      sessionId: 'sess-1',
+      requestId: 'req-1',
+      approved: true,
+    })).toEqual({
+      envelopeId: 'msg-2',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+    expect(openSealedRelayPayload(cloud.mailbox.list(desktop.deviceId)[0], desktop.keyPair)).toEqual({
+      kind: 'approval',
+      sessionId: 'sess-1',
+      requestId: 'req-1',
+      approved: true,
+    })
+    expect(await controller.sendCancel({
+      id: 'msg-3',
+      sessionId: 'sess-1',
+      requestId: 'req-1',
+    })).toEqual({
+      envelopeId: 'msg-3',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+
+    controller.close()
+    const desktopToken = await issueOutboundRelayToken({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+    })
+    const desktopConnection = await connectOutboundRelay({
+      url: cloud.url,
+      accessToken: desktopToken.accessToken,
+      envelope: createSignedHandshakeEnvelope({
+        id: 'hs-desktop',
+        sentAt: NOW,
+        actor: { userId: 'user-a', deviceId: desktop.deviceId },
+        keyPair: desktop.keyPair,
+        nonce: 'desktop-nonce-1',
+        capabilities: ['session.observe', 'session.prompt'],
+      }),
+    })
+    const secret = 'never-show-this-prompt-on-the-pwa'
+    expect(await desktopConnection.send({
+      envelope: createSealedRelayEnvelope({
+        id: 'evt-1',
+        sentAt: NOW,
+        actor: { userId: 'user-a', deviceId: desktop.deviceId },
+        kind: 'session-event',
+        sender: desktop.keyPair,
+        recipientEncryptionPublicKey: pwa.keyPair.encryptionPublicKey,
+        payload: {
+          kind: 'session-event',
+          sessionId: 'sess-1',
+          type: 'notify.tool',
+          detail: 'Waiting for approval',
+        },
+      }),
+      destinationDeviceId: pwa.deviceId,
+    })).toEqual({
+      envelopeId: 'evt-1',
+      toDeviceId: pwa.deviceId,
+      outcome: 'queued',
+    })
+    expect(JSON.stringify(cloud.mailbox.list(pwa.deviceId))).not.toContain(secret)
+    desktopConnection.close()
+
+    await controller.reconnect()
+    const drained = await controller.drain()
+    expect(drained.views).toEqual([{
+      kind: 'progress',
+      sessionId: 'sess-1',
+      type: 'notify.tool',
+      detail: 'Waiting for approval',
+    }])
+    expect(drained.notifications).toEqual([{
+      kind: 'notification',
+      sessionId: 'sess-1',
+      type: 'notify.tool',
+      detail: 'Waiting for approval',
+    }])
+    expect(JSON.stringify(drained)).not.toContain(secret)
+    expect(await controller.drain()).toEqual({ views: [], notifications: [] })
     controller.close()
   })
 
