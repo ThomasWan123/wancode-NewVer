@@ -128,6 +128,12 @@ describe('PWA relay pairing', () => {
       status: 'running',
     }])
     controller.close()
+    await expectRelayErrorAsync(() => controller.sendFollowUp({
+      id: 'msg-closed',
+      sessionId: 'sess-1',
+      text: 'too late',
+    }), 'malformed')
+    await expectRelayErrorAsync(() => controller.drain(), 'malformed')
   })
 
   it('lists same-account desktops, sends approval and cancel, and drains reconnect mail', async () => {

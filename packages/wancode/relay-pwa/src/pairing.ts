@@ -121,12 +121,20 @@ export async function createPwaRelayController(
   let selected = input.desktop
   let connection = await openSession(input, published, userId, now)
   const board = createPwaSessionBoard()
+  let closed = false
+
+  function assertOpen(): void {
+    if (closed) {
+      throw new RelayAuthorizationError('malformed', 'pwa relay session is closed')
+    }
+  }
 
   async function sendSealed(
     kind: RelayApplicationKind,
     id: string,
     payload: RelayApplicationPayload,
   ): Promise<PwaRelayDelivery> {
+    assertOpen()
     const desktop = selected
     if (desktop === undefined) {
       throw new RelayAuthorizationError('malformed', 'pwa relay desktop is required')
@@ -221,6 +229,7 @@ export async function createPwaRelayController(
       })
     },
     async drain() {
+      assertOpen()
       const queued = [...await connection.reclaim()]
       let live: Awaited<ReturnType<typeof connection.receive>> = []
       try {
@@ -253,8 +262,10 @@ export async function createPwaRelayController(
     async reconnect() {
       connection.close()
       connection = await openSession(input, published, userId, now)
+      closed = false
     },
     async revoke() {
+      closed = true
       connection.close()
       return revokeOutboundRelayDevice({
         httpUrl: input.httpUrl,
@@ -264,6 +275,7 @@ export async function createPwaRelayController(
     },
     project: projectRelaySessionView,
     close() {
+      closed = true
       connection.close()
     },
   }
