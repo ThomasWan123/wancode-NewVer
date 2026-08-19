@@ -416,6 +416,17 @@ describe('PWA relay pairing', () => {
       sessionId: 'sess-1',
       text: 'x'.repeat(8_193),
     }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendFollowUp({
+      id: 'msg-sess',
+      sessionId: '',
+      text: 'ok',
+    }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendApproval({
+      id: 'msg-req',
+      sessionId: 'sess-1',
+      requestId: '',
+      approved: true,
+    }), 'malformed')
     controller.close()
   })
 
