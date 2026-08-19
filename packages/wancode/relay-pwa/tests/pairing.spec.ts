@@ -110,6 +110,10 @@ describe('PWA relay pairing', () => {
       type: 'assistant.delta',
       detail: 'Looking at the form',
     })
+    expect(controller.sessions()).toEqual([{
+      sessionId: 'sess-1',
+      status: 'running',
+    }])
     controller.close()
   })
 
@@ -249,8 +253,25 @@ describe('PWA relay pairing', () => {
       type: 'notify.tool',
       detail: 'Waiting for approval',
     }])
+    expect(drained.sessions).toEqual([{
+      sessionId: 'sess-1',
+      status: 'awaiting-approval',
+      lastType: 'notify.tool',
+      lastDetail: 'Waiting for approval',
+      pendingRequestId: 'req-1',
+      notification: {
+        kind: 'notification',
+        sessionId: 'sess-1',
+        type: 'notify.tool',
+        detail: 'Waiting for approval',
+      },
+    }])
     expect(JSON.stringify(drained)).not.toContain(secret)
-    expect(await controller.drain()).toEqual({ views: [], notifications: [] })
+    expect(await controller.drain()).toEqual({
+      views: [],
+      notifications: [],
+      sessions: drained.sessions,
+    })
     controller.close()
   })
 

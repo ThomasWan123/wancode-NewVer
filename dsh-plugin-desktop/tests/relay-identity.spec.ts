@@ -107,6 +107,7 @@ describe('desktop relay device identity', () => {
       register,
       issueToken: vi.fn(),
       revoke: vi.fn(),
+      listDevices: vi.fn(),
     })
 
     await expect(handle?.enroll({

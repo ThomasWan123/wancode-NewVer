@@ -7,6 +7,7 @@ import {
   connectOutboundRelay,
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
+  listOutboundRelayDevices,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
 } from '@wancode/relay-protocol'
@@ -59,6 +60,19 @@ export interface DesktopRelayRegisterInput {
 export interface DesktopRelayDeviceInput {
   readonly assertion: unknown
   readonly deviceId: string
+}
+
+/** Inputs for listing same-account devices over outbound HTTPS. */
+export interface DesktopRelayListInput {
+  readonly assertion: unknown
+}
+
+/** Public device returned by list. Private keys never appear here. */
+export interface DesktopRelayPublicDevice {
+  readonly deviceId: string
+  readonly userId: string
+  readonly publicKey: string
+  readonly encryptionPublicKey?: string
 }
 
 /** Inputs for registering the stored local identity without a socket. */
@@ -119,6 +133,7 @@ export interface DesktopRelayHandle {
     readonly deviceId: string
     readonly revokedAt: number
   }>
+  listDevices(input: DesktopRelayListInput): Promise<readonly DesktopRelayPublicDevice[]>
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
   dispose(): void
 }
@@ -131,12 +146,14 @@ export interface DesktopRelayControl {
   register: typeof registerOutboundRelayDevice
   issueToken: typeof issueOutboundRelayToken
   revoke: typeof revokeOutboundRelayDevice
+  listDevices: typeof listOutboundRelayDevices
 }
 
 const defaultControl: DesktopRelayControl = {
   register: registerOutboundRelayDevice,
   issueToken: issueOutboundRelayToken,
   revoke: revokeOutboundRelayDevice,
+  listDevices: listOutboundRelayDevices,
 }
 
 /**
@@ -185,6 +202,12 @@ export function prepareDesktopRelay(
         httpUrl: httpUrl.href,
         assertion: input.assertion,
         deviceId: input.deviceId,
+      })
+    },
+    async listDevices(input) {
+      return control.listDevices({
+        httpUrl: httpUrl.href,
+        assertion: input.assertion,
       })
     },
     async connect(input) {

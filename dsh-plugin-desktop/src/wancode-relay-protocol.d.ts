@@ -87,6 +87,15 @@ declare module '@wancode/relay-protocol' {
     input: OutboundRelayControlInput,
   ): Promise<OutboundRelayRevocation>
 
+  export interface ListOutboundRelayDevicesInput {
+    readonly httpUrl: string
+    readonly assertion: unknown
+  }
+
+  export function listOutboundRelayDevices(
+    input: ListOutboundRelayDevicesInput,
+  ): Promise<readonly OutboundRelayDevice[]>
+
   export interface DeviceKeyPair {
     readonly publicKey: string
     readonly privateKey: string

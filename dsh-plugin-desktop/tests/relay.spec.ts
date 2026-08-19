@@ -74,7 +74,7 @@ describe('desktop outbound relay Host plugin', () => {
     expect(connection.close).toHaveBeenCalledOnce()
   })
 
-  it('registers, mints a token, and revokes over HTTP without opening a socket', async () => {
+  it('registers, mints a token, lists devices, and revokes over HTTP without opening a socket', async () => {
     const connect = vi.fn()
     const register = vi.fn(async () => ({
       deviceId: 'device-a',
@@ -89,10 +89,16 @@ describe('desktop outbound relay Host plugin', () => {
       deviceId: 'device-a',
       revokedAt: 1_700_000_000_000,
     }))
+    const listDevices = vi.fn(async () => [{
+      deviceId: 'desktop-b',
+      userId: 'user-a',
+      publicKey: 'pub-b',
+      encryptionPublicKey: 'enc-b',
+    }])
     const handle = prepareDesktopRelay(idleConfig({
       enabled: true,
       url: 'wss://relay.example.invalid/v1',
-    }), connect, { register, issueToken, revoke })
+    }), connect, { register, issueToken, revoke, listDevices })
 
     await expect(handle?.register({
       assertion: { sub: 'user-a' },
@@ -110,6 +116,14 @@ describe('desktop outbound relay Host plugin', () => {
       accessToken: 'tok-live',
       expiresAt: 1_700_000_900_000,
     })
+    await expect(handle?.listDevices({
+      assertion: { sub: 'user-a' },
+    })).resolves.toEqual([{
+      deviceId: 'desktop-b',
+      userId: 'user-a',
+      publicKey: 'pub-b',
+      encryptionPublicKey: 'enc-b',
+    }])
     await expect(handle?.revoke({
       assertion: { sub: 'user-a' },
       deviceId: 'device-a',
@@ -122,6 +136,10 @@ describe('desktop outbound relay Host plugin', () => {
       assertion: { sub: 'user-a' },
       deviceId: 'device-a',
       publicKey: 'pub-a',
+    })
+    expect(listDevices).toHaveBeenCalledWith({
+      httpUrl: 'https://relay.example.invalid/',
+      assertion: { sub: 'user-a' },
     })
     expect(connect).not.toHaveBeenCalled()
   })

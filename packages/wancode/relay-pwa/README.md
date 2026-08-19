@@ -5,8 +5,9 @@
 Mobile pairing and session projections for Wan Code Cloud Relay (M3). This
 package lets a PWA device enroll over outbound HTTPS, dial outbound WSS, list
 same-account desktops, and send sealed follow-ups, approvals, and cancels to a
-selected desktop. It can drain reconnect mail and project `notify.*` events
-without prompt text. It does not listen on a public interface, declare a
+selected desktop. It can drain reconnect mail, fold streaming progress into
+session snapshots, and publish a standalone Web App Manifest whose cache policy
+never stores tokens. It does not listen on a public interface, declare a
 DeepSeek Harness plugin entry, or store model credentials. Those keys stay on
 the desktop.
 
@@ -28,7 +29,14 @@ directory links.
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so
   the handshake is not replay. The returned object does not include private
   keys.
+- `createPwaSessionBoard` folds views into one snapshot per session. Prompt
+  text never appears. `notify.*` progress becomes the latest notification.
+- `createPwaWebManifest` returns a standalone install record with a relative
+  `start_url`. `decidePwaCacheAction` caches only shell GET assets; token query
+  keys and model credentials fail closed. POST control-plane calls stay
+  network-only.
 - The default export has no listener and no loopback/cloud acceptor.
 
-This is not an installable iOS or Android PWA yet. Graphical launch is out of
-scope for the headless pairing contract.
+This is not yet a shipped iOS or Android install. The HTML shell, icons, and
+service-worker runtime are still out of scope for the headless contract.
+Graphical launch stays explicit.

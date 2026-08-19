@@ -68,6 +68,7 @@ acceptor; it refuses non-loopback binds and is not part of the default export.
 The desktop Host loads `dsh-plugin-desktop/relay` disabled by default and
 bundles this dialer without declaring a Yarn workspace link. When enabled, the
 plugin derives an HTTPS control origin from the WebSocket URL, then registers,
-mints a token, or revokes over outbound HTTP before `connect` opens a socket.
+mints a token, lists same-account devices, or revokes over outbound HTTP before
+`connect` opens a socket.
 `createStoredDeviceIdentity` encodes the Ed25519 and X25519 pair for a secure
 store. Public views omit private keys; a mutated public key fails closed.

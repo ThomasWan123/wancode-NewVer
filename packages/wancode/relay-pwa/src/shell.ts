@@ -1,0 +1,125 @@
+/** Installable PWA shell contract. This module never listens and never caches credentials. */
+
+import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
+import { assertPwaRelayRecord } from './credentials.ts'
+
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
+const CREDENTIAL_QUERY = /token|secret|credential|password|authorization/iu
+
+/** Relative assets the installed shell may cache. */
+export const PWA_SHELL_PATHS = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/sw.js',
+  '/icons/wancode-192.png',
+  '/icons/wancode-512.png',
+] as const
+
+/** Cache name for the installable shell. Bump when the asset list changes. */
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v1'
+
+const SHELL_PATHS = new Set<string>(PWA_SHELL_PATHS)
+
+/** Web App Manifest used to install Wan Code on a phone home screen. */
+export interface PwaWebManifest {
+  readonly name: 'Wan Code'
+  readonly short_name: 'Wan Code'
+  readonly start_url: './'
+  readonly scope: './'
+  readonly display: 'standalone'
+  readonly background_color: '#0b0f14'
+  readonly theme_color: '#0b0f14'
+  readonly icons: readonly [
+    {
+      readonly src: './icons/wancode-192.png'
+      readonly sizes: '192x192'
+      readonly type: 'image/png'
+      readonly purpose: 'any'
+    },
+    {
+      readonly src: './icons/wancode-512.png'
+      readonly sizes: '512x512'
+      readonly type: 'image/png'
+      readonly purpose: 'any maskable'
+    },
+  ]
+}
+
+/** Cache policy for one service-worker fetch. The worker itself never listens. */
+export type PwaCacheDecision = 'cache-shell' | 'network-only'
+
+/**
+ * Return the installable Web App Manifest. URLs stay relative so a token cannot
+ * be baked into start_url. Model credentials are refused if supplied.
+ */
+export function createPwaWebManifest(
+  extras: Record<string, unknown> = {},
+): PwaWebManifest {
+  assertPwaRelayRecord(extras, 'pwa web manifest')
+  return {
+    name: 'Wan Code',
+    short_name: 'Wan Code',
+    start_url: './',
+    scope: './',
+    display: 'standalone',
+    background_color: '#0b0f14',
+    theme_color: '#0b0f14',
+    icons: [
+      {
+        src: './icons/wancode-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: './icons/wancode-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable',
+      },
+    ],
+  }
+}
+
+/**
+ * Decide whether a service worker may cache, pass through, or refuse a request.
+ * Credentialed URLs and token query keys fail closed. POST control-plane calls
+ * stay network-only so tokens are never written to Cache Storage.
+ */
+export function decidePwaCacheAction(input: {
+  readonly method: string
+  readonly url: string
+}): PwaCacheDecision {
+  assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa cache request')
+  const parsed = parsePwaRequestUrl(input.url)
+  if (input.method !== 'GET' && input.method !== 'HEAD') return 'network-only'
+  if (SHELL_PATHS.has(parsed.pathname)) return 'cache-shell'
+  return 'network-only'
+}
+
+function parsePwaRequestUrl(url: string): URL {
+  let parsed: URL
+  try {
+    parsed = new URL(url, 'https://pwa.wancode.example/')
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'pwa cache url is not a valid url')
+  }
+  if (parsed.username !== '' || parsed.password !== '') {
+    throw new RelayAuthorizationError('plaintext', 'pwa cache url must not embed credentials')
+  }
+  for (const key of parsed.searchParams.keys()) {
+    if (CREDENTIAL_QUERY.test(key)) {
+      throw new RelayAuthorizationError('plaintext', 'pwa cache url must not carry credentials')
+    }
+  }
+  if (parsed.protocol === 'https:') return parsed
+  if (parsed.protocol === 'http:' && LOOPBACK_HOSTS.has(parsed.hostname)) return parsed
+  if (parsed.protocol === 'http:') {
+    throw new RelayAuthorizationError(
+      'cleartext-transport',
+      'cleartext pwa cache is only allowed to loopback',
+    )
+  }
+  throw new RelayAuthorizationError('malformed', 'pwa cache url must use https or loopback http')
+}

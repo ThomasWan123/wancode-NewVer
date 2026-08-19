@@ -23,6 +23,7 @@ import {
   type RelayNotificationView,
   type RelaySessionView,
 } from './session-view.ts'
+import { createPwaSessionBoard, type PwaSessionSnapshot } from './session-board.ts'
 
 /** Inputs used to enroll a PWA device and open an outbound session. */
 export interface CreatePwaRelayControllerInput {
@@ -68,7 +69,9 @@ export interface PwaRelayController {
   drain(): Promise<{
     readonly views: readonly RelaySessionView[]
     readonly notifications: readonly RelayNotificationView[]
+    readonly sessions: readonly PwaSessionSnapshot[]
   }>
+  sessions(): readonly PwaSessionSnapshot[]
   reconnect(): Promise<void>
   project(payload: RelayApplicationPayload): RelaySessionView
   close(): void
@@ -106,6 +109,7 @@ export async function createPwaRelayController(
   })
   let selected = input.desktop
   let connection = await openSession(input, published, userId, now)
+  const board = createPwaSessionBoard()
 
   async function sendSealed(
     kind: RelayApplicationKind,
@@ -154,28 +158,43 @@ export async function createPwaRelayController(
     },
     async sendFollowUp(followUp) {
       assertPwaRelayRecord(followUp as unknown as Record<string, unknown>, 'pwa follow-up')
-      return sendSealed('prompt', followUp.id, {
+      const delivery = await sendSealed('prompt', followUp.id, {
         kind: 'prompt',
         sessionId: followUp.sessionId,
         text: followUp.text,
       })
+      board.apply({ kind: 'follow-up', sessionId: followUp.sessionId })
+      return delivery
     },
     async sendApproval(approval) {
       assertPwaRelayRecord(approval as unknown as Record<string, unknown>, 'pwa approval')
-      return sendSealed('approval', approval.id, {
+      const delivery = await sendSealed('approval', approval.id, {
         kind: 'approval',
         sessionId: approval.sessionId,
         requestId: approval.requestId,
         approved: approval.approved,
       })
+      board.apply({
+        kind: 'approval',
+        sessionId: approval.sessionId,
+        requestId: approval.requestId,
+        approved: approval.approved,
+      })
+      return delivery
     },
     async sendCancel(cancel) {
       assertPwaRelayRecord(cancel as unknown as Record<string, unknown>, 'pwa cancel')
-      return sendSealed('cancel', cancel.id, {
+      const delivery = await sendSealed('cancel', cancel.id, {
         kind: 'cancel',
         sessionId: cancel.sessionId,
         requestId: cancel.requestId,
       })
+      board.apply({
+        kind: 'cancel',
+        sessionId: cancel.sessionId,
+        requestId: cancel.requestId,
+      })
+      return delivery
     },
     async drain() {
       const queued = [...await connection.reclaim()]
@@ -195,13 +214,17 @@ export async function createPwaRelayController(
         const payload = openSealedRelayPayload(envelope, input.identity.keyPair)
         const view = projectRelaySessionView(payload)
         views.push(view)
+        board.apply(view)
         const notification = projectRelayNotification(view)
         if (notification !== undefined) notifications.push(notification)
         if (queuedIds.has(envelope.id)) {
           await connection.acknowledge({ envelopeId: envelope.id })
         }
       }
-      return { views, notifications }
+      return { views, notifications, sessions: board.list() }
+    },
+    sessions() {
+      return board.list()
     },
     async reconnect() {
       connection.close()

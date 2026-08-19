@@ -29,8 +29,10 @@ Status: active
 - M3 started: `@wancode/relay-pwa` projects session events without prompt text
   or model credentials, lists same-account desktops, and can enroll as a PWA
   device then send sealed follow-ups, approvals, and cancels over outbound
-  HTTPS/WSS. Reconnect drains mailbox mail and projects `notify.*` events.
-  It does not listen and is not yet an installable iOS or Android PWA.
+  HTTPS/WSS. Reconnect drains mailbox mail, folds streaming progress into
+  session snapshots, and projects `notify.*` events. The installable Web App
+  Manifest and fail-closed cache policy exist; the HTML/icons/service-worker
+  runtime is not shipped. It does not listen.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
