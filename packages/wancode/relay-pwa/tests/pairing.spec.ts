@@ -454,6 +454,11 @@ describe('PWA relay pairing', () => {
       requestId: '',
       approved: true,
     }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendCancel({
+      id: 'msg-cancel',
+      sessionId: 'sess-1',
+      requestId: '',
+    }), 'malformed')
     controller.close()
   })
 
