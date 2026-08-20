@@ -19,7 +19,7 @@ export const PWA_SHELL_PATHS = [
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list or worker changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v4'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v5'
 
 /** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
 export type PwaCacheRetention = 'keep' | 'delete'
@@ -44,11 +44,14 @@ const SHELL_PATHS = new Set<string>(PWA_SHELL_PATHS)
 export interface PwaWebManifest {
   readonly name: 'Wan Code'
   readonly short_name: 'Wan Code'
+  readonly id: './'
+  readonly lang: 'en'
   readonly start_url: './'
   readonly scope: './'
   readonly display: 'standalone'
   readonly background_color: '#0b0f14'
   readonly theme_color: '#0b0f14'
+  readonly prefer_related_applications: false
   readonly icons: readonly [
     {
       readonly src: './icons/wancode-192.png'
@@ -79,11 +82,14 @@ export function createPwaWebManifest(
   return {
     name: 'Wan Code',
     short_name: 'Wan Code',
+    id: './',
+    lang: 'en',
     start_url: './',
     scope: './',
     display: 'standalone',
     background_color: '#0b0f14',
     theme_color: '#0b0f14',
+    prefer_related_applications: false,
     icons: [
       {
         src: './icons/wancode-192.png',

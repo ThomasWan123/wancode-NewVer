@@ -32,7 +32,8 @@ Status: active
   HTTPS/WSS. Handshake nonces use WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. Progress details are
   capped. The installable Web App
-  Manifest and fail-closed cache policy exist; `createPwaServiceWorkerSource`
+  Manifest and fail-closed cache policy exist; the install `id` stays relative.
+  `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,
   manifest, worker, and `pair.js`.   The index has no inline script. Apple and Android home-screen metas are present.
   `PWA_SHELL_CSP` forbids `unsafe-inline`, frames, and plugins. The PWA can also send sealed presence and revoke itself

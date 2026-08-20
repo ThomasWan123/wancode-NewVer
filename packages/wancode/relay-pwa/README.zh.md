@@ -29,7 +29,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   `notify.*` 进度成为最新通知。`assistant.done` 与 `session.complete` 会把快照
   标为 complete。
 - `createPwaWebManifest` 返回 `display: standalone` 且 `start_url` 为相对路径
-  的安装记录。`decidePwaCacheAction` 只缓存 shell GET 资源；令牌查询参数和
+  的安装记录。安装 `id` 保持相对路径，且 `prefer_related_applications` 为 false，
+  便于加到手机主屏。`decidePwaCacheAction` 只缓存 shell GET 资源；令牌查询参数和
   模型凭据失败关闭。控制面 POST 保持 network-only。
   `decidePwaCacheRetention` 只保留当前 shell 缓存名。
   `createPwaServiceWorkerSource` 生成对应的 worker 源码；activate 时删除过期
