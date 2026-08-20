@@ -478,6 +478,10 @@ describe('PWA relay pairing', () => {
       id: '',
       state: 'online',
     }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendPresence({
+      id: 'msg-away',
+      state: 'away',
+    } as never), 'malformed')
     controller.close()
   })
 

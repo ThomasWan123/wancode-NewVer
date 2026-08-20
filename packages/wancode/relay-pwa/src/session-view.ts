@@ -65,6 +65,7 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
         requestId: payload.requestId,
       }
     case 'presence':
+      assertPwaPresenceState(payload.state)
       return { kind: 'presence', state: payload.state }
     default: {
       const exhaustive: never = payload
@@ -111,5 +112,14 @@ export function assertPwaSessionId(sessionId: string): void {
 export function assertPwaRequestId(requestId: string): void {
   if (typeof requestId !== 'string' || requestId.length === 0 || /[\0\r\n]/u.test(requestId)) {
     throw new RelayAuthorizationError('malformed', 'pwa request id is required')
+  }
+}
+
+/**
+ * Refuse a presence frame that is not online or offline.
+ */
+export function assertPwaPresenceState(state: string): asserts state is 'online' | 'offline' {
+  if (state !== 'online' && state !== 'offline') {
+    throw new RelayAuthorizationError('malformed', 'pwa presence state is invalid')
   }
 }

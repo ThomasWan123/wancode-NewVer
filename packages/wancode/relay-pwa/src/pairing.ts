@@ -26,6 +26,7 @@ import {
   projectRelaySessionView,
   assertPwaSessionId,
   assertPwaRequestId,
+  assertPwaPresenceState,
   type RelayNotificationView,
   type RelaySessionView,
 } from './session-view.ts'
@@ -278,6 +279,7 @@ export async function createPwaRelayController(
     },
     async sendPresence(presence) {
       assertPwaRelayRecord(presence as unknown as Record<string, unknown>, 'pwa presence')
+      assertPwaPresenceState(presence.state)
       return sendSealed('presence', presence.id, {
         kind: 'presence',
         state: presence.state,

@@ -32,7 +32,7 @@ directory links.
   desktop id, or a non-X25519 encryption key fails closed. `listDesktops`
   omits those same devices. Revoked desktops are omitted. Follow-ups, approvals, and cancels are
   sealed to that desktop encryption public key. Presence frames are sealed the
-  same way. Follow-up text is required and capped so low-bandwidth links stay
+  same way. Presence state must be online or offline. Follow-up text is required and capped so low-bandwidth links stay
   bounded. Handshake nonces come from WebCrypto, not `node:crypto`. Closed sessions refuse send and drain until `reconnect`.
   `listDesktops` uses outbound HTTPS and still works after close. `drain` reclaims queued mail
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so

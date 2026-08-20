@@ -136,5 +136,12 @@ describe('PWA session projections', () => {
       }),
       'malformed',
     )
+    expectRelayError(
+      () => projectRelaySessionView({
+        kind: 'presence',
+        state: 'away',
+      } as never),
+      'malformed',
+    )
   })
 })
