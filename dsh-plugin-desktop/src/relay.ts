@@ -681,6 +681,67 @@ export function createDesktopRelayApplySinks(input: {
   }
 }
 
+/**
+ * Host/client session shape used to queue a follow-up. This is not a Cordis
+ * inject and does not listen.
+ */
+export interface DesktopRelayHostSession {
+  readonly prompt: (
+    parts: readonly { readonly type: 'text'; readonly text: string }[],
+    mode: 'queue',
+  ) => Promise<unknown>
+}
+
+/**
+ * Queue a follow-up through Host `prompt([{ type: 'text', text }], 'queue')`
+ * so PWA mail uses the same submit path as the desktop Client. Missing
+ * sessions still fail closed. This does not inject Host services.
+ */
+export function createDesktopRelayHostFollowUpSink(input: {
+  readonly getSession: (sessionId: string) => DesktopRelayHostSession | undefined
+}): DesktopRelayApplySinks['followUp'] {
+  return createDesktopRelayFollowUpSink({
+    getSession: sessionId => {
+      const session = input.getSession(sessionId)
+      return session === undefined ? undefined : bindDesktopRelayHostSession(session)
+    },
+  })
+}
+
+/**
+ * Bind follow-up, approval, and cancel to live Host lookups. Follow-ups use
+ * `prompt(..., 'queue')`. Missing sessions or request ids fail closed. This
+ * does not listen and does not inject Host services.
+ */
+export function createDesktopRelayHostApplySinks(input: {
+  readonly getSession: (sessionId: string) => DesktopRelayHostSession | undefined
+  readonly getRequest: (input: {
+    readonly sessionId: string
+    readonly requestId: string
+  }) => {
+    readonly decide: (approved: boolean) => Promise<void>
+    readonly cancel: () => Promise<void>
+  } | undefined
+}): Required<DesktopRelayApplySinks> {
+  return createDesktopRelayApplySinks({
+    getSession: sessionId => {
+      const session = input.getSession(sessionId)
+      return session === undefined ? undefined : bindDesktopRelayHostSession(session)
+    },
+    getRequest: input.getRequest,
+  })
+}
+
+function bindDesktopRelayHostSession(session: DesktopRelayHostSession): {
+  readonly submit: (text: string) => Promise<void>
+} {
+  return {
+    async submit(text) {
+      await session.prompt([{ type: 'text', text }], 'queue')
+    },
+  }
+}
+
 function relayEnvelopeId(envelope: unknown): string {
   if (envelope !== null && typeof envelope === 'object' && !Array.isArray(envelope)) {
     const id = (envelope as { id?: unknown }).id

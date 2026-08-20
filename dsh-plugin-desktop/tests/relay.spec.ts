@@ -7,6 +7,7 @@ import {
   createDesktopRelayCancelSink,
   createDesktopRelayFollowUpSink,
   createDesktopRelayApplySinks,
+  createDesktopRelayHostApplySinks,
   drainDesktopRelayMail,
   MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
   MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS,
@@ -487,6 +488,29 @@ describe('desktop outbound relay Host plugin', () => {
       sessionId: 'sess-1',
       requestId: 'req-missing',
       approved: false,
+    })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
+  it('queues follow-ups through the Host prompt API without injecting sessions', async () => {
+    const prompt = vi.fn(async () => undefined)
+    const other = vi.fn(async () => undefined)
+    const sinks = createDesktopRelayHostApplySinks({
+      getSession: sessionId => {
+        if (sessionId === 'sess-1') return { prompt }
+        if (sessionId === 'sess-other') return { prompt: other }
+        return undefined
+      },
+      getRequest: () => undefined,
+    })
+    await sinks.followUp({ sessionId: 'sess-1', text: 'review the login form' })
+    expect(prompt).toHaveBeenCalledWith(
+      [{ type: 'text', text: 'review the login form' }],
+      'queue',
+    )
+    expect(other).not.toHaveBeenCalled()
+    await expect(sinks.followUp({
+      sessionId: 'sess-missing',
+      text: 'review the login form',
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 
