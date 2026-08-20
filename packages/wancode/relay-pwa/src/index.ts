@@ -41,6 +41,7 @@ export {
 } from './icons.ts'
 export {
   createPwaRelayController,
+  assertPwaDesktopSelection,
   type CreatePwaRelayControllerInput,
   type PwaRelayController,
   type PwaRelayDesktop,

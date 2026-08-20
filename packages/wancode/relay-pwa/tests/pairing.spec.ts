@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController } from '../src/index.ts'
+import { createPwaRelayController, assertPwaDesktopSelection } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -32,6 +32,16 @@ function assertion(overrides: Record<string, unknown> = {}): Record<string, unkn
 async function expectRelayErrorAsync(run: () => Promise<unknown>, code: string): Promise<void> {
   try {
     await run()
+    expect.unreachable('expected a relay authorization error')
+  } catch (cause) {
+    expect(cause).toBeInstanceOf(RelayAuthorizationError)
+    expect((cause as RelayAuthorizationError).code).toBe(code)
+  }
+}
+
+function expectRelayError(run: () => unknown, code: string): void {
+  try {
+    run()
     expect.unreachable('expected a relay authorization error')
   } catch (cause) {
     expect(cause).toBeInstanceOf(RelayAuthorizationError)
@@ -469,6 +479,42 @@ describe('PWA relay pairing', () => {
       state: 'online',
     }), 'malformed')
     controller.close()
+  })
+
+  it('refuses selecting the local PWA or an empty desktop', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    expectRelayError(
+      () => assertPwaDesktopSelection({
+        deviceId: '',
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      }, pwa.deviceId),
+      'malformed',
+    )
+    expectRelayError(
+      () => assertPwaDesktopSelection({
+        deviceId: pwa.deviceId,
+        encryptionPublicKey: pwa.keyPair.encryptionPublicKey,
+      }, pwa.deviceId),
+      'malformed',
+    )
+    expectRelayError(
+      () => assertPwaDesktopSelection({
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: 'not-an-x25519-key',
+      }, pwa.deviceId),
+      'untrusted-key',
+    )
+    await expectRelayErrorAsync(() => createPwaRelayController({
+      httpUrl: 'http://127.0.0.1:9',
+      url: 'ws://127.0.0.1:9',
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: pwa.deviceId,
+        encryptionPublicKey: pwa.keyPair.encryptionPublicKey,
+      },
+    }), 'malformed')
   })
 
   it('refuses to pair when a model credential is supplied', async () => {

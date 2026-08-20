@@ -2,6 +2,7 @@
 
 import {
   RelayAuthorizationError,
+  assertDeviceEncryptionPublicKey,
   connectOutboundRelay,
   createRelayHandshakeNonce,
   createSealedRelayEnvelope,
@@ -99,6 +100,26 @@ interface PwaRelayDelivery {
 const MAX_PWA_FOLLOW_UP_CHARS = 8_192
 
 /**
+ * Refuse an empty desktop, a local-device target, or a key that is not X25519.
+ * Follow-ups must seal to another device.
+ */
+export function assertPwaDesktopSelection(
+  desktop: {
+    readonly deviceId: string
+    readonly encryptionPublicKey: string
+  },
+  selfDeviceId: string,
+): void {
+  if (typeof desktop.deviceId !== 'string' || desktop.deviceId.length === 0 || /[\0\r\n]/u.test(desktop.deviceId)) {
+    throw new RelayAuthorizationError('malformed', 'pwa desktop device id is required')
+  }
+  if (desktop.deviceId === selfDeviceId) {
+    throw new RelayAuthorizationError('malformed', 'pwa desktop must not be the local device')
+  }
+  assertDeviceEncryptionPublicKey(desktop.encryptionPublicKey)
+}
+
+/**
  * Register the PWA device, mint a token, and dial the relay outbound.
  * Model credentials are refused. The desktop keeps those keys locally.
  */
@@ -111,11 +132,12 @@ export async function createPwaRelayController(
   if (input.assertion !== null && typeof input.assertion === 'object' && !Array.isArray(input.assertion)) {
     assertPwaRelayRecord(input.assertion as Record<string, unknown>, 'pwa relay assertion')
   }
-  if (input.desktop !== undefined) {
-    assertPwaRelayRecord(input.desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
-  }
   const userId = assertionUserId(input.assertion)
   const published = publicDeviceIdentity(input.identity)
+  if (input.desktop !== undefined) {
+    assertPwaRelayRecord(input.desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
+    assertPwaDesktopSelection(input.desktop, published.deviceId)
+  }
   const now = input.now ?? Date.now()
   await registerOutboundRelayDevice({
     httpUrl: input.httpUrl,
@@ -180,6 +202,7 @@ export async function createPwaRelayController(
     },
     selectDesktop(desktop) {
       assertPwaRelayRecord(desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
+      assertPwaDesktopSelection(desktop, published.deviceId)
       selected = desktop
     },
     async sendFollowUp(followUp) {
