@@ -365,6 +365,17 @@ describe('desktop outbound relay Host plugin', () => {
       identity: { openSealed: vi.fn() },
       followUp: vi.fn(async () => undefined),
     })).rejects.toMatchObject({ code: 'malformed' })
+    await expect(handle?.sendProgress({
+      destinationDeviceId: 'pwa-1',
+      identity: { sealTo: vi.fn() },
+      id: 'evt-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      sessionId: 'sess-1',
+      type: 'notify.tool',
+      detail: 'Waiting for approval',
+    })).rejects.toMatchObject({ code: 'malformed' })
   })
 
   it('submits follow-ups only to the matching live desktop session', async () => {
@@ -529,5 +540,49 @@ describe('desktop outbound relay Host plugin', () => {
       envelope,
       destinationDeviceId: 'pwa-1',
     })
+  })
+
+  it('sends progress through the connected outbound handle', async () => {
+    const envelope = { id: 'evt-1', kind: 'session-event' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(async () => ({
+        envelopeId: 'evt-1',
+        toDeviceId: 'pwa-1',
+        outcome: 'queued' as const,
+      })),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn(async () => connection))
+    await handle?.connect({
+      accessToken: 'tok-live',
+      envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
+    })
+    await expect(handle?.sendProgress({
+      destinationDeviceId: 'pwa-1',
+      identity: { sealTo: vi.fn(() => envelope) },
+      id: 'evt-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      sessionId: 'sess-1',
+      type: 'tool.progress',
+      detail: 'reading src/main.ts',
+    })).resolves.toEqual({
+      envelopeId: 'evt-1',
+      toDeviceId: 'pwa-1',
+      outcome: 'queued',
+    })
+    handle?.dispose()
+    expect(connection.close).toHaveBeenCalledOnce()
   })
 })

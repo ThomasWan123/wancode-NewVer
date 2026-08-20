@@ -40,7 +40,8 @@ Status: active
   and can `sealTo` a PWA encryption public key. `sealDesktopRelaySessionEvent`
   allows only compact progress types and never seals prompt text.
   `sendDesktopRelaySessionEvent` pushes that box over the outbound socket.
-  `drainDesktopRelayMail` reclaims
+  After connect, `sendProgress` uses the same path and refuses to send before
+  the socket exists. `drainDesktopRelayMail` reclaims
   queued boxes and acks only queued ids. `processDesktopRelayMail` applies
   follow-ups locally first and acks queued ids only after that sink succeeds.
   `applyDesktopRelayPayloads` hands follow-ups to a local session sink so

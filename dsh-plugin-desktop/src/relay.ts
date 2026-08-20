@@ -143,6 +143,13 @@ export interface DesktopRelayHandle {
     readonly applied: number
     readonly ignored: number
   }>
+  sendProgress(input: SealDesktopRelaySessionEventInput & {
+    readonly destinationDeviceId: string
+  }): Promise<{
+    readonly envelopeId: string
+    readonly toDeviceId: string
+    readonly outcome: 'delivered' | 'queued' | 'duplicate'
+  }>
   dispose(): void
 }
 
@@ -229,6 +236,12 @@ export function prepareDesktopRelay(
         throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
       }
       return processDesktopRelayMail({ connection, ...input })
+    },
+    async sendProgress(input) {
+      if (connection === undefined) {
+        throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
+      }
+      return sendDesktopRelaySessionEvent({ connection, ...input })
     },
     dispose() {
       connection?.close()
