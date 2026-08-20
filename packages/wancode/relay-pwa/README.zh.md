@@ -28,8 +28,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   避免低带宽链路被撑爆。握手 nonce 来自 WebCrypto，而不是 `node:crypto`。设备身份可用
   `createWebCryptoDeviceIdentity` 生成。`loadPwaRelayIdentity` 只在调用方提供的
   存储里生成一次并回读；`peekPwaRelayPublicIdentity` 从不返回私钥。
-  `resolvePwaRelayIdentity` 只接受该存储或现成身份，不能两者同时给。
-  `createPwaRelayController` 可用 `identityStorage` 注册。
+  `resolvePwaRelayIdentity` 只接受该存储、IndexedDB 或现成身份，不能多于一个来源。
+  `createPwaRelayController` 可用 `identityStorage` 或 `indexedDB` 注册。
   `bindPwaRelayIdentityStorage` 拒绝 `sessionStorage`、origin 键和凭据风格
   键名。`bindPwaRelayAsyncIdentityStorage` 绑定 IndexedDB 风格的异步存储。
   `openPwaRelayIdentityIndexedDb` 打开该存储；缺少 IndexedDB 失败关闭。

@@ -45,8 +45,9 @@ Status: active
   mints that identity once into caller-supplied storage; public peeks omit
   private keys, and the origin `sessionStorage` key cannot hold identity.
   Identity storage is async so IndexedDB can hold the blob; `sessionStorage`
-  itself is refused. `openPwaRelayIdentityIndexedDb` opens that database.
-  `createPwaRelayController` can enroll from that store without taking private
+  itself is refused.   `openPwaRelayIdentityIndexedDb` opens that database.
+  Pairing can enroll from that IndexedDB factory when no identity blob is
+  supplied. `createPwaRelayController` can enroll from that store without taking private
   keys on the pairing input. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`

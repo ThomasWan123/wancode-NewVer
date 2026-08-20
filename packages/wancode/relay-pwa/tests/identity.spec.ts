@@ -151,18 +151,44 @@ describe('PWA device identity store', () => {
     expect((await peekPwaRelayPublicIdentity(storage))?.deviceId).toBe(first.deviceId)
   })
 
-  it('resolves exactly one of a supplied identity or a storage load', async () => {
+  it('resolves exactly one of a supplied identity, storage, or IndexedDB', async () => {
     const identity = createStoredDeviceIdentity()
     expect(await resolvePwaRelayIdentity({ identity })).toBe(identity)
     const storage = memoryStorage()
     const minted = await resolvePwaRelayIdentity({ identityStorage: storage })
     expect(minted.deviceId).toMatch(/^[0-9a-f]{32}$/u)
     expect(await resolvePwaRelayIdentity({ identityStorage: storage })).toEqual(minted)
+    const indexedDB = memoryIndexedDb()
+    const fromDb = await resolvePwaRelayIdentity({ indexedDB })
+    expect(fromDb.deviceId).toMatch(/^[0-9a-f]{32}$/u)
+    expect((await resolvePwaRelayIdentity({ indexedDB })).deviceId).toBe(fromDb.deviceId)
     await expectRelayErrorAsync(() => resolvePwaRelayIdentity({}), 'malformed')
     await expectRelayErrorAsync(
       () => resolvePwaRelayIdentity({ identity, identityStorage: storage }),
       'malformed',
     )
+    await expectRelayErrorAsync(
+      () => resolvePwaRelayIdentity({ identity, indexedDB }),
+      'malformed',
+    )
+  })
+
+  it('enrolls from global IndexedDB when no identity is supplied', async () => {
+    const indexedDB = memoryIndexedDb()
+    const host = globalThis as unknown as { indexedDB?: PwaRelayIndexedDbFactory }
+    const previous = host.indexedDB
+    host.indexedDB = indexedDB
+    try {
+      const first = await resolvePwaRelayIdentity({})
+      expect(first.deviceId).toMatch(/^[0-9a-f]{32}$/u)
+      expect((await resolvePwaRelayIdentity({})).deviceId).toBe(first.deviceId)
+    } finally {
+      if (previous === undefined) {
+        delete host.indexedDB
+      } else {
+        host.indexedDB = previous
+      }
+    }
   })
 
   it('opens IndexedDB identity storage and refuses a missing factory', async () => {

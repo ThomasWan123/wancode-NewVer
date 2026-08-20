@@ -34,6 +34,7 @@ import { createPwaSessionBoard, type PwaSessionSnapshot } from './session-board.
 import {
   resolvePwaRelayIdentity,
   type PwaRelayIdentityStorage,
+  type PwaRelayIndexedDbFactory,
 } from './identity.ts'
 
 /** Inputs used to enroll a PWA device and open an outbound session. */
@@ -43,6 +44,7 @@ export interface CreatePwaRelayControllerInput {
   readonly assertion: unknown
   readonly identity?: StoredDeviceIdentity
   readonly identityStorage?: PwaRelayIdentityStorage
+  readonly indexedDB?: PwaRelayIndexedDbFactory
   readonly desktop?: {
     readonly deviceId: string
     readonly encryptionPublicKey: string

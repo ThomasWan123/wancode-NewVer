@@ -37,8 +37,9 @@ directory links.
   identities can be minted with `createWebCryptoDeviceIdentity`.
   `loadPwaRelayIdentity` mints once into caller-supplied storage and reloads
   that blob; `peekPwaRelayPublicIdentity` never returns private keys.
-  `resolvePwaRelayIdentity` accepts either that store or a supplied identity,
-  not both. `createPwaRelayController` can enroll from `identityStorage`.
+  `resolvePwaRelayIdentity` accepts either that store, IndexedDB, or a supplied
+  identity, not more than one. `createPwaRelayController` can enroll from
+  `identityStorage` or `indexedDB`.
   `bindPwaRelayIdentityStorage` refuses `sessionStorage`, the origin key, and
   credential-like keys. `bindPwaRelayAsyncIdentityStorage` binds IndexedDB-style
   async stores. `openPwaRelayIdentityIndexedDb` opens that store; missing

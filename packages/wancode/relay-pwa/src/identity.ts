@@ -178,21 +178,27 @@ export async function peekPwaRelayPublicIdentity(
 }
 
 /**
- * Load identity from storage, or use a caller-supplied blob. Supplying both,
- * or neither, fails closed so private keys are not duplicated onto pairing
- * input while a store also exists.
+ * Load identity from storage, IndexedDB, or a caller-supplied blob.
+ * Supplying more than one source fails closed. With none, the global
+ * IndexedDB factory is used when present.
  */
 export async function resolvePwaRelayIdentity(input: {
   readonly identity?: StoredDeviceIdentity
   readonly identityStorage?: PwaRelayIdentityStorage
+  readonly indexedDB?: PwaRelayIndexedDbFactory
 }): Promise<StoredDeviceIdentity> {
   const identity = input.identity
   const storage = input.identityStorage
-  if (identity !== undefined && storage !== undefined) {
+  const indexedDB = input.indexedDB
+  if ([identity, storage, indexedDB].filter(value => value !== undefined).length > 1) {
     throw new RelayAuthorizationError('malformed', 'pwa relay identity must not be supplied twice')
   }
   if (storage !== undefined) return loadPwaRelayIdentity(storage)
   if (identity !== undefined) return identity
+  const factory = indexedDB ?? globalIndexedDb()
+  if (factory !== undefined) {
+    return loadPwaRelayIdentity(await openPwaRelayIdentityIndexedDb(factory))
+  }
   throw new RelayAuthorizationError('malformed', 'pwa relay identity is required')
 }
 
@@ -217,6 +223,12 @@ function parseStoredPwaIdentity(raw: string): StoredDeviceIdentity {
   }
   assertPwaModelCredentials(parsed as Record<string, unknown>, 'pwa relay identity')
   return parseStoredDeviceIdentity(raw)
+}
+
+function globalIndexedDb(): PwaRelayIndexedDbFactory | undefined {
+  const candidate = (globalThis as { indexedDB?: PwaRelayIndexedDbFactory }).indexedDB
+  if (candidate === undefined || typeof candidate.open !== 'function') return undefined
+  return candidate
 }
 
 function assertNotSessionStorage(storage: PwaRelayKeyedStorage): void {
