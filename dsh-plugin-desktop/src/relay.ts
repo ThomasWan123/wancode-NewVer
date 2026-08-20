@@ -336,6 +336,7 @@ export async function applyDesktopRelayPayloads(input: {
           ignored += 1
           break
         }
+        assertDesktopRelayControl(payload)
         await input.approval({
           sessionId: payload.sessionId,
           requestId: payload.requestId,
@@ -348,6 +349,7 @@ export async function applyDesktopRelayPayloads(input: {
           ignored += 1
           break
         }
+        assertDesktopRelayControl(payload)
         await input.cancel({
           sessionId: payload.sessionId,
           requestId: payload.requestId,
@@ -407,6 +409,15 @@ function assertDesktopRelayFollowUp(payload: Extract<RelayApplicationPayload, { 
   }
 }
 
+function assertDesktopRelayControl(payload: Extract<RelayApplicationPayload, { kind: 'approval' | 'cancel' }>): void {
+  if (payload.sessionId.length === 0 || /[\0\r\n]/u.test(payload.sessionId)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay control session id is required')
+  }
+  if (payload.requestId.length === 0 || /[\0\r\n]/u.test(payload.requestId)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay control request id is required')
+  }
+}
+
 /**
  * Bind follow-ups to a live desktop session lookup. Missing sessions fail
  * closed so prompt text is not applied to the wrong Host session.
@@ -422,6 +433,54 @@ export function createDesktopRelayFollowUpSink(input: {
       throw new RelayAuthorizationError('malformed', 'desktop relay follow-up session is required')
     }
     await session.submit(followUp.text)
+  }
+}
+
+/**
+ * Bind approvals to a live desktop request lookup. Missing requests fail
+ * closed so a PWA cannot approve the wrong tool call.
+ */
+export function createDesktopRelayApprovalSink(input: {
+  readonly getRequest: (input: {
+    readonly sessionId: string
+    readonly requestId: string
+  }) => {
+    readonly decide: (approved: boolean) => Promise<void>
+  } | undefined
+}): NonNullable<DesktopRelayApplySinks['approval']> {
+  return async (approval) => {
+    const request = input.getRequest({
+      sessionId: approval.sessionId,
+      requestId: approval.requestId,
+    })
+    if (request === undefined) {
+      throw new RelayAuthorizationError('malformed', 'desktop relay approval request is required')
+    }
+    await request.decide(approval.approved)
+  }
+}
+
+/**
+ * Bind cancels to a live desktop request lookup. Missing requests fail closed
+ * so a PWA cannot cancel the wrong tool call.
+ */
+export function createDesktopRelayCancelSink(input: {
+  readonly getRequest: (input: {
+    readonly sessionId: string
+    readonly requestId: string
+  }) => {
+    readonly cancel: () => Promise<void>
+  } | undefined
+}): NonNullable<DesktopRelayApplySinks['cancel']> {
+  return async (cancel) => {
+    const request = input.getRequest({
+      sessionId: cancel.sessionId,
+      requestId: cancel.requestId,
+    })
+    if (request === undefined) {
+      throw new RelayAuthorizationError('malformed', 'desktop relay cancel request is required')
+    }
+    await request.cancel()
   }
 }
 

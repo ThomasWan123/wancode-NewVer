@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   apply,
   applyDesktopRelayPayloads,
+  createDesktopRelayApprovalSink,
+  createDesktopRelayCancelSink,
   createDesktopRelayFollowUpSink,
   drainDesktopRelayMail,
   MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
@@ -379,5 +381,57 @@ describe('desktop outbound relay Host plugin', () => {
       sessionId: 'sess-missing',
       text: 'review the login form',
     })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
+  it('refuses empty approval and cancel ids before the local sink runs', async () => {
+    const approval = vi.fn(async () => undefined)
+    const cancel = vi.fn(async () => undefined)
+    await expect(applyDesktopRelayPayloads({
+      payloads: [{ kind: 'approval', sessionId: 'sess-1', requestId: '', approved: true }],
+      followUp: vi.fn(async () => undefined),
+      approval,
+    })).rejects.toMatchObject({ code: 'malformed' })
+    await expect(applyDesktopRelayPayloads({
+      payloads: [{ kind: 'cancel', sessionId: 'sess-1', requestId: '' }],
+      followUp: vi.fn(async () => undefined),
+      cancel,
+    })).rejects.toMatchObject({ code: 'malformed' })
+    expect(approval).not.toHaveBeenCalled()
+    expect(cancel).not.toHaveBeenCalled()
+  })
+
+  it('decides and cancels only the matching live desktop request', async () => {
+    const decide = vi.fn(async () => undefined)
+    const otherDecide = vi.fn(async () => undefined)
+    const cancel = vi.fn(async () => undefined)
+    const otherCancel = vi.fn(async () => undefined)
+    const approval = createDesktopRelayApprovalSink({
+      getRequest: request => {
+        if (request.sessionId === 'sess-1' && request.requestId === 'req-1') return { decide }
+        return { decide: otherDecide }
+      },
+    })
+    const cancelSink = createDesktopRelayCancelSink({
+      getRequest: request => {
+        if (request.sessionId === 'sess-1' && request.requestId === 'req-1') return { cancel }
+        return { cancel: otherCancel }
+      },
+    })
+    await approval({ sessionId: 'sess-1', requestId: 'req-1', approved: true })
+    await cancelSink({ sessionId: 'sess-1', requestId: 'req-1' })
+    expect(decide).toHaveBeenCalledWith(true)
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(otherDecide).not.toHaveBeenCalled()
+    expect(otherCancel).not.toHaveBeenCalled()
+    await expect(createDesktopRelayApprovalSink({
+      getRequest: () => undefined,
+    })({ sessionId: 'sess-1', requestId: 'req-missing', approved: false })).rejects.toMatchObject({
+      code: 'malformed',
+    })
+    await expect(createDesktopRelayCancelSink({
+      getRequest: () => undefined,
+    })({ sessionId: 'sess-1', requestId: 'req-missing' })).rejects.toMatchObject({
+      code: 'malformed',
+    })
   })
 })
