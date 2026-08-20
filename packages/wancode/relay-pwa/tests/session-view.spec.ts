@@ -109,4 +109,24 @@ describe('PWA session projections', () => {
       'malformed',
     )
   })
+
+  it('refuses an empty session id on a projection payload', () => {
+    expectRelayError(
+      () => projectRelaySessionView({
+        kind: 'prompt',
+        sessionId: '',
+        text: 'follow-up',
+      }),
+      'malformed',
+    )
+    expectRelayError(
+      () => projectRelaySessionView({
+        kind: 'approval',
+        sessionId: 'sess-1\n',
+        requestId: 'req-1',
+        approved: true,
+      }),
+      'malformed',
+    )
+  })
 })

@@ -111,6 +111,18 @@ describe('PWA session board', () => {
     )
   })
 
+  it('refuses an empty session id on the board', () => {
+    const board = createPwaSessionBoard()
+    expectRelayError(
+      () => board.apply({ kind: 'follow-up', sessionId: '' }),
+      'malformed',
+    )
+    expectRelayError(
+      () => board.snapshot(''),
+      'malformed',
+    )
+  })
+
   it('refuses model credential fields on a session view', () => {
     const board = createPwaSessionBoard()
     expectRelayError(

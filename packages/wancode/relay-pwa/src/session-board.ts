@@ -3,6 +3,7 @@
 import { assertPwaRelayRecord } from './credentials.ts'
 import {
   assertPwaProgressDetail,
+  assertPwaSessionId,
   projectRelayNotification,
   type RelayNotificationView,
   type RelaySessionView,
@@ -48,6 +49,7 @@ export function createPwaSessionBoard(): PwaSessionBoard {
     apply(view) {
       assertPwaRelayRecord(view as unknown as Record<string, unknown>, 'pwa session view')
       if (view.kind === 'presence') return undefined
+      assertPwaSessionId(view.sessionId)
       if (view.kind === 'progress') assertPwaProgressDetail(view.detail)
       const current = sessions.get(view.sessionId) ?? {
         sessionId: view.sessionId,
@@ -58,6 +60,7 @@ export function createPwaSessionBoard(): PwaSessionBoard {
       return publish(next)
     },
     snapshot(sessionId) {
+      assertPwaSessionId(sessionId)
       const current = sessions.get(sessionId)
       return current === undefined ? undefined : publish(current)
     },

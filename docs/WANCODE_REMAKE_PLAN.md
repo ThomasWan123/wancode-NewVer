@@ -31,7 +31,7 @@ Status: active
   device then send sealed follow-ups, approvals, and cancels over outbound
   HTTPS/WSS. Handshake nonces use WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. Progress details are
-  capped. The installable Web App
+  capped. Empty session ids fail closed. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,

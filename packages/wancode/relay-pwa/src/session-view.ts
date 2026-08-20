@@ -36,8 +36,10 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
   assertPwaRelayRecord(payload as unknown as Record<string, unknown>, 'pwa session payload')
   switch (payload.kind) {
     case 'prompt':
+      assertPwaSessionId(payload.sessionId)
       return { kind: 'follow-up', sessionId: payload.sessionId }
     case 'session-event':
+      assertPwaSessionId(payload.sessionId)
       assertPwaProgressDetail(payload.detail)
       return {
         kind: 'progress',
@@ -46,6 +48,7 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
         detail: payload.detail,
       }
     case 'approval':
+      assertPwaSessionId(payload.sessionId)
       return {
         kind: 'approval',
         sessionId: payload.sessionId,
@@ -53,6 +56,7 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
         approved: payload.approved,
       }
     case 'cancel':
+      assertPwaSessionId(payload.sessionId)
       return {
         kind: 'cancel',
         sessionId: payload.sessionId,
@@ -87,5 +91,14 @@ export function assertPwaProgressDetail(detail: string): void {
   }
   if (detail.length > MAX_PWA_PROGRESS_DETAIL_CHARS) {
     throw new RelayAuthorizationError('malformed', 'pwa progress detail is too large')
+  }
+}
+
+/**
+ * Refuse an empty session id so snapshots cannot collapse unrelated events.
+ */
+export function assertPwaSessionId(sessionId: string): void {
+  if (typeof sessionId !== 'string' || sessionId.length === 0 || /[\0\r\n]/u.test(sessionId)) {
+    throw new RelayAuthorizationError('malformed', 'pwa session id is required')
   }
 }
