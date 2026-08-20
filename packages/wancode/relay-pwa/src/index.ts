@@ -51,12 +51,16 @@ export {
 export {
   PWA_RELAY_IDENTITY_STORAGE_KEY,
   PWA_RELAY_ORIGIN_STORAGE_KEY,
+  PWA_RELAY_IDENTITY_DB,
+  PWA_RELAY_IDENTITY_STORE,
   bindPwaRelayIdentityStorage,
   bindPwaRelayAsyncIdentityStorage,
+  openPwaRelayIdentityIndexedDb,
   loadPwaRelayIdentity,
   peekPwaRelayPublicIdentity,
   resolvePwaRelayIdentity,
   type PwaRelayAsyncKv,
   type PwaRelayIdentityStorage,
+  type PwaRelayIndexedDbFactory,
   type PwaRelayKeyedStorage,
 } from './identity.ts'

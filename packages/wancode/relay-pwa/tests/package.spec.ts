@@ -45,6 +45,7 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('resolvePwaRelayIdentity')
     expect(pwa).toHaveProperty('bindPwaRelayIdentityStorage')
     expect(pwa).toHaveProperty('bindPwaRelayAsyncIdentityStorage')
+    expect(pwa).toHaveProperty('openPwaRelayIdentityIndexedDb')
     expect(pwa).toHaveProperty('assertPwaDesktopSelection')
     expect(pwa).toHaveProperty('isSelectablePwaDesktop')
     expect(pwa).toHaveProperty('createPwaSessionBoard')

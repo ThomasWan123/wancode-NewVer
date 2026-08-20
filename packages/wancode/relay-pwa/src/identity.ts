@@ -40,6 +40,39 @@ export interface PwaRelayAsyncKv {
   readonly delete: (key: string) => Promise<void>
 }
 
+/** IndexedDB database name for the PWA device identity blob. */
+export const PWA_RELAY_IDENTITY_DB = 'wancode-relay-identity'
+
+/** Object store that holds the serialized identity. */
+export const PWA_RELAY_IDENTITY_STORE = 'device'
+
+/** Minimal IndexedDB request used without DOM lib types. */
+export interface PwaRelayIndexedDbRequest<T> {
+  result: T
+  onsuccess: (() => void) | null
+  onerror: (() => void) | null
+}
+
+/** Minimal IndexedDB database used without DOM lib types. */
+export interface PwaRelayIndexedDatabase {
+  readonly objectStoreNames: { contains(name: string): boolean }
+  createObjectStore(name: string): unknown
+  transaction(store: string, mode: 'readonly' | 'readwrite'): {
+    objectStore(name: string): {
+      get(key: string): PwaRelayIndexedDbRequest<unknown>
+      put(value: string, key: string): PwaRelayIndexedDbRequest<unknown>
+      delete(key: string): PwaRelayIndexedDbRequest<unknown>
+    }
+  }
+}
+
+/** Minimal IndexedDB factory used without DOM lib types. */
+export interface PwaRelayIndexedDbFactory {
+  open(name: string, version: number): PwaRelayIndexedDbRequest<PwaRelayIndexedDatabase> & {
+    onupgradeneeded: (() => void) | null
+  }
+}
+
 /**
  * Bind identity to a keyed store. sessionStorage, the origin key, and
  * credential-like keys fail closed so private keys cannot share that slot.
@@ -85,6 +118,35 @@ export function bindPwaRelayAsyncIdentityStorage(
       await storage.delete(key)
     },
   }
+}
+
+/**
+ * Open IndexedDB-backed identity storage. Missing IndexedDB fails closed.
+ * Private keys never go to sessionStorage.
+ */
+export async function openPwaRelayIdentityIndexedDb(
+  indexedDB: PwaRelayIndexedDbFactory,
+): Promise<PwaRelayIdentityStorage> {
+  if (indexedDB === null || typeof indexedDB !== 'object' || typeof indexedDB.open !== 'function') {
+    throw new RelayAuthorizationError('malformed', 'pwa identity indexeddb is required')
+  }
+  const db = await openIdentityDatabase(indexedDB)
+  return bindPwaRelayAsyncIdentityStorage({
+    async get(key) {
+      const value = await settleIndexedDbRequest(objectStore(db, 'readonly').get(key))
+      if (value === undefined || value === '') return undefined
+      if (typeof value !== 'string' || /[\0\r\n]/u.test(value)) {
+        throw new RelayAuthorizationError('malformed', 'pwa relay identity is required')
+      }
+      return value
+    },
+    async put(key, value) {
+      await settleIndexedDbRequest(objectStore(db, 'readwrite').put(value, key))
+    },
+    async delete(key) {
+      await settleIndexedDbRequest(objectStore(db, 'readwrite').delete(key))
+    },
+  })
 }
 
 /**
@@ -162,6 +224,42 @@ function assertNotSessionStorage(storage: PwaRelayKeyedStorage): void {
   if (session !== undefined && storage === session) {
     throw new RelayAuthorizationError('malformed', 'pwa relay identity must not use sessionStorage')
   }
+}
+
+async function openIdentityDatabase(
+  indexedDB: PwaRelayIndexedDbFactory,
+): Promise<PwaRelayIndexedDatabase> {
+  let request: ReturnType<PwaRelayIndexedDbFactory['open']>
+  try {
+    request = indexedDB.open(PWA_RELAY_IDENTITY_DB, 1)
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'pwa identity indexeddb failed')
+  }
+  return new Promise((resolve, reject) => {
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(PWA_RELAY_IDENTITY_STORE)) {
+        db.createObjectStore(PWA_RELAY_IDENTITY_STORE)
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => {
+      reject(new RelayAuthorizationError('malformed', 'pwa identity indexeddb failed'))
+    }
+  })
+}
+
+function objectStore(db: PwaRelayIndexedDatabase, mode: 'readonly' | 'readwrite') {
+  return db.transaction(PWA_RELAY_IDENTITY_STORE, mode).objectStore(PWA_RELAY_IDENTITY_STORE)
+}
+
+function settleIndexedDbRequest<T>(request: PwaRelayIndexedDbRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => {
+      reject(new RelayAuthorizationError('malformed', 'pwa identity indexeddb failed'))
+    }
+  })
 }
 
 function assertPwaIdentityStorageKey(key: string): void {

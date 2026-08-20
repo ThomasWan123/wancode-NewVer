@@ -7,12 +7,16 @@ import {
 import {
   PWA_RELAY_IDENTITY_STORAGE_KEY,
   PWA_RELAY_ORIGIN_STORAGE_KEY,
+  PWA_RELAY_IDENTITY_DB,
+  PWA_RELAY_IDENTITY_STORE,
   bindPwaRelayIdentityStorage,
   bindPwaRelayAsyncIdentityStorage,
+  openPwaRelayIdentityIndexedDb,
   loadPwaRelayIdentity,
   peekPwaRelayPublicIdentity,
   resolvePwaRelayIdentity,
   type PwaRelayIdentityStorage,
+  type PwaRelayIndexedDbFactory,
 } from '../src/index.ts'
 
 function expectRelayError(run: () => unknown, code: string): void {
@@ -160,4 +164,91 @@ describe('PWA device identity store', () => {
       'malformed',
     )
   })
+
+  it('opens IndexedDB identity storage and refuses a missing factory', async () => {
+    await expectRelayErrorAsync(
+      () => openPwaRelayIdentityIndexedDb({} as PwaRelayIndexedDbFactory),
+      'malformed',
+    )
+    const indexedDB = memoryIndexedDb()
+    const storage = await openPwaRelayIdentityIndexedDb(indexedDB)
+    const first = await loadPwaRelayIdentity(storage)
+    const second = await loadPwaRelayIdentity(await openPwaRelayIdentityIndexedDb(indexedDB))
+    expect(second.deviceId).toBe(first.deviceId)
+    expect((await peekPwaRelayPublicIdentity(storage))?.deviceId).toBe(first.deviceId)
+    expect(PWA_RELAY_IDENTITY_DB).toBe('wancode-relay-identity')
+    expect(PWA_RELAY_IDENTITY_STORE).toBe('device')
+  })
 })
+
+function memoryIndexedDb(): PwaRelayIndexedDbFactory {
+  const values = new Map<string, string>()
+  const stores = new Set<string>()
+  const db = {
+    objectStoreNames: {
+      contains(name: string) {
+        return stores.has(name)
+      },
+    },
+    createObjectStore(name: string) {
+      stores.add(name)
+      return undefined
+    },
+    transaction() {
+      return {
+        objectStore() {
+          return {
+            get(key: string) {
+              return idbRequest(() => values.get(key))
+            },
+            put(value: string, key: string) {
+              return idbRequest(() => {
+                values.set(key, value)
+                return undefined
+              })
+            },
+            delete(key: string) {
+              return idbRequest(() => {
+                values.delete(key)
+                return undefined
+              })
+            },
+          }
+        },
+      }
+    },
+  }
+  return {
+    open(name: string, version: number) {
+      if (name.length === 0 || version < 1) throw new Error('indexeddb')
+      const request = {
+        result: db,
+        onupgradeneeded: null as (() => void) | null,
+        onsuccess: null as (() => void) | null,
+        onerror: null as (() => void) | null,
+      }
+      queueMicrotask(() => {
+        request.onupgradeneeded?.()
+        request.onsuccess?.()
+      })
+      return request
+    },
+  }
+}
+
+function idbRequest<T>(run: () => T): {
+  result: T
+  onsuccess: (() => void) | null
+  onerror: (() => void) | null
+} {
+  const request = {
+    result: undefined as T,
+    onsuccess: null as (() => void) | null,
+    onerror: null as (() => void) | null,
+  }
+  queueMicrotask(() => {
+    request.result = run()
+    request.onsuccess?.()
+  })
+  return request
+}

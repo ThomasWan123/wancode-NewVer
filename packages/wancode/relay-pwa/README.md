@@ -41,7 +41,8 @@ directory links.
   not both. `createPwaRelayController` can enroll from `identityStorage`.
   `bindPwaRelayIdentityStorage` refuses `sessionStorage`, the origin key, and
   credential-like keys. `bindPwaRelayAsyncIdentityStorage` binds IndexedDB-style
-  async stores. Handshake
+  async stores. `openPwaRelayIdentityIndexedDb` opens that store; missing
+  IndexedDB fails closed. Handshake
   signatures use `createWebCryptoSignedHandshakeEnvelope`. Follow-ups are
   sealed with `createWebCryptoSealedRelayEnvelope`. Drain opens those boxes
   with `openWebCryptoSealedRelayPayload`. Closed sessions refuse send and drain until `reconnect`.
