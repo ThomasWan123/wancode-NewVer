@@ -53,7 +53,8 @@ directory links.
   copies live under `public/` and must match those generators. `createPwaDeployFiles`
   adds the PNG icons so a static HTTPS origin can host the installable shell
   without this package listening. The index form
-  accepts a relay origin and never names token fields. Apple and Android home-screen metas are present.
+  accepts a relay origin and never names token fields. A valid origin may be
+  remembered in `sessionStorage` only. Apple and Android home-screen metas are present.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs.   `@wancode/relay-pwa/host` may serve that shell on
   127.0.0.1 only; public binds and non-loopback Host, Origin, or Referer

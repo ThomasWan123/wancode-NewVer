@@ -19,7 +19,7 @@ export const PWA_SHELL_PATHS = [
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list or worker changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v5'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v6'
 
 /** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
 export type PwaCacheRetention = 'keep' | 'delete'
@@ -225,18 +225,30 @@ export function createPwaPairingScriptSource(): string {
     "if ('serviceWorker' in navigator) {",
     "  navigator.serviceWorker.register('./sw.js');",
     '}',
+    'function allowedOrigin(value) {',
+    '  var parsed = new URL(value);',
+    "  if (parsed.username !== '' || parsed.password !== '') throw new Error('origin');",
+    '  parsed.searchParams.forEach(function (_value, key) {',
+    "    if (/token|secret|credential|password|authorization/i.test(key)) throw new Error('origin');",
+    '  });',
+    "  if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');",
+    '  return parsed.origin;',
+    '}',
+    'try {',
+    "  var saved = sessionStorage.getItem('wancode-relay-origin');",
+    '  if (saved) document.getElementById(\'pair\').elements.origin.value = allowedOrigin(saved);',
+    '} catch (error) {',
+    "  try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}",
+    '}',
     "document.getElementById('pair').addEventListener('submit', function (event) {",
     '  event.preventDefault();',
     "  var status = document.getElementById('status');",
     '  try {',
-    "    var parsed = new URL(event.target.elements.origin.value);",
-    "    if (parsed.username !== '' || parsed.password !== '') throw new Error('origin');",
-    '    parsed.searchParams.forEach(function (_value, key) {',
-    "      if (/token|secret|credential|password|authorization/i.test(key)) throw new Error('origin');",
-    '    });',
-    "    if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');",
+    "    var origin = allowedOrigin(event.target.elements.origin.value);",
+    "    sessionStorage.setItem('wancode-relay-origin', origin);",
     "    status.textContent = 'Desktop keys stay on that machine.';",
     '  } catch (error) {',
+    "    try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}",
     "    status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';",
     '  }',
     '});',

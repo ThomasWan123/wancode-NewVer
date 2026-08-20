@@ -36,6 +36,7 @@ Status: active
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,
   manifest, worker, and `pair.js`.   The index has no inline script. Apple and Android home-screen metas are present.
+  A valid relay origin may be remembered in `sessionStorage` only.
   `PWA_SHELL_CSP` forbids `unsafe-inline`, frames, and plugins. The PWA can also send sealed presence and revoke itself
   immediately. Follow-up text is required and capped. Checked-in `public/`
   shell files, including PNG icons, match the generators. Desktop identity can
