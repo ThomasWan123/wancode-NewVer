@@ -407,6 +407,24 @@ function assertDesktopRelayFollowUp(payload: Extract<RelayApplicationPayload, { 
   }
 }
 
+/**
+ * Bind follow-ups to a live desktop session lookup. Missing sessions fail
+ * closed so prompt text is not applied to the wrong Host session.
+ */
+export function createDesktopRelayFollowUpSink(input: {
+  readonly getSession: (sessionId: string) => {
+    readonly submit: (text: string) => Promise<void>
+  } | undefined
+}): DesktopRelayApplySinks['followUp'] {
+  return async (followUp) => {
+    const session = input.getSession(followUp.sessionId)
+    if (session === undefined) {
+      throw new RelayAuthorizationError('malformed', 'desktop relay follow-up session is required')
+    }
+    await session.submit(followUp.text)
+  }
+}
+
 function relayEnvelopeId(envelope: unknown): string {
   if (envelope !== null && typeof envelope === 'object' && !Array.isArray(envelope)) {
     const id = (envelope as { id?: unknown }).id

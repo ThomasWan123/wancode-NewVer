@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   apply,
   applyDesktopRelayPayloads,
+  createDesktopRelayFollowUpSink,
   drainDesktopRelayMail,
   MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
   prepareDesktopRelay,
@@ -358,6 +359,25 @@ describe('desktop outbound relay Host plugin', () => {
     await expect(handle?.processMail({
       identity: { openSealed: vi.fn() },
       followUp: vi.fn(async () => undefined),
+    })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
+  it('submits follow-ups only to the matching live desktop session', async () => {
+    const submit = vi.fn(async () => undefined)
+    const other = vi.fn(async () => undefined)
+    const followUp = createDesktopRelayFollowUpSink({
+      getSession: sessionId => {
+        if (sessionId === 'sess-1') return { submit }
+        if (sessionId === 'sess-other') return { submit: other }
+        return undefined
+      },
+    })
+    await followUp({ sessionId: 'sess-1', text: 'review the login form' })
+    expect(submit).toHaveBeenCalledWith('review the login form')
+    expect(other).not.toHaveBeenCalled()
+    await expect(followUp({
+      sessionId: 'sess-missing',
+      text: 'review the login form',
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 })

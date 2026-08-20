@@ -41,7 +41,8 @@ Status: active
   queued boxes and acks only queued ids. `processDesktopRelayMail` applies
   follow-ups locally first and acks queued ids only after that sink succeeds.
   `applyDesktopRelayPayloads` hands follow-ups to a local session sink so
-  model credentials stay on the desktop.
+  model credentials stay on the desktop. `createDesktopRelayFollowUpSink`
+  refuses missing session ids.
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail
   closed. It does not listen on a public interface.
