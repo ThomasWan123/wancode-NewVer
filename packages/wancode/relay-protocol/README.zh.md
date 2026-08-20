@@ -45,7 +45,7 @@ HTTPS（或回环 HTTP）调用 `registerOutboundRelayDevice`、
 `issueOutboundRelayToken`、`listOutboundRelayDevices` 和
 `revokeOutboundRelayDevice`。设备列表走 POST `/v1/devices/list`，断言放在请求
 体里，从不放在查询字符串。只返回当前账号下未撤销的设备，不含私钥。列出的签名
-与加密公钥必须是 Ed25519 与 X25519。账号列表会省略密钥不合法的行。重定向会
+与加密公钥必须是 Ed25519 与 X25519。账号列表会省略密钥不合法或缺少加密公钥的行。重定向会
 再次按同一 URL 策略检查，请求从不携带凭据，私钥一律拒绝。本包不是入站 Host surface。
 `@wancode/relay-protocol/loopback` 只用于 `127.0.0.1` 测试接收端。
 `@wancode/relay-protocol/cloud` 在回环地址上提供设备注册、令牌签发和同一套

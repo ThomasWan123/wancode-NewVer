@@ -215,7 +215,7 @@ describe('replaceable OIDC identity and device registration', () => {
     }), 'untrusted-key')
   })
 
-  it('omits listed devices whose keys are not Ed25519 or X25519', () => {
+  it('omits listed devices without trusted Ed25519 and X25519 keys', () => {
     const store = createMemoryRelayStore()
     const keys = generateDeviceKeyPair()
     store.putDevice({
@@ -229,6 +229,11 @@ describe('replaceable OIDC identity and device registration', () => {
       userId: 'user-a',
       publicKey: 'not-ed25519',
       encryptionPublicKey: 'not-x25519',
+    })
+    store.putDevice({
+      deviceId: 'desktop-sign-only',
+      userId: 'user-a',
+      publicKey: keys.publicKey,
     })
     expect(listRelayAccountDevices({
       userId: 'user-a',

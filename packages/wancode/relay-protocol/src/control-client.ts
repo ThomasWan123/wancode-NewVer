@@ -91,7 +91,7 @@ export interface OutboundRelayDevice {
   readonly deviceId: string
   readonly userId: string
   readonly publicKey: string
-  readonly encryptionPublicKey?: string
+  readonly encryptionPublicKey: string
 }
 
 /** Short-lived token returned after a successful outbound mint. */
@@ -176,7 +176,8 @@ export interface ListOutboundRelayDevicesInput {
 /**
  * POST `/v1/devices/list` over HTTPS (or loopback HTTP). Only live devices on
  * the presented account are returned. Private keys are refused. Listed signing
- * and encryption keys must be Ed25519 and X25519.
+ * and encryption keys must be Ed25519 and X25519. Listed devices must include
+ * an X25519 encryption public key.
  */
 export async function listOutboundRelayDevices(
   input: ListOutboundRelayDevicesInput,
@@ -294,17 +295,16 @@ function parsePublicDevice(record: Record<string, unknown>): OutboundRelayDevice
     throw new RelayAuthorizationError('malformed', 'relay control public key is required')
   }
   assertDevicePublicKey(record.publicKey)
-  const device: OutboundRelayDevice = {
-    deviceId: record.deviceId,
-    userId: record.userId,
-    publicKey: record.publicKey,
-  }
-  if (record.encryptionPublicKey === undefined) return device
   if (typeof record.encryptionPublicKey !== 'string' || record.encryptionPublicKey.length === 0 || /[\0\r\n]/u.test(record.encryptionPublicKey)) {
     throw new RelayAuthorizationError('malformed', 'relay control encryption public key is required')
   }
   assertDeviceEncryptionPublicKey(record.encryptionPublicKey)
-  return { ...device, encryptionPublicKey: record.encryptionPublicKey }
+  return {
+    deviceId: record.deviceId,
+    userId: record.userId,
+    publicKey: record.publicKey,
+    encryptionPublicKey: record.encryptionPublicKey,
+  }
 }
 
 function refusePrivateKeyMaterial(record: Record<string, unknown>, label: string): void {

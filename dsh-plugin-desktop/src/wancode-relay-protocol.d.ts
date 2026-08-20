@@ -69,7 +69,7 @@ declare module '@wancode/relay-protocol' {
     readonly deviceId: string
     readonly userId: string
     readonly publicKey: string
-    readonly encryptionPublicKey?: string
+    readonly encryptionPublicKey: string
   }
 
   export interface OutboundRelayAccessToken {

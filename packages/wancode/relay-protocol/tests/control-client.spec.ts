@@ -195,6 +195,26 @@ describe('outbound relay control client', () => {
     }), 'untrusted-key')
   })
 
+  it('refuses listed devices that omit an encryption public key', async () => {
+    const keys = generateDeviceKeyPair()
+    await expectRelayErrorAsync(() => listOutboundRelayDevices({
+      httpUrl: 'https://relay.wancode.example',
+      assertion: assertion(),
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        arrayBuffer: async () => new TextEncoder().encode(JSON.stringify({
+          devices: [{
+            deviceId: 'desktop-sign-only',
+            userId: 'user-a',
+            publicKey: keys.publicKey,
+          }],
+        })).buffer,
+      }),
+    }), 'malformed')
+  })
+
   it('refuses to send private key material and public cleartext control URLs', async () => {
     const keys = generateDeviceKeyPair()
     await expectRelayErrorAsync(() => registerOutboundRelayDevice({
