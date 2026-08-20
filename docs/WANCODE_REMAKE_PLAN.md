@@ -32,7 +32,8 @@ Status: active
   HTTPS/WSS. Selecting the local PWA as the desktop fails closed.
   `listDesktops` omits local ids and untrusted encryption keys. Handshake nonces use WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. Progress details are
-  capped. Empty session ids and empty approval request ids fail closed. The installable Web App
+  capped. Empty session ids and empty approval request ids fail closed. A denied
+  approval keeps the request id. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,

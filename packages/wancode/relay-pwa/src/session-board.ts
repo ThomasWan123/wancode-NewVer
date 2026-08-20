@@ -92,10 +92,16 @@ function foldView(current: MutableSession, view: RelaySessionView): MutableSessi
       }
     }
     case 'approval':
-      return {
-        ...omitPending(current),
-        status: view.approved ? 'running' : 'cancelled',
-      }
+      return view.approved
+        ? {
+            ...omitPending(current),
+            status: 'running',
+          }
+        : {
+            ...current,
+            status: 'cancelled',
+            pendingRequestId: view.requestId,
+          }
     case 'cancel':
       return {
         ...current,

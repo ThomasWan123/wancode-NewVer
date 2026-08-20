@@ -41,7 +41,7 @@ directory links.
   keys.
 - `createPwaSessionBoard` folds views into one snapshot per session. Prompt
   text never appears. `notify.*` progress becomes the latest notification.
-  `assistant.done` and `session.complete` mark the snapshot complete.
+  A denied approval keeps the request id. `assistant.done` and `session.complete` mark the snapshot complete.
 - `createPwaWebManifest` returns a standalone install record with a relative
   `start_url`. The install `id` stays relative and `prefer_related_applications`
   is false so the shell can be added to a phone home screen. `decidePwaCacheAction` caches only shell GET assets; token query

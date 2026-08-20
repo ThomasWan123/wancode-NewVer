@@ -30,7 +30,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   id。`reconnect` 使用新 nonce，避免握手被当成重放。`revoke` 关闭 socket 并立即
   撤销该 PWA 设备 id。返回对象不含私钥。
 - `createPwaSessionBoard` 把视图折成每个会话一份快照。prompt 正文不会出现。
-  `notify.*` 进度成为最新通知。`assistant.done` 与 `session.complete` 会把快照
+  `notify.*` 进度成为最新通知。拒绝的 approval 会保留 request id。
+  `assistant.done` 与 `session.complete` 会把快照
   标为 complete。
 - `createPwaWebManifest` 返回 `display: standalone` 且 `start_url` 为相对路径
   的安装记录。安装 `id` 保持相对路径，且 `prefer_related_applications` 为 false，

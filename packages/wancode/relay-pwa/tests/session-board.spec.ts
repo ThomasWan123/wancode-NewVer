@@ -79,6 +79,16 @@ describe('PWA session board', () => {
     })
     expect(board.list()).toHaveLength(1)
     expect(board.apply({
+      kind: 'approval',
+      sessionId: 'sess-1',
+      requestId: 'req-2',
+      approved: false,
+    })).toEqual({
+      sessionId: 'sess-1',
+      status: 'cancelled',
+      pendingRequestId: 'req-2',
+    })
+    expect(board.apply({
       kind: 'follow-up',
       sessionId: 'sess-1',
     })).toEqual({
