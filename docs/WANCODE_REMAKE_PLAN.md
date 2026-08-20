@@ -36,7 +36,8 @@ Status: active
   approval keeps `pendingRequestId` until the request is cancelled or replaced.
   Missing desktop apply sinks fail closed instead of acknowledging the mail.
   Listed control-plane devices refuse non-Ed25519 / non-X25519 keys. The account
-  device list omits those rows so a poisoned store cannot fail the whole list. The installable Web App
+  device list omits those rows so a poisoned store cannot fail the whole list.
+  Device registration requires an X25519 encryption public key. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,

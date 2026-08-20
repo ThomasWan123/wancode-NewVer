@@ -93,6 +93,7 @@ describe('desktop outbound relay Host plugin', () => {
       deviceId: 'device-a',
       userId: 'user-a',
       publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
     }))
     const issueToken = vi.fn(async () => ({
       accessToken: 'tok-live',
@@ -117,10 +118,12 @@ describe('desktop outbound relay Host plugin', () => {
       assertion: { sub: 'user-a' },
       deviceId: 'device-a',
       publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
     })).resolves.toEqual({
       deviceId: 'device-a',
       userId: 'user-a',
       publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
     })
     await expect(handle?.issueToken({
       assertion: { sub: 'user-a' },
@@ -149,6 +152,7 @@ describe('desktop outbound relay Host plugin', () => {
       assertion: { sub: 'user-a' },
       deviceId: 'device-a',
       publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
     })
     expect(listDevices).toHaveBeenCalledWith({
       httpUrl: 'https://relay.example.invalid/',

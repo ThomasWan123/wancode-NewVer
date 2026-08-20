@@ -16,7 +16,7 @@ export interface RegisterRelayDeviceInput {
   readonly identity: RelayIdentityClaims
   readonly deviceId: string
   readonly publicKey: string
-  readonly encryptionPublicKey?: string
+  readonly encryptionPublicKey: string
   readonly now: number
   readonly store: RelayDeviceStore
 }
@@ -39,6 +39,8 @@ function requiredId(value: unknown, field: string): string {
 /**
  * Register a desktop or PWA device for a verified identity.
  * A revoked device id cannot be reused. A live device cannot change accounts.
+ * Registration requires an X25519 encryption public key so sealed mail has a
+ * recipient.
  */
 export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevice {
   if (input.identity.expiresAt <= input.now) {
@@ -47,10 +49,7 @@ export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevic
   const deviceId = requiredId(input.deviceId, 'deviceId')
   const userId = requiredId(input.identity.userId, 'userId')
   assertDevicePublicKey(input.publicKey)
-  const encryptionPublicKey = input.encryptionPublicKey
-  if (encryptionPublicKey !== undefined) {
-    assertDeviceEncryptionPublicKey(encryptionPublicKey)
-  }
+  assertDeviceEncryptionPublicKey(input.encryptionPublicKey)
   const existing = input.store.getDevice(deviceId)
   if (existing !== undefined) {
     if (existing.userId !== userId) {
@@ -62,18 +61,17 @@ export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevic
     if (existing.publicKey !== input.publicKey) {
       throw new RelayAuthorizationError('untrusted-key', 'relay device public key does not match the registered key')
     }
-    if (
-      encryptionPublicKey !== undefined &&
-      existing.encryptionPublicKey !== undefined &&
-      existing.encryptionPublicKey !== encryptionPublicKey
-    ) {
+    if (existing.encryptionPublicKey !== input.encryptionPublicKey) {
       throw new RelayAuthorizationError('untrusted-key', 'relay device encryption public key does not match the registered key')
     }
     return existing
   }
-  const device: RelayDevice = encryptionPublicKey === undefined
-    ? { deviceId, userId, publicKey: input.publicKey }
-    : { deviceId, userId, publicKey: input.publicKey, encryptionPublicKey }
+  const device: RelayDevice = {
+    deviceId,
+    userId,
+    publicKey: input.publicKey,
+    encryptionPublicKey: input.encryptionPublicKey,
+  }
   input.store.putDevice(device)
   return device
 }

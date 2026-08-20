@@ -174,17 +174,15 @@ async function handleCloudHttp(
 function registerCloudDevice(body: Record<string, unknown>, context: CloudHttpContext): RelayDevice {
   const deviceId = requiredText(body.deviceId, 'deviceId')
   const publicKey = requiredText(body.publicKey, 'publicKey')
-  const encryptionPublicKey = body.encryptionPublicKey === undefined
-    ? undefined
-    : requiredText(body.encryptionPublicKey, 'encryptionPublicKey')
+  const encryptionPublicKey = requiredText(body.encryptionPublicKey, 'encryptionPublicKey')
   const identity = context.identity.verify(body.assertion, context.now)
   return registerRelayDevice({
     identity,
     deviceId,
     publicKey,
+    encryptionPublicKey,
     now: context.now,
     store: context.store,
-    ...(encryptionPublicKey === undefined ? {} : { encryptionPublicKey }),
   })
 }
 

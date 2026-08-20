@@ -202,12 +202,14 @@ describe('outbound relay control client', () => {
       assertion: assertion(),
       deviceId: DEVICE_ID,
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
     }), 'cleartext-transport')
     await expectRelayErrorAsync(() => registerOutboundRelayDevice({
       httpUrl: 'https://relay.wancode.example',
       assertion: assertion(),
       deviceId: DEVICE_ID,
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
       privateKey: keys.privateKey,
     } as never), 'plaintext')
   })
@@ -220,6 +222,7 @@ describe('outbound relay control client', () => {
       assertion: assertion(),
       deviceId: DEVICE_ID,
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
       fetchImpl: async (url, init) => {
         seen.push({ url, headers: init.headers })
         expect(init.method).toBe('POST')

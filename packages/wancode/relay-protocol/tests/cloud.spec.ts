@@ -176,10 +176,19 @@ describe('relay cloud control plane', () => {
       error: { code: 'plaintext', message: 'relay cloud request must not carry plaintext field prompt' },
     })
 
+    const missingEncryption = await postJson(`${cloud.httpUrl}/v1/devices`, {
+      assertion: assertion(),
+      deviceId: ACTOR.deviceId,
+      publicKey: keys.publicKey,
+    })
+    expect(missingEncryption.status).toBe(400)
+    expect((missingEncryption.json.error as { code: string }).code).toBe('malformed')
+
     await postJson(`${cloud.httpUrl}/v1/devices`, {
       assertion: assertion(),
       deviceId: ACTOR.deviceId,
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
     })
     const expired = await postJson(`${cloud.httpUrl}/v1/tokens`, {
       assertion: assertion({ exp: Math.floor(NOW / 1000) }),

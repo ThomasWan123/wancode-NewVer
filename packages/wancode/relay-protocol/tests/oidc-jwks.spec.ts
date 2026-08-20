@@ -145,6 +145,7 @@ describe('jwks-backed oidc identity', () => {
       identity: verified,
       deviceId: 'device-a',
       publicKey: deviceKeys.publicKey,
+      encryptionPublicKey: deviceKeys.encryptionPublicKey,
       now: NOW,
       store: createMemoryRelayStore(),
     }).userId).toBe('user-a')

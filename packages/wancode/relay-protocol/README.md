@@ -44,7 +44,8 @@ plugin entry.
   request never carries credentials. The static provider remains the
   object-shaped test double. Expired assertions, unknown kids, and `none` /
   HMAC algorithms fail closed.
-- Device registration binds one Ed25519 public key to that account. Revocation
+- Device registration binds one Ed25519 public key and one X25519 encryption
+  public key to that account. Revocation
   is immediate and the device id cannot be reused.
 - Routing delivers a sealed application envelope only to another device on the
   same account. Opaque prompt ciphertext and handshake frames are not routed.

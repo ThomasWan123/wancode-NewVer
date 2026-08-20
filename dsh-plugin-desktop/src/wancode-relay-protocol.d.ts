@@ -62,7 +62,7 @@ declare module '@wancode/relay-protocol' {
 
   export interface RegisterOutboundRelayDeviceInput extends OutboundRelayControlInput {
     readonly publicKey: string
-    readonly encryptionPublicKey?: string
+    readonly encryptionPublicKey: string
   }
 
   export interface OutboundRelayDevice {

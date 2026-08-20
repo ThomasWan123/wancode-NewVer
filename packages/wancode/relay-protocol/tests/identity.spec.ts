@@ -45,6 +45,7 @@ describe('replaceable OIDC identity and device registration', () => {
       identity: claims,
       deviceId: 'device-a',
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
       now: NOW,
       store,
     })
@@ -59,6 +60,7 @@ describe('replaceable OIDC identity and device registration', () => {
       deviceId: 'device-a',
       userId: 'user-a',
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
     })
     expect(dispatchRelayEnvelope({
       envelope: {
@@ -92,6 +94,7 @@ describe('replaceable OIDC identity and device registration', () => {
       identity: claims,
       deviceId: 'device-a',
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
       now: NOW,
       store,
     })
@@ -125,6 +128,7 @@ describe('replaceable OIDC identity and device registration', () => {
       identity: claims,
       deviceId: 'device-a',
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
       now: NOW,
       store,
     }), 'revoked-device')
@@ -138,6 +142,7 @@ describe('replaceable OIDC identity and device registration', () => {
       identity: identity.verify(assertion(), NOW),
       deviceId: 'device-a',
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
       now: NOW,
       store,
     })
@@ -145,6 +150,7 @@ describe('replaceable OIDC identity and device registration', () => {
       identity: identity.verify(assertion({ sub: 'user-b' }), NOW),
       deviceId: 'device-a',
       publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
       now: NOW,
       store,
     }), 'cross-account')
@@ -156,12 +162,20 @@ describe('replaceable OIDC identity and device registration', () => {
     }), 'cross-account')
   })
 
-  it('stores an optional X25519 encryption public key and refuses a later mismatch', () => {
+  it('requires an X25519 encryption public key and refuses a later mismatch', () => {
     const identity = createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE })
     const store = createMemoryRelayStore()
     const keys = generateDeviceKeyPair()
     const other = generateDeviceKeyPair()
     const claims = identity.verify(assertion(), NOW)
+    expectRelayError(() => registerRelayDevice({
+      identity: claims,
+      deviceId: 'device-a',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: '',
+      now: NOW,
+      store,
+    }), 'untrusted-key')
     expect(registerRelayDevice({
       identity: claims,
       deviceId: 'device-a',

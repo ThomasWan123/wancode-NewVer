@@ -57,7 +57,7 @@ export interface DesktopRelayRegisterInput {
   readonly assertion: unknown
   readonly deviceId: string
   readonly publicKey: string
-  readonly encryptionPublicKey?: string
+  readonly encryptionPublicKey: string
 }
 
 /** Inputs for outbound HTTP token mint or revocation. */
@@ -209,7 +209,7 @@ export function prepareDesktopRelay(
         assertion: input.assertion,
         deviceId: input.deviceId,
         publicKey: input.publicKey,
-        ...(input.encryptionPublicKey === undefined ? {} : { encryptionPublicKey: input.encryptionPublicKey }),
+        encryptionPublicKey: input.encryptionPublicKey,
       })
     },
     async issueToken(input) {

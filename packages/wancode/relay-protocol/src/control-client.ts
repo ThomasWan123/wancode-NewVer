@@ -83,7 +83,7 @@ export interface OutboundRelayControlInput {
 /** Inputs used to register one device over outbound HTTPS. */
 export interface RegisterOutboundRelayDeviceInput extends OutboundRelayControlInput {
   readonly publicKey: string
-  readonly encryptionPublicKey?: string
+  readonly encryptionPublicKey: string
 }
 
 /** Public device returned after a successful outbound registration. */
@@ -108,7 +108,8 @@ export interface OutboundRelayRevocation {
 
 /**
  * POST `/v1/devices` over HTTPS (or loopback HTTP). Redirects are re-checked
- * and the request never carries credentials or private keys.
+ * and the request never carries credentials or private keys. An X25519
+ * encryption public key is required so sealed mail has a recipient.
  */
 export async function registerOutboundRelayDevice(
   input: RegisterOutboundRelayDeviceInput,
@@ -117,7 +118,7 @@ export async function registerOutboundRelayDevice(
     assertion: input.assertion,
     deviceId: input.deviceId,
     publicKey: input.publicKey,
-    ...(input.encryptionPublicKey === undefined ? {} : { encryptionPublicKey: input.encryptionPublicKey }),
+    encryptionPublicKey: input.encryptionPublicKey,
   })
   const device = json.device
   if (device === null || typeof device !== 'object' || Array.isArray(device)) {
