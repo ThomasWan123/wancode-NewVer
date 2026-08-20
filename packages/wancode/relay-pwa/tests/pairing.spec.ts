@@ -493,4 +493,19 @@ describe('PWA relay pairing', () => {
       } as never,
     }), 'plaintext')
   })
+
+  it('refuses public cleartext origins before any enroll request is sent', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    await expectRelayErrorAsync(() => createPwaRelayController({
+      httpUrl: 'http://relay.example.invalid/',
+      url: 'ws://relay.example.invalid/v1',
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+    }), 'cleartext-transport')
+  })
 })

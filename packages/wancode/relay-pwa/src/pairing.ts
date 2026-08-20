@@ -12,12 +12,14 @@ import {
   publicDeviceIdentity,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
+  assertOutboundRelayUrl,
   type OutboundRelayDevice,
   type RelayApplicationKind,
   type RelayApplicationPayload,
   type StoredDeviceIdentity,
 } from '../../relay-protocol/src/index.ts'
 import { assertPwaRelayRecord } from './credentials.ts'
+import { assertPwaShellOrigin } from './shell.ts'
 import {
   projectRelayNotification,
   projectRelaySessionView,
@@ -102,6 +104,8 @@ export async function createPwaRelayController(
   input: CreatePwaRelayControllerInput,
 ): Promise<PwaRelayController> {
   assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa relay pairing')
+  assertPwaShellOrigin(input.httpUrl)
+  assertOutboundRelayUrl(input.url)
   if (input.assertion !== null && typeof input.assertion === 'object' && !Array.isArray(input.assertion)) {
     assertPwaRelayRecord(input.assertion as Record<string, unknown>, 'pwa relay assertion')
   }
