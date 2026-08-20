@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   RelayAuthorizationError,
   createStoredDeviceIdentity,
+  createWebCryptoDeviceIdentity,
   generateDeviceKeyPair,
+  generateWebCryptoDeviceKeyPair,
   parseStoredDeviceIdentity,
   publicDeviceIdentity,
   serializeStoredDeviceIdentity,
+  signDevicePayload,
+  verifyDevicePayload,
 } from '../src/index.ts'
 
 function expectRelayError(run: () => unknown, code: string): void {
@@ -55,5 +59,31 @@ describe('stored device identity', () => {
       })),
       'untrusted-key',
     )
+  })
+
+  it('mints an identity with WebCrypto keys that sign like node:crypto keys', async () => {
+    const stored = await createWebCryptoDeviceIdentity()
+    const published = publicDeviceIdentity(stored)
+    const payload = new TextEncoder().encode('v1:hs:webcrypto')
+    const signature = signDevicePayload(stored.keyPair.privateKey, payload)
+
+    expect(stored.deviceId).toMatch(/^[0-9a-f]{32}$/u)
+    expect(JSON.stringify(published)).not.toContain(stored.keyPair.privateKey)
+    expect(JSON.stringify(published)).not.toContain(stored.keyPair.encryptionPrivateKey)
+    expect(verifyDevicePayload(stored.keyPair.publicKey, payload, signature)).toBe(true)
+    expect(parseStoredDeviceIdentity(serializeStoredDeviceIdentity(stored))).toEqual(stored)
+  })
+
+  it('fails closed when WebCrypto is missing', async () => {
+    const original = globalThis.crypto
+    Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined })
+    try {
+      await expect(generateWebCryptoDeviceKeyPair()).rejects.toMatchObject({
+        name: RelayAuthorizationError.name,
+        code: 'malformed',
+      })
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', { configurable: true, value: original })
+    }
   })
 })

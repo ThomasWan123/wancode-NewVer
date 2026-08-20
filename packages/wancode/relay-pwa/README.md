@@ -33,7 +33,8 @@ directory links.
   omits those same devices. Revoked desktops are omitted. Follow-ups, approvals, and cancels are
   sealed to that desktop encryption public key. Presence frames are sealed the
   same way. Presence state must be online or offline. Follow-up text is required and capped so low-bandwidth links stay
-  bounded. Handshake nonces come from WebCrypto, not `node:crypto`. Closed sessions refuse send and drain until `reconnect`.
+  bounded. Handshake nonces come from WebCrypto, not `node:crypto`. Device
+  identities can be minted with `createWebCryptoDeviceIdentity`. Closed sessions refuse send and drain until `reconnect`.
   `listDesktops` uses outbound HTTPS and still works after close. `drain` reclaims queued mail
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so
   the handshake is not replay. `revoke` closes the socket and revokes the PWA

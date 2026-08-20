@@ -38,7 +38,9 @@ Status: active
   Listed control-plane devices refuse non-Ed25519 / non-X25519 keys. The account
   device list omits those rows so a poisoned store cannot fail the whole list.
   Device registration requires an X25519 encryption public key. Listed devices
-  without that key are omitted, and the outbound list parser refuses them. The installable Web App
+  without that key are omitted, and the outbound list parser refuses them.
+  `createWebCryptoDeviceIdentity` mints Ed25519 and X25519 keys without
+  `node:crypto`; missing WebCrypto fails closed. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,

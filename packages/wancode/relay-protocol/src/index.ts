@@ -26,6 +26,7 @@ export {
   assertDeviceEncryptionPublicKey,
   assertDevicePublicKey,
   createStoredDeviceIdentity,
+  createWebCryptoDeviceIdentity,
   generateDeviceKeyPair,
   parseStoredDeviceIdentity,
   publicDeviceIdentity,
@@ -36,6 +37,11 @@ export {
   type PublicDeviceIdentity,
   type StoredDeviceIdentity,
 } from './device-keys.ts'
+export {
+  RELAY_DEVICE_ID_BYTES,
+  createWebCryptoDeviceId,
+  generateWebCryptoDeviceKeyPair,
+} from './webcrypto-keys.ts'
 export {
   createStaticOidcIdentityProvider,
   parseOidcIdentityAssertion,

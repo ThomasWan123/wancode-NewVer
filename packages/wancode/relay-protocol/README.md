@@ -76,4 +76,6 @@ plugin derives an HTTPS control origin from the WebSocket URL, then registers,
 mints a token, lists same-account devices, or revokes over outbound HTTP before
 `connect` opens a socket.
 `createStoredDeviceIdentity` encodes the Ed25519 and X25519 pair for a secure
-store. Public views omit private keys; a mutated public key fails closed.
+store. `createWebCryptoDeviceIdentity` mints the same blob through WebCrypto
+so a PWA does not import `node:crypto`; missing WebCrypto fails closed.
+Public views omit private keys; a mutated public key fails closed.

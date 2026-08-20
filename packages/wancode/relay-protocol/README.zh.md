@@ -54,4 +54,6 @@ HTTPS（或回环 HTTP）调用 `registerOutboundRelayDevice`、
 workspace 链接。启用后，插件从 WebSocket URL 推导 HTTPS 控制面源，先通过出站
 HTTP 注册、签发令牌、列出同一账号设备或撤销，再在 `connect` 时打开 socket。
 `createStoredDeviceIdentity` 把 Ed25519 与 X25519 密钥对编码进安全存储。
+`createWebCryptoDeviceIdentity` 用 WebCrypto 生成同一份 blob，因此 PWA 不必导入
+`node:crypto`；缺少 WebCrypto 一律失败关闭。
 公开视图不含私钥；被改写的公钥一律失败关闭。

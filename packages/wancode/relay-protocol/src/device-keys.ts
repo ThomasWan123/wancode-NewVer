@@ -1,15 +1,15 @@
 /** Ed25519 signing keys and X25519 encryption keys for Wan Code devices. */
 
 import {
-  createPrivateKey,
   createPublicKey,
+  createPrivateKey,
   generateKeyPairSync,
-  randomBytes,
   sign,
   verify,
 } from 'node:crypto'
 import { assertNoPlaintextRelayFields } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
+import { createWebCryptoDeviceId, generateWebCryptoDeviceKeyPair } from './webcrypto-keys.ts'
 
 /** Desktop-held device identity. Private keys never leave the device. */
 export interface DeviceKeyPair {
@@ -91,7 +91,7 @@ export interface PublicDeviceIdentity {
  */
 export function createStoredDeviceIdentity(
   keyPair: DeviceKeyPair = generateDeviceKeyPair(),
-  deviceId: string = randomBytes(16).toString('hex'),
+  deviceId: string = createWebCryptoDeviceId(),
 ): StoredDeviceIdentity {
   return parseStoredDeviceIdentity(JSON.stringify({
     protocolVersion: 1,
@@ -156,6 +156,18 @@ export function parseStoredDeviceIdentity(raw: string): StoredDeviceIdentity {
     'relay device encryption',
   )
   return { deviceId: record.deviceId, keyPair }
+}
+
+/**
+ * Create one stored identity with WebCrypto keys and a WebCrypto device id.
+ * Missing WebCrypto fails closed. The resulting blob matches
+ * `createStoredDeviceIdentity`.
+ */
+export async function createWebCryptoDeviceIdentity(): Promise<StoredDeviceIdentity> {
+  return createStoredDeviceIdentity(
+    await generateWebCryptoDeviceKeyPair(),
+    createWebCryptoDeviceId(),
+  )
 }
 
 /** Return the fields that may be registered or logged. Private keys stay out. */
