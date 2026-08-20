@@ -34,7 +34,11 @@ directory links.
   sealed to that desktop encryption public key. Presence frames are sealed the
   same way. Presence state must be online or offline. Follow-up text is required and capped so low-bandwidth links stay
   bounded. Handshake nonces come from WebCrypto, not `node:crypto`. Device
-  identities can be minted with `createWebCryptoDeviceIdentity`. Handshake
+  identities can be minted with `createWebCryptoDeviceIdentity`.
+  `loadPwaRelayIdentity` mints once into caller-supplied storage and reloads
+  that blob; `peekPwaRelayPublicIdentity` never returns private keys.
+  `bindPwaRelayIdentityStorage` refuses the origin `sessionStorage` key and
+  credential-like keys. Handshake
   signatures use `createWebCryptoSignedHandshakeEnvelope`. Follow-ups are
   sealed with `createWebCryptoSealedRelayEnvelope`. Drain opens those boxes
   with `openWebCryptoSealedRelayPayload`. Closed sessions refuse send and drain until `reconnect`.

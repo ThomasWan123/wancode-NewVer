@@ -48,3 +48,12 @@ export {
   type PwaRelayController,
   type PwaRelayDesktop,
 } from './pairing.ts'
+export {
+  PWA_RELAY_IDENTITY_STORAGE_KEY,
+  PWA_RELAY_ORIGIN_STORAGE_KEY,
+  bindPwaRelayIdentityStorage,
+  loadPwaRelayIdentity,
+  peekPwaRelayPublicIdentity,
+  type PwaRelayIdentityStorage,
+  type PwaRelayKeyedStorage,
+} from './identity.ts'

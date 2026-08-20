@@ -41,7 +41,9 @@ Status: active
   Device registration requires an X25519 encryption public key. Listed devices
   without that key are omitted, and the outbound list parser refuses them.
   `createWebCryptoDeviceIdentity` mints Ed25519 and X25519 keys without
-  `node:crypto`; missing WebCrypto fails closed. The installable Web App
+  `node:crypto`; missing WebCrypto fails closed. `loadPwaRelayIdentity`
+  mints that identity once into caller-supplied storage; public peeks omit
+  private keys, and the origin `sessionStorage` key cannot hold identity. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,
