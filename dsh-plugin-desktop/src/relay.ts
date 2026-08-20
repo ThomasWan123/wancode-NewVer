@@ -316,6 +316,7 @@ export function sealDesktopRelaySessionEvent(
   if (input.detail.length > MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS) {
     throw new RelayAuthorizationError('malformed', 'desktop relay progress detail is too large')
   }
+  assertDesktopRelayRecipient(input.recipientEncryptionPublicKey)
   return input.identity.sealTo({
     id: input.id,
     sentAt: input.sentAt,
@@ -365,6 +366,7 @@ export function sealDesktopRelayPresence(
   if (input.state !== 'online' && input.state !== 'offline') {
     throw new RelayAuthorizationError('malformed', 'desktop relay presence state is invalid')
   }
+  assertDesktopRelayRecipient(input.recipientEncryptionPublicKey)
   const payload: RelayApplicationPayload = { kind: 'presence', state: input.state }
   assertNoPlaintextRelayFields(payload as unknown as Record<string, unknown>, 'desktop relay presence')
   return input.identity.sealTo({
@@ -572,6 +574,12 @@ function assertDesktopRelayControl(payload: Extract<RelayApplicationPayload, { k
   }
   if (payload.requestId.length === 0 || /[\0\r\n]/u.test(payload.requestId)) {
     throw new RelayAuthorizationError('malformed', 'desktop relay control request id is required')
+  }
+}
+
+function assertDesktopRelayRecipient(key: string): void {
+  if (typeof key !== 'string' || key.length === 0 || /[\0\r\n]/u.test(key)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay recipient encryption key is required')
   }
 }
 

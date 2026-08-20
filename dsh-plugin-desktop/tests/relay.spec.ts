@@ -532,6 +532,19 @@ describe('desktop outbound relay Host plugin', () => {
       }),
       'malformed',
     )
+    expectRelayError(
+      () => sealDesktopRelaySessionEvent({
+        identity: { sealTo },
+        id: 'evt-empty',
+        sentAt: 1_700_000_000_000,
+        userId: 'user-a',
+        recipientEncryptionPublicKey: '',
+        sessionId: 'sess-1',
+        type: 'notify.tool',
+        detail: 'Waiting for approval',
+      }),
+      'malformed',
+    )
     expect(sealTo).toHaveBeenCalledOnce()
   })
 
@@ -644,6 +657,17 @@ describe('desktop outbound relay Host plugin', () => {
         userId: 'user-a',
         recipientEncryptionPublicKey: 'enc-pwa',
         state: 'away' as 'online',
+      }),
+      'malformed',
+    )
+    expectRelayError(
+      () => sealDesktopRelayPresence({
+        identity: { sealTo },
+        id: 'pres-empty',
+        sentAt: 1_700_000_000_000,
+        userId: 'user-a',
+        recipientEncryptionPublicKey: '',
+        state: 'online',
       }),
       'malformed',
     )

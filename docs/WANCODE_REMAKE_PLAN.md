@@ -44,6 +44,7 @@ Status: active
   open sealed PWA follow-ups without exposing private keys,
   and can `sealTo` a PWA encryption public key. `sealDesktopRelaySessionEvent`
   allows only compact progress types and never seals prompt text.
+  Empty recipient encryption keys fail closed.
   `sendDesktopRelaySessionEvent` pushes that box over the outbound socket.
   After connect, `sendProgress` uses the same path and refuses to send before
   the socket exists. `sendPresence` seals online/offline frames the same way. `drainDesktopRelayMail` reclaims
