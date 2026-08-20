@@ -492,8 +492,7 @@ export async function applyDesktopRelayPayloads(input: {
         break
       case 'approval':
         if (input.approval === undefined) {
-          ignored += 1
-          break
+          throw new RelayAuthorizationError('malformed', 'desktop relay approval sink is required')
         }
         assertDesktopRelayControl(payload)
         await input.approval({
@@ -505,8 +504,7 @@ export async function applyDesktopRelayPayloads(input: {
         break
       case 'cancel':
         if (input.cancel === undefined) {
-          ignored += 1
-          break
+          throw new RelayAuthorizationError('malformed', 'desktop relay cancel sink is required')
         }
         assertDesktopRelayControl(payload)
         await input.cancel({

@@ -272,15 +272,20 @@ describe('desktop outbound relay Host plugin', () => {
     expect(cancel).toHaveBeenCalledWith({ sessionId: 'sess-1', requestId: 'req-1' })
   })
 
-  it('ignores approval and cancel when the desktop has not wired those sinks', async () => {
+  it('refuses approval and cancel when the desktop has not wired those sinks', async () => {
     const followUp = vi.fn(async () => undefined)
     await expect(applyDesktopRelayPayloads({
       payloads: [
         { kind: 'approval', sessionId: 'sess-1', requestId: 'req-1', approved: false },
+      ],
+      followUp,
+    })).rejects.toMatchObject({ code: 'malformed' })
+    await expect(applyDesktopRelayPayloads({
+      payloads: [
         { kind: 'cancel', sessionId: 'sess-1', requestId: 'req-1' },
       ],
       followUp,
-    })).resolves.toEqual({ applied: 0, ignored: 2 })
+    })).rejects.toMatchObject({ code: 'malformed' })
     expect(followUp).not.toHaveBeenCalled()
   })
 

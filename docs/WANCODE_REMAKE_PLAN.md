@@ -52,7 +52,8 @@ Status: active
   queued boxes and acks only queued ids. `processDesktopRelayMail` applies
   follow-ups locally first and acks queued ids only after that sink succeeds.
   `applyDesktopRelayPayloads` hands follow-ups to a local session sink so
-  model credentials stay on the desktop.   `createDesktopRelayFollowUpSink`
+  model credentials stay on the desktop. Approval and cancel frames require
+  those sinks and are not dropped. `createDesktopRelayFollowUpSink`
   refuses missing session ids. Approval and cancel sinks refuse missing
   request ids. `createDesktopRelayApplySinks` binds those lookups together.
   The installable shell includes PNG icons and may be served from
