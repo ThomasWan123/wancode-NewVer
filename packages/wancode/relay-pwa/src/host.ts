@@ -7,6 +7,16 @@ import { createPwaDeployFiles, PWA_SHELL_CSP } from './shell.ts'
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
 const CREDENTIAL_QUERY = /token|secret|credential|password|authorization/iu
 
+/** Fail-closed headers on every loopback shell response. */
+export const PWA_SHELL_LOCKDOWN_HEADERS = {
+  'content-security-policy': PWA_SHELL_CSP,
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+  'cross-origin-opener-policy': 'same-origin',
+  'cross-origin-resource-policy': 'same-origin',
+} as const
+
 /** Listening loopback shell. `url` is always `http://127.0.0.1:<port>/`. */
 export interface PwaShellHost {
   readonly url: string
@@ -112,8 +122,7 @@ function handleShellHttp(
     if (file === undefined) {
       response.writeHead(404, {
         'content-type': 'text/plain; charset=utf-8',
-        'content-security-policy': PWA_SHELL_CSP,
-        'x-content-type-options': 'nosniff',
+        ...PWA_SHELL_LOCKDOWN_HEADERS,
       })
       response.end('not found')
       return
@@ -122,8 +131,7 @@ function handleShellHttp(
       'content-type': file.type,
       'content-length': file.body.byteLength,
       'cache-control': 'no-store',
-      'content-security-policy': PWA_SHELL_CSP,
-      'x-content-type-options': 'nosniff',
+      ...PWA_SHELL_LOCKDOWN_HEADERS,
     })
     response.end(method === 'HEAD' ? undefined : file.body)
   } catch (cause) {
@@ -133,8 +141,7 @@ function handleShellHttp(
     response.writeHead(status, {
       'content-type': 'application/json; charset=utf-8',
       'content-length': Buffer.byteLength(payload),
-      'content-security-policy': PWA_SHELL_CSP,
-      'x-content-type-options': 'nosniff',
+      ...PWA_SHELL_LOCKDOWN_HEADERS,
     })
     response.end(payload)
   }

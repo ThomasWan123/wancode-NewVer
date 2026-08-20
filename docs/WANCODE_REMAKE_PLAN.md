@@ -53,7 +53,9 @@ Status: active
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail
   closed. It does not listen on a public interface. Non-loopback Origin and
-  Referer headers also fail closed. `createPwaDeployFiles`
+  Referer headers also fail closed. Loopback responses send
+  `Referrer-Policy: no-referrer` and disable camera, microphone, and
+  geolocation. `createPwaDeployFiles`
   includes PNG icons so a static HTTPS origin can host the shell.
   `assertPwaShellOrigin`
   requires HTTPS or loopback HTTP so a public install cannot use cleartext.

@@ -1,6 +1,6 @@
 import { request as httpRequest } from 'node:http'
 import { afterEach, describe, expect, it } from 'vitest'
-import { startPwaShellHost, type PwaShellHost } from '../src/host.ts'
+import { startPwaShellHost, type PwaShellHost, PWA_SHELL_LOCKDOWN_HEADERS } from '../src/host.ts'
 import { createPwaPairingScriptSource, createPwaShellFiles, createPwaShellIcons, PWA_SHELL_CSP } from '../src/index.ts'
 
 describe('PWA loopback shell host', () => {
@@ -21,6 +21,10 @@ describe('PWA loopback shell host', () => {
     expect(index.headers.get('content-type')).toContain('text/html')
     expect(index.headers.get('content-security-policy')).toBe(PWA_SHELL_CSP)
     expect(index.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(index.headers.get('referrer-policy')).toBe(PWA_SHELL_LOCKDOWN_HEADERS['referrer-policy'])
+    expect(index.headers.get('permissions-policy')).toBe(PWA_SHELL_LOCKDOWN_HEADERS['permissions-policy'])
+    expect(index.headers.get('cross-origin-opener-policy')).toBe('same-origin')
+    expect(index.headers.get('cross-origin-resource-policy')).toBe('same-origin')
     expect(await index.text()).toBe(createPwaShellFiles()['index.html'])
 
     const pairing = await fetch(new URL('pair.js', host.url))
@@ -43,7 +47,22 @@ describe('PWA loopback shell host', () => {
 
     const denied = await fetch(`${host.url}?access_token=tok-live`)
     expect(denied.status).toBe(403)
+    expect(denied.headers.get('referrer-policy')).toBe('no-referrer')
     expect(await denied.json()).toEqual({ error: { code: 'plaintext' } })
+  })
+
+  it('serves HEAD and refuses mutating methods', async () => {
+    const host = await startPwaShellHost()
+    hosts.push(host)
+    const head = await fetch(host.url, { method: 'HEAD' })
+    expect(head.status).toBe(200)
+    expect(head.headers.get('content-security-policy')).toBe(PWA_SHELL_CSP)
+    expect(await head.text()).toBe('')
+
+    const posted = await fetch(host.url, { method: 'POST', body: 'origin=https://evil.example' })
+    expect(posted.status).toBe(400)
+    expect(posted.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(await posted.json()).toEqual({ error: { code: 'malformed' } })
   })
 
   it('refuses a public bind address and does not listen', async () => {
