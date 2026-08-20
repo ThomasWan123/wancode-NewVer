@@ -6,7 +6,7 @@ import {
   connectOutboundRelay,
   createRelayHandshakeNonce,
   createSealedRelayEnvelope,
-  createSignedHandshakeEnvelope,
+  createWebCryptoSignedHandshakeEnvelope,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
   openSealedRelayPayload,
@@ -353,7 +353,7 @@ async function openSession(
   return connectOutboundRelay({
     url: input.url,
     accessToken: token.accessToken,
-    envelope: createSignedHandshakeEnvelope({
+    envelope: await createWebCryptoSignedHandshakeEnvelope({
       id: `hs:${published.deviceId}:${nonce}`,
       sentAt: now,
       actor: { userId, deviceId: published.deviceId },

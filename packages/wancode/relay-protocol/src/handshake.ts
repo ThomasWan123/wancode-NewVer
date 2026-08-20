@@ -7,6 +7,10 @@ import {
 } from './device-keys.ts'
 import { RelayAuthorizationError } from './errors.ts'
 import {
+  encodeStandardBase64,
+  signWebCryptoDevicePayload,
+} from './webcrypto-keys.ts'
+import {
   dispatchRelayEnvelope,
   parseRelayEnvelope,
   type RelayActor,
@@ -84,20 +88,44 @@ export interface SignedHandshakeEnvelopeInput {
 export function createSignedHandshakeEnvelope(
   input: SignedHandshakeEnvelopeInput,
 ): Record<string, unknown> {
-  const claims: OutboundHandshakeClaims = {
+  const claims = handshakeClaims(input)
+  const signature = signDevicePayload(input.keyPair.privateKey, canonicalClaims(claims))
+  return signedHandshakeEnvelope(input, claims, signature)
+}
+
+/**
+ * Build the same handshake envelope through WebCrypto so a PWA does not import
+ * `node:crypto` to sign. Missing WebCrypto fails closed.
+ */
+export async function createWebCryptoSignedHandshakeEnvelope(
+  input: SignedHandshakeEnvelopeInput,
+): Promise<Record<string, unknown>> {
+  const claims = handshakeClaims(input)
+  const signature = await signWebCryptoDevicePayload(input.keyPair.privateKey, canonicalClaims(claims))
+  return signedHandshakeEnvelope(input, claims, signature)
+}
+
+function handshakeClaims(input: SignedHandshakeEnvelopeInput): OutboundHandshakeClaims {
+  return {
     direction: input.direction ?? 'outbound',
     nonce: input.nonce,
     publicKey: input.keyPair.publicKey,
     capabilities: [...input.capabilities],
   }
-  const signature = signDevicePayload(input.keyPair.privateKey, canonicalClaims(claims))
+}
+
+function signedHandshakeEnvelope(
+  input: SignedHandshakeEnvelopeInput,
+  claims: OutboundHandshakeClaims,
+  signature: string,
+): Record<string, unknown> {
   return {
     protocolVersion: 1,
     id: input.id,
     kind: 'handshake',
     sentAt: input.sentAt,
     actor: input.actor,
-    ciphertext: `${HANDSHAKE_PREFIX}${Buffer.from(JSON.stringify({ claims, signature }), 'utf8').toString('base64')}`,
+    ciphertext: `${HANDSHAKE_PREFIX}${encodeStandardBase64(new TextEncoder().encode(JSON.stringify({ claims, signature })))}`,
   }
 }
 
@@ -303,10 +331,10 @@ export function parseHandshakeAck(value: unknown): HandshakeAck {
 }
 
 function canonicalClaims(claims: OutboundHandshakeClaims): Uint8Array {
-  return Buffer.from(JSON.stringify({
+  return new TextEncoder().encode(JSON.stringify({
     direction: claims.direction,
     nonce: claims.nonce,
     publicKey: claims.publicKey,
     capabilities: [...claims.capabilities],
-  }), 'utf8')
+  }))
 }

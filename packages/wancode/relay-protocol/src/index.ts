@@ -41,6 +41,7 @@ export {
   RELAY_DEVICE_ID_BYTES,
   createWebCryptoDeviceId,
   generateWebCryptoDeviceKeyPair,
+  signWebCryptoDevicePayload,
 } from './webcrypto-keys.ts'
 export {
   createStaticOidcIdentityProvider,
@@ -71,6 +72,7 @@ export {
   RELAY_HANDSHAKE_NONCE_BYTES,
   createRelayHandshakeNonce,
   createSignedHandshakeEnvelope,
+  createWebCryptoSignedHandshakeEnvelope,
   openOutboundSession,
   parseHandshakeAck,
   type HandshakeAck,

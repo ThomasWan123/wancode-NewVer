@@ -9,6 +9,7 @@ import {
   publicDeviceIdentity,
   serializeStoredDeviceIdentity,
   signDevicePayload,
+  signWebCryptoDevicePayload,
   verifyDevicePayload,
 } from '../src/index.ts'
 
@@ -72,6 +73,8 @@ describe('stored device identity', () => {
     expect(JSON.stringify(published)).not.toContain(stored.keyPair.encryptionPrivateKey)
     expect(verifyDevicePayload(stored.keyPair.publicKey, payload, signature)).toBe(true)
     expect(parseStoredDeviceIdentity(serializeStoredDeviceIdentity(stored))).toEqual(stored)
+    const webSignature = await signWebCryptoDevicePayload(stored.keyPair.privateKey, payload)
+    expect(verifyDevicePayload(stored.keyPair.publicKey, payload, webSignature)).toBe(true)
   })
 
   it('fails closed when WebCrypto is missing', async () => {

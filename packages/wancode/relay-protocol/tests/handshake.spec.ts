@@ -4,8 +4,10 @@ import {
   createMemoryRelayStore,
   createRelayHandshakeNonce,
   createSignedHandshakeEnvelope,
+  createWebCryptoSignedHandshakeEnvelope,
   dispatchRelayEnvelope,
   generateDeviceKeyPair,
+  generateWebCryptoDeviceKeyPair,
   openOutboundSession,
   parseHandshakeAck,
   parseRelayWireHandshake,
@@ -81,6 +83,30 @@ describe('outbound device handshake', () => {
     expect(ack.sessionId).toBe(session.sessionId)
     expect(ack.grantedCapabilities).toEqual(['session.observe', 'session.prompt'])
     expect(ack.nonce).toBe('nonce-1')
+  })
+
+  it('opens a session from a WebCrypto-signed outbound handshake', async () => {
+    const keys = await generateWebCryptoDeviceKeyPair()
+    const store = authorizedStore(keys.publicKey)
+    const envelope = await createWebCryptoSignedHandshakeEnvelope({
+      id: 'hs-webcrypto',
+      sentAt: NOW,
+      actor: ACTOR,
+      keyPair: keys,
+      nonce: 'nonce-webcrypto',
+      capabilities: ['session.observe', 'session.prompt'],
+    })
+
+    const session = openOutboundSession({
+      envelope,
+      accessToken: 'tok-live',
+      store,
+      now: NOW,
+    })
+
+    expect(session.grantedCapabilities).toEqual(['session.observe', 'session.prompt'])
+    expect(parseHandshakeAck(session.ack).nonce).toBe('nonce-webcrypto')
+    expect(session.ack.ciphertext).not.toContain(keys.privateKey)
   })
 
   it('returns the same session when the identical handshake is retried', () => {

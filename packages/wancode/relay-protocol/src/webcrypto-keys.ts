@@ -7,6 +7,7 @@ import { RelayAuthorizationError } from './errors.ts'
 export const RELAY_DEVICE_ID_BYTES = 16
 
 type WebCryptoSubtle = NonNullable<typeof globalThis.crypto>['subtle']
+type CryptoKeyLike = Parameters<WebCryptoSubtle['exportKey']>[1]
 
 /**
  * Create a 32-hex device id with WebCrypto so a PWA does not import
@@ -58,9 +59,66 @@ export async function generateWebCryptoDeviceKeyPair(): Promise<DeviceKeyPair> {
   }
 }
 
+/**
+ * Sign canonical UTF-8 bytes with an Ed25519 PKCS8 key through WebCrypto.
+ * Missing WebCrypto or an untrusted key fails closed.
+ */
+export async function signWebCryptoDevicePayload(privateKey: string, payload: Uint8Array): Promise<string> {
+  if (typeof privateKey !== 'string' || privateKey.length === 0 || /[\0\r\n]/u.test(privateKey)) {
+    throw new RelayAuthorizationError('untrusted-key', 'relay device private key is required')
+  }
+  const subtle = requireSubtle()
+  try {
+    const key = await subtle.importKey(
+      'pkcs8',
+      decodeStandardBase64(privateKey),
+      { name: 'Ed25519' },
+      false,
+      ['sign'],
+    )
+    return encodeStandardBase64(await subtle.sign({ name: 'Ed25519' }, key, payload))
+  } catch (cause) {
+    if (cause instanceof RelayAuthorizationError) throw cause
+    throw new RelayAuthorizationError('untrusted-key', 'relay device private key is not a valid Ed25519 PKCS8 key')
+  }
+}
+
+/** Encode bytes as standard base64 without `node:crypto` or `Buffer`. */
+export function encodeStandardBase64(bytes: Uint8Array | ArrayBuffer): string {
+  if (typeof btoa !== 'function') {
+    throw new RelayAuthorizationError('malformed', 'relay device keys require webcrypto')
+  }
+  const view = bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes
+  let binary = ''
+  for (const byte of view) binary += String.fromCharCode(byte)
+  return btoa(binary)
+}
+
+function decodeStandardBase64(value: string): Uint8Array {
+  if (typeof atob !== 'function') {
+    throw new RelayAuthorizationError('malformed', 'relay device keys require webcrypto')
+  }
+  try {
+    const binary = atob(value)
+    const bytes = new Uint8Array(binary.length)
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index)
+    }
+    return bytes
+  } catch {
+    throw new RelayAuthorizationError('untrusted-key', 'relay device private key is not a valid Ed25519 PKCS8 key')
+  }
+}
+
 function requireSubtle(): WebCryptoSubtle {
   const crypto = globalThis.crypto
-  if (crypto === undefined || crypto.subtle === undefined || typeof crypto.subtle.generateKey !== 'function') {
+  if (
+    crypto === undefined
+    || crypto.subtle === undefined
+    || typeof crypto.subtle.generateKey !== 'function'
+    || typeof crypto.subtle.importKey !== 'function'
+    || typeof crypto.subtle.sign !== 'function'
+  ) {
     throw new RelayAuthorizationError('malformed', 'relay device keys require webcrypto')
   }
   return crypto.subtle
@@ -75,22 +133,10 @@ function hasKeyPair(
     && 'privateKey' in value
 }
 
-type CryptoKeyLike = Parameters<WebCryptoSubtle['exportKey']>[1]
-
 async function exportSpki(subtle: WebCryptoSubtle, key: CryptoKeyLike): Promise<string> {
-  return bytesToBase64(await subtle.exportKey('spki', key))
+  return encodeStandardBase64(await subtle.exportKey('spki', key))
 }
 
 async function exportPkcs8(subtle: WebCryptoSubtle, key: CryptoKeyLike): Promise<string> {
-  return bytesToBase64(await subtle.exportKey('pkcs8', key))
-}
-
-function bytesToBase64(buffer: ArrayBuffer): string {
-  if (typeof btoa !== 'function') {
-    throw new RelayAuthorizationError('malformed', 'relay device keys require webcrypto')
-  }
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
+  return encodeStandardBase64(await subtle.exportKey('pkcs8', key))
 }
