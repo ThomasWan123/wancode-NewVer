@@ -9,6 +9,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./host": {
+      "types": "./src/host.ts",
+      "default": "./src/host.ts"
     }
   },
   "files": [

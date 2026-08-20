@@ -258,6 +258,74 @@ export async function drainDesktopRelayMail(input: {
   return { payloads }
 }
 
+/**
+ * Apply opened PWA payloads on the desktop. Prompt text is handed to the
+ * caller-supplied follow-up sink so model credentials stay local. Session
+ * events and presence are ignored; they travel desktop to PWA, not back.
+ */
+export async function applyDesktopRelayPayloads(input: {
+  readonly payloads: readonly RelayApplicationPayload[]
+  readonly followUp: (input: {
+    readonly sessionId: string
+    readonly text: string
+  }) => Promise<void>
+  readonly approval?: (input: {
+    readonly sessionId: string
+    readonly requestId: string
+    readonly approved: boolean
+  }) => Promise<void>
+  readonly cancel?: (input: {
+    readonly sessionId: string
+    readonly requestId: string
+  }) => Promise<void>
+}): Promise<{
+  readonly applied: number
+  readonly ignored: number
+}> {
+  let applied = 0
+  let ignored = 0
+  for (const payload of input.payloads) {
+    switch (payload.kind) {
+      case 'prompt':
+        await input.followUp({ sessionId: payload.sessionId, text: payload.text })
+        applied += 1
+        break
+      case 'approval':
+        if (input.approval === undefined) {
+          ignored += 1
+          break
+        }
+        await input.approval({
+          sessionId: payload.sessionId,
+          requestId: payload.requestId,
+          approved: payload.approved,
+        })
+        applied += 1
+        break
+      case 'cancel':
+        if (input.cancel === undefined) {
+          ignored += 1
+          break
+        }
+        await input.cancel({
+          sessionId: payload.sessionId,
+          requestId: payload.requestId,
+        })
+        applied += 1
+        break
+      case 'session-event':
+      case 'presence':
+        ignored += 1
+        break
+      default: {
+        const exhaustive: never = payload
+        throw new RelayAuthorizationError('malformed', `desktop relay payload kind is not supported: ${String(exhaustive)}`)
+      }
+    }
+  }
+  return { applied, ignored }
+}
+
 function relayEnvelopeId(envelope: unknown): string {
   if (envelope !== null && typeof envelope === 'object' && !Array.isArray(envelope)) {
     const id = (envelope as { id?: unknown }).id

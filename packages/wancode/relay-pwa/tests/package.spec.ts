@@ -27,6 +27,10 @@ describe('relay-pwa package surface', () => {
         types: './src/index.ts',
         default: './src/index.ts',
       },
+      './host': {
+        types: './src/host.ts',
+        default: './src/host.ts',
+      },
     })
     expect(pwa).toHaveProperty('projectRelaySessionView')
     expect(pwa).toHaveProperty('projectRelayNotification')
@@ -35,8 +39,11 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('createPwaWebManifest')
     expect(pwa).toHaveProperty('createPwaIndexHtml')
     expect(pwa).toHaveProperty('createPwaShellFiles')
+    expect(pwa).toHaveProperty('createPwaShellIcon')
+    expect(pwa).toHaveProperty('createPwaShellIcons')
     expect(pwa).toHaveProperty('createPwaServiceWorkerSource')
     expect(pwa).toHaveProperty('decidePwaCacheAction')
+    expect(pwa).not.toHaveProperty('startPwaShellHost')
     expect(pwa).not.toHaveProperty('startRelayCloud')
     expect(pwa).not.toHaveProperty('startLoopbackRelay')
     expect(pwa).not.toHaveProperty('listen')

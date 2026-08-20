@@ -5,6 +5,8 @@ import {
   createPwaIndexHtml,
   createPwaServiceWorkerSource,
   createPwaShellFiles,
+  createPwaShellIcon,
+  createPwaShellIcons,
   createPwaWebManifest,
   decidePwaCacheAction,
   PWA_SHELL_CACHE,
@@ -86,6 +88,7 @@ describe('PWA installable shell', () => {
     expect(JSON.parse(files['manifest.webmanifest'])).toEqual(createPwaWebManifest())
     expect(files['sw.js']).toBe(createPwaServiceWorkerSource())
     expect(files['index.html']).toContain('rel="manifest"')
+    expect(files['index.html']).toContain('rel="apple-touch-icon"')
     expect(files['index.html']).toContain("navigator.serviceWorker.register('./sw.js')")
     expect(files['index.html']).toContain('<title>Wan Code</title>')
     expect(files['index.html']).toBe(createPwaIndexHtml())
@@ -95,4 +98,24 @@ describe('PWA installable shell', () => {
       expect(readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8')).toBe(files[name])
     }
   })
+
+  it('emits PNG icons that match the checked-in installable assets', () => {
+    const icons = createPwaShellIcons()
+    expect(readPngSize(icons['icons/wancode-192.png'])).toEqual({ width: 192, height: 192 })
+    expect(readPngSize(icons['icons/wancode-512.png'])).toEqual({ width: 512, height: 512 })
+    expect(createPwaShellIcon(192).equals(icons['icons/wancode-192.png'])).toBe(true)
+    expect(PWA_SHELL_PATHS).toContain('/icons/wancode-192.png')
+    expect(PWA_SHELL_PATHS).toContain('/icons/wancode-512.png')
+    for (const name of ['icons/wancode-192.png', 'icons/wancode-512.png'] as const) {
+      expect(readFileSync(new URL(`../public/${name}`, import.meta.url))).toEqual(icons[name])
+    }
+  })
 })
+
+function readPngSize(png: Buffer): { width: number, height: number } {
+  expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  return {
+    width: png.readUInt32BE(16),
+    height: png.readUInt32BE(20),
+  }
+}

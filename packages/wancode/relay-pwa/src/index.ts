@@ -24,6 +24,12 @@ export {
   type PwaWebManifest,
 } from './shell.ts'
 export {
+  createPwaShellIcon,
+  createPwaShellIcons,
+  PWA_SHELL_ICON_FILES,
+  type PwaShellIconSize,
+} from './icons.ts'
+export {
   createPwaRelayController,
   type CreatePwaRelayControllerInput,
   type PwaRelayController,

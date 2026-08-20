@@ -47,7 +47,7 @@ Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / too
 | Local test installer | **Available**: `yarn dist:win` produces an unsigned NSIS package; preview asset is [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned) |
 | Signed production release | **Deferred** until a code-signing certificate and trusted previous installer exist |
 | Cloud relay protocol (M2) | **In progress**: fail-closed contract, JWKS OIDC, outbound HTTPS register/token/revoke, Credential Manager device identity, outbound WSS, routing, rate limits, audit, offline mailbox, same-socket reconnect drain/ack, live sealed-box fan-out, loopback control plane, device-sealed payloads, and an opt-in desktop dialer |
-| Mobile PWA (M3) | **In progress**: session snapshots, device selection, sealed control, notifications, reconnect drain, and a checked-in static shell; model credentials stay on the desktop; icons and hosting are not shipped yet |
+| Mobile PWA (M3) | **In progress**: session snapshots, sealed control, PNG icons, and a loopback static host; model credentials stay on the desktop; public install is not shipped yet |
 | Marketplace, channels | Roadmap; not published as available features |
 
 The desktop `master` branch currently includes:
@@ -113,7 +113,7 @@ Production signing uses `dist:win-release` and requires a code-signing certifica
 
 1. **Windows desktop core** — delivered as an independently useful local product; signed production packages wait on the certificate.
 2. **Wan Code Cloud Relay** — accounts, device registration, short-lived tokens, revocation, audit, and an end-to-end encrypted protocol.
-3. **Mobile PWA** — in progress: session snapshots, sealed control, and a checked-in static shell; icons and hosting are not delivered yet.
+3. **Mobile PWA** — in progress: session snapshots, sealed control, PNG icons, and a loopback host; public install is not delivered yet.
 4. **Reviewed plugin marketplace** — signed manifests, declared capabilities, compatibility checks, atomic activation, and rollback.
 5. **Messaging channels** — official APIs for Feishu, Discord, WhatsApp, and compliant WeChat where available.
 

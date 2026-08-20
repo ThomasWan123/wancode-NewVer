@@ -31,9 +31,10 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   的安装记录。`decidePwaCacheAction` 只缓存 shell GET 资源；令牌查询参数和
   模型凭据失败关闭。控制面 POST 保持 network-only。
   `createPwaServiceWorkerSource` 生成对应的 worker 源码，从不监听。
-  `createPwaShellFiles` 返回 `index.html`、manifest 和 `sw.js`，供静态托管写入，
-  本包自己不监听。检入的副本在 `public/`，必须与生成器一致。
+  `createPwaShellFiles` 返回 `index.html`、manifest 和 `sw.js`。
+  `createPwaShellIcons` 返回 192 与 512 PNG。检入的副本在 `public/`，必须与
+  生成器一致。`@wancode/relay-pwa/host` 只在 127.0.0.1 上托管该 shell，公网
+  绑定失败关闭，且不在默认导出中。
 - 默认导出没有监听器，也没有 loopback/cloud 接收端。
 
-这还不是已交付的 iOS / Android 安装包。HTML shell、图标与 service worker
-运行时仍不在无头契约范围内。图形界面启动保持显式。
+这还不是公网上已交付的 iOS / Android 安装。图形界面启动保持显式。

@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import {
   apply,
+  applyDesktopRelayPayloads,
   drainDesktopRelayMail,
   prepareDesktopRelay,
   type Config as RelayConfig,
@@ -232,5 +233,43 @@ describe('desktop outbound relay Host plugin', () => {
       identity: { openSealed: vi.fn() },
     })).rejects.toMatchObject({ code: 'malformed' })
     expect(connection.acknowledge).not.toHaveBeenCalled()
+  })
+
+  it('applies PWA follow-ups locally and ignores desktop-originated events', async () => {
+    const followUp = vi.fn(async () => undefined)
+    const approval = vi.fn(async () => undefined)
+    const cancel = vi.fn(async () => undefined)
+    const secret = 'review the login form'
+    await expect(applyDesktopRelayPayloads({
+      payloads: [
+        { kind: 'prompt', sessionId: 'sess-1', text: secret },
+        { kind: 'approval', sessionId: 'sess-1', requestId: 'req-1', approved: true },
+        { kind: 'cancel', sessionId: 'sess-1', requestId: 'req-1' },
+        { kind: 'session-event', sessionId: 'sess-1', type: 'assistant.delta', detail: 'Looking' },
+        { kind: 'presence', state: 'online' },
+      ],
+      followUp,
+      approval,
+      cancel,
+    })).resolves.toEqual({ applied: 3, ignored: 2 })
+    expect(followUp).toHaveBeenCalledWith({ sessionId: 'sess-1', text: secret })
+    expect(approval).toHaveBeenCalledWith({
+      sessionId: 'sess-1',
+      requestId: 'req-1',
+      approved: true,
+    })
+    expect(cancel).toHaveBeenCalledWith({ sessionId: 'sess-1', requestId: 'req-1' })
+  })
+
+  it('ignores approval and cancel when the desktop has not wired those sinks', async () => {
+    const followUp = vi.fn(async () => undefined)
+    await expect(applyDesktopRelayPayloads({
+      payloads: [
+        { kind: 'approval', sessionId: 'sess-1', requestId: 'req-1', approved: false },
+        { kind: 'cancel', sessionId: 'sess-1', requestId: 'req-1' },
+      ],
+      followUp,
+    })).resolves.toEqual({ applied: 0, ignored: 2 })
+    expect(followUp).not.toHaveBeenCalled()
   })
 })
