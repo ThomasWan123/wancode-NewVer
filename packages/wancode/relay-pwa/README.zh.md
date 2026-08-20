@@ -32,7 +32,9 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   的安装记录。`decidePwaCacheAction` 只缓存 shell GET 资源；令牌查询参数和
   模型凭据失败关闭。控制面 POST 保持 network-only。
   `createPwaServiceWorkerSource` 生成对应的 worker 源码，从不监听。
-  `createPwaShellFiles` 返回 `index.html`、manifest 和 `sw.js`。
+  `createPwaShellFiles` 返回 `index.html`、manifest、`sw.js` 和 `pair.js`。
+  首页没有内联脚本。`PWA_SHELL_CSP` 禁止 `unsafe-inline`、嵌套框架和插件。
+  回环响应还发送 `X-Content-Type-Options: nosniff`。
   `createPwaShellIcons` 返回 192 与 512 PNG。检入的副本在 `public/`，必须与
   生成器一致。`createPwaDeployFiles` 附带 PNG 图标，静态 HTTPS 源可托管可安装
   shell，而本包自己不监听。首页表单只收集 Relay origin，从不命名 token 字段。

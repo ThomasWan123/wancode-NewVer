@@ -2,7 +2,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
-import { createPwaDeployFiles } from './shell.ts'
+import { createPwaDeployFiles, PWA_SHELL_CSP } from './shell.ts'
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
 const CREDENTIAL_QUERY = /token|secret|credential|password|authorization/iu
@@ -110,7 +110,11 @@ function handleShellHttp(
     const path = normalizeShellPath(url.pathname)
     const file = files.get(path)
     if (file === undefined) {
-      response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+      response.writeHead(404, {
+        'content-type': 'text/plain; charset=utf-8',
+        'content-security-policy': PWA_SHELL_CSP,
+        'x-content-type-options': 'nosniff',
+      })
       response.end('not found')
       return
     }
@@ -118,6 +122,8 @@ function handleShellHttp(
       'content-type': file.type,
       'content-length': file.body.byteLength,
       'cache-control': 'no-store',
+      'content-security-policy': PWA_SHELL_CSP,
+      'x-content-type-options': 'nosniff',
     })
     response.end(method === 'HEAD' ? undefined : file.body)
   } catch (cause) {
@@ -127,6 +133,8 @@ function handleShellHttp(
     response.writeHead(status, {
       'content-type': 'application/json; charset=utf-8',
       'content-length': Buffer.byteLength(payload),
+      'content-security-policy': PWA_SHELL_CSP,
+      'x-content-type-options': 'nosniff',
     })
     response.end(payload)
   }

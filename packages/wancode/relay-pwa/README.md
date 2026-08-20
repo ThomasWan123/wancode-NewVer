@@ -42,8 +42,10 @@ directory links.
   `start_url`. `decidePwaCacheAction` caches only shell GET assets; token query
   keys and model credentials fail closed. POST control-plane calls stay
   network-only. `createPwaServiceWorkerSource` emits the matching worker; it
-  never listens. `createPwaShellFiles` returns `index.html`, the manifest, and
-  `sw.js`. `createPwaShellIcons` returns the 192 and 512 PNG marks. Checked-in
+  never listens. `createPwaShellFiles` returns `index.html`, the manifest,
+  `sw.js`, and `pair.js`. The index has no inline script. `PWA_SHELL_CSP`
+  forbids `unsafe-inline`, frames, and plugins. Loopback responses also send
+  `X-Content-Type-Options: nosniff`. `createPwaShellIcons` returns the 192 and 512 PNG marks. Checked-in
   copies live under `public/` and must match those generators. `createPwaDeployFiles`
   adds the PNG icons so a static HTTPS origin can host the installable shell
   without this package listening. The index form

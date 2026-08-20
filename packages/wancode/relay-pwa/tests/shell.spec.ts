@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
 import {
   createPwaIndexHtml,
+  createPwaPairingScriptSource,
   createPwaServiceWorkerSource,
   createPwaShellFiles,
   createPwaDeployFiles,
@@ -12,6 +13,7 @@ import {
   decidePwaCacheAction,
   assertPwaShellOrigin,
   PWA_SHELL_CACHE,
+  PWA_SHELL_CSP,
   PWA_SHELL_PATHS,
 } from '../src/index.ts'
 
@@ -33,14 +35,23 @@ describe('PWA installable shell', () => {
     expect(manifest.scope).toBe('./')
     expect(manifest.name).toBe('Wan Code')
     expect(JSON.stringify(manifest)).not.toMatch(/token|secret|credential|password|authorization/i)
-    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v1')
+    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v2')
+    expect(PWA_SHELL_CSP).toContain("script-src 'self'")
+    expect(PWA_SHELL_CSP).toContain("object-src 'none'")
+    expect(PWA_SHELL_CSP).toContain("frame-ancestors 'none'")
+    expect(PWA_SHELL_CSP).not.toContain('unsafe-inline')
     expect(PWA_SHELL_PATHS).toContain('/manifest.webmanifest')
+    expect(PWA_SHELL_PATHS).toContain('/pair.js')
   })
 
   it('caches only shell GET assets and never stores control-plane tokens', () => {
     expect(decidePwaCacheAction({
       method: 'GET',
       url: 'https://pwa.wancode.example/manifest.webmanifest',
+    })).toBe('cache-shell')
+    expect(decidePwaCacheAction({
+      method: 'GET',
+      url: 'https://pwa.wancode.example/pair.js',
     })).toBe('cache-shell')
     expect(decidePwaCacheAction({
       method: 'GET',
@@ -106,17 +117,20 @@ describe('PWA installable shell', () => {
     const files = createPwaShellFiles()
     expect(JSON.parse(files['manifest.webmanifest'])).toEqual(createPwaWebManifest())
     expect(files['sw.js']).toBe(createPwaServiceWorkerSource())
+    expect(files['pair.js']).toBe(createPwaPairingScriptSource())
     expect(files['index.html']).toContain('rel="manifest"')
     expect(files['index.html']).toContain('rel="apple-touch-icon"')
-    expect(files['index.html']).toContain("navigator.serviceWorker.register('./sw.js')")
+    expect(files['index.html']).toContain('src="./pair.js"')
+    expect(files['index.html']).not.toContain("navigator.serviceWorker.register('./sw.js')")
     expect(files['index.html']).toContain('<title>Wan Code</title>')
     expect(files['index.html']).toContain('name="origin"')
-    expect(files['index.html']).toContain('event.preventDefault()')
+    expect(files['pair.js']).toContain('event.preventDefault()')
+    expect(files['pair.js']).toContain("navigator.serviceWorker.register('./sw.js')")
     expect(files['index.html']).not.toContain('name="token"')
     expect(files['index.html']).toBe(createPwaIndexHtml())
     expect(JSON.stringify(files)).not.toMatch(/access_token|DEEPSEEK_API_KEY|privateKey/)
     expect(JSON.stringify(files)).not.toContain('listen(')
-    for (const name of ['index.html', 'manifest.webmanifest', 'sw.js'] as const) {
+    for (const name of ['index.html', 'manifest.webmanifest', 'sw.js', 'pair.js'] as const) {
       expect(readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8')).toBe(files[name])
     }
   })
@@ -131,6 +145,7 @@ describe('PWA installable shell', () => {
       'icons/wancode-512.png',
       'index.html',
       'manifest.webmanifest',
+      'pair.js',
       'sw.js',
     ])
     expect(JSON.stringify({

@@ -1,7 +1,7 @@
 import { request as httpRequest } from 'node:http'
 import { afterEach, describe, expect, it } from 'vitest'
 import { startPwaShellHost, type PwaShellHost } from '../src/host.ts'
-import { createPwaShellFiles, createPwaShellIcons } from '../src/index.ts'
+import { createPwaPairingScriptSource, createPwaShellFiles, createPwaShellIcons, PWA_SHELL_CSP } from '../src/index.ts'
 
 describe('PWA loopback shell host', () => {
   const hosts: PwaShellHost[] = []
@@ -19,7 +19,14 @@ describe('PWA loopback shell host', () => {
 
     const index = await fetch(host.url)
     expect(index.headers.get('content-type')).toContain('text/html')
+    expect(index.headers.get('content-security-policy')).toBe(PWA_SHELL_CSP)
+    expect(index.headers.get('x-content-type-options')).toBe('nosniff')
     expect(await index.text()).toBe(createPwaShellFiles()['index.html'])
+
+    const pairing = await fetch(new URL('pair.js', host.url))
+    expect(pairing.headers.get('content-type')).toContain('javascript')
+    expect(pairing.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(await pairing.text()).toBe(createPwaPairingScriptSource())
 
     const manifest = await fetch(new URL('manifest.webmanifest', host.url))
     expect(manifest.ok).toBe(true)
@@ -31,6 +38,8 @@ describe('PWA loopback shell host', () => {
 
     const missing = await fetch(new URL('missing.html', host.url))
     expect(missing.status).toBe(404)
+    expect(missing.headers.get('content-security-policy')).toBe(PWA_SHELL_CSP)
+    expect(missing.headers.get('x-content-type-options')).toBe('nosniff')
 
     const denied = await fetch(`${host.url}?access_token=tok-live`)
     expect(denied.status).toBe(403)

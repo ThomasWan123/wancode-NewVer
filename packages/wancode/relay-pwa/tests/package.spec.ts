@@ -45,6 +45,8 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('createPwaShellIcon')
     expect(pwa).toHaveProperty('createPwaShellIcons')
     expect(pwa).toHaveProperty('createPwaServiceWorkerSource')
+    expect(pwa).toHaveProperty('createPwaPairingScriptSource')
+    expect(pwa).toHaveProperty('PWA_SHELL_CSP')
     expect(pwa).toHaveProperty('decidePwaCacheAction')
     expect(pwa).toHaveProperty('assertPwaShellOrigin')
     expect(pwa).not.toHaveProperty('startPwaShellHost')

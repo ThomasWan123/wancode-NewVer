@@ -13,12 +13,27 @@ export const PWA_SHELL_PATHS = [
   '/index.html',
   '/manifest.webmanifest',
   '/sw.js',
+  '/pair.js',
   '/icons/wancode-192.png',
   '/icons/wancode-512.png',
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v1'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v2'
+
+/** Loopback host policy. No inline script, no credentialed connect-src. */
+export const PWA_SHELL_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*",
+  "img-src 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+].join('; ')
 
 const SHELL_PATHS = new Set<string>(PWA_SHELL_PATHS)
 
@@ -174,6 +189,36 @@ export function createPwaServiceWorkerSource(): string {
 }
 
 /**
+ * Return the pairing page script. It never listens, never stores tokens, and
+ * never embeds model credentials.
+ */
+export function createPwaPairingScriptSource(): string {
+  return [
+    '/* Wan Code PWA pairing shell. Never listen. Never store credentials. */',
+    "'use strict';",
+    "if ('serviceWorker' in navigator) {",
+    "  navigator.serviceWorker.register('./sw.js');",
+    '}',
+    "document.getElementById('pair').addEventListener('submit', function (event) {",
+    '  event.preventDefault();',
+    "  var status = document.getElementById('status');",
+    '  try {',
+    "    var parsed = new URL(event.target.elements.origin.value);",
+    "    if (parsed.username !== '' || parsed.password !== '') throw new Error('origin');",
+    '    parsed.searchParams.forEach(function (_value, key) {',
+    "      if (/token|secret|credential|password|authorization/i.test(key)) throw new Error('origin');",
+    '    });',
+    "    if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');",
+    "    status.textContent = 'Desktop keys stay on that machine.';",
+    '  } catch (error) {',
+    "    status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';",
+    '  }',
+    '});',
+    '',
+  ].join('\n')
+}
+
+/**
  * Return the installable index document. It registers the shell worker and
  * never embeds tokens or model credentials.
  */
@@ -199,26 +244,7 @@ export function createPwaIndexHtml(): string {
     '    </form>',
     '    <p id="status">Do not paste API keys or tokens.</p>',
     '  </main>',
-    '  <script>',
-    "    if ('serviceWorker' in navigator) {",
-    "      navigator.serviceWorker.register('./sw.js');",
-    '    }',
-    "    document.getElementById('pair').addEventListener('submit', function (event) {",
-    '      event.preventDefault();',
-    "      var status = document.getElementById('status');",
-    '      try {',
-    "        var parsed = new URL(event.target.elements.origin.value);",
-    "        if (parsed.username !== '' || parsed.password !== '') throw new Error('origin');",
-    "        parsed.searchParams.forEach(function (_value, key) {",
-    "          if (/token|secret|credential|password|authorization/i.test(key)) throw new Error('origin');",
-    '        });',
-    "        if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');",
-    "        status.textContent = 'Desktop keys stay on that machine.';",
-    '      } catch (error) {',
-    "        status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';",
-    '      }',
-    '    });',
-    '  </script>',
+    '  <script src="./pair.js"></script>',
     '</body>',
     '</html>',
     '',
@@ -230,11 +256,13 @@ export function createPwaShellFiles(): {
   readonly 'index.html': string
   readonly 'manifest.webmanifest': string
   readonly 'sw.js': string
+  readonly 'pair.js': string
 } {
   return {
     'index.html': createPwaIndexHtml(),
     'manifest.webmanifest': `${JSON.stringify(createPwaWebManifest(), null, 2)}\n`,
     'sw.js': createPwaServiceWorkerSource(),
+    'pair.js': createPwaPairingScriptSource(),
   }
 }
 
@@ -246,6 +274,7 @@ export function createPwaDeployFiles(): {
   readonly 'index.html': string
   readonly 'manifest.webmanifest': string
   readonly 'sw.js': string
+  readonly 'pair.js': string
   readonly 'icons/wancode-192.png': Buffer
   readonly 'icons/wancode-512.png': Buffer
 } {
