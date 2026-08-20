@@ -95,6 +95,7 @@ function handleShellHttp(
       throw new RelayAuthorizationError('malformed', 'pwa shell is not listening')
     }
     assertPwaShellHostHeader(request.headers.host, boundPort)
+    assertPwaShellOriginHeader(request.headers.origin, boundPort)
     const method = request.method ?? 'GET'
     if (method !== 'GET' && method !== 'HEAD') {
       throw new RelayAuthorizationError('malformed', 'pwa shell method is not supported')
@@ -141,6 +142,27 @@ function assertPwaShellHostHeader(header: string | undefined, port: number): voi
   ])
   if (!allowed.has(header)) {
     throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell host header must be loopback')
+  }
+}
+
+function assertPwaShellOriginHeader(header: string | string[] | undefined, port: number): void {
+  if (header === undefined) return
+  if (Array.isArray(header) || header.length === 0 || /[\0\r\n]/u.test(header) || header === 'null') {
+    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell origin header must be loopback')
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(header)
+  } catch {
+    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell origin header must be loopback')
+  }
+  const allowed = new Set([
+    `http://127.0.0.1:${port}`,
+    `http://localhost:${port}`,
+    `http://[::1]:${port}`,
+  ])
+  if (!allowed.has(parsed.origin)) {
+    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell origin header must be loopback')
   }
 }
 

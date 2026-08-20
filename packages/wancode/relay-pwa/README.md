@@ -49,9 +49,9 @@ directory links.
   without this package listening. The index form
   accepts a relay origin and never names token fields.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
-  credentialed URLs. `@wancode/relay-pwa/host` may serve that shell on
-  127.0.0.1 only; public binds and non-loopback Host headers fail closed. It
-  is not part of the default export.
+  credentialed URLs.   `@wancode/relay-pwa/host` may serve that shell on
+  127.0.0.1 only; public binds and non-loopback Host or Origin headers fail
+  closed. It is not part of the default export.
 - The default export has no listener and no loopback/cloud acceptor.
 
 This is not yet a shipped iOS or Android install on the public internet.

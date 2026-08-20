@@ -66,4 +66,31 @@ describe('PWA loopback shell host', () => {
     expect(denied.status).toBe(403)
     expect(JSON.parse(denied.body)).toEqual({ error: { code: 'inbound-forbidden' } })
   })
+
+  it('refuses a non-loopback Origin header and does not serve the shell', async () => {
+    const host = await startPwaShellHost()
+    hosts.push(host)
+    const denied = await new Promise<{ status: number, body: string }>((resolve, reject) => {
+      const request = httpRequest({
+        host: '127.0.0.1',
+        port: host.port,
+        path: '/',
+        headers: {
+          host: `127.0.0.1:${host.port}`,
+          origin: 'https://evil.example',
+        },
+      }, response => {
+        const chunks: Buffer[] = []
+        response.on('data', chunk => chunks.push(chunk))
+        response.on('end', () => resolve({
+          status: response.statusCode ?? 0,
+          body: Buffer.concat(chunks).toString('utf8'),
+        }))
+      })
+      request.on('error', reject)
+      request.end()
+    })
+    expect(denied.status).toBe(403)
+    expect(JSON.parse(denied.body)).toEqual({ error: { code: 'inbound-forbidden' } })
+  })
 })
