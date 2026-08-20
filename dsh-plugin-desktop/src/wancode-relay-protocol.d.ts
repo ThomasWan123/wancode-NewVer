@@ -6,6 +6,11 @@ declare module '@wancode/relay-protocol' {
     constructor(code: string, message: string)
   }
 
+  export function assertNoPlaintextRelayFields(
+    record: Record<string, unknown>,
+    label?: string,
+  ): void
+
   export function assertOutboundRelayUrl(url: string): URL
 
   export interface ConnectOutboundRelayInput {

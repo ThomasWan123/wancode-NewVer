@@ -3,6 +3,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
+  assertNoPlaintextRelayFields,
   assertOutboundRelayUrl,
   connectOutboundRelay,
   httpUrlFromOutboundRelayUrl,
@@ -238,6 +239,86 @@ export function prepareDesktopRelay(
 
 /** Same 8192-character follow-up cap as the PWA sender. */
 export const MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS = 8_192
+
+/** Compact progress detail for low-bandwidth PWA links. */
+export const MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS = 512
+
+const DESKTOP_RELAY_PROGRESS_TYPES = new Set([
+  'notify.tool',
+  'notify.approval',
+  'assistant.delta',
+  'assistant.done',
+  'session.complete',
+  'tool.progress',
+])
+
+/** Inputs used to seal one desktop progress event to a PWA. */
+export interface SealDesktopRelaySessionEventInput {
+  readonly identity: Pick<DesktopRelayIdentity, 'sealTo'>
+  readonly id: string
+  readonly sentAt: number
+  readonly userId: string
+  readonly recipientEncryptionPublicKey: string
+  readonly sessionId: string
+  readonly type: string
+  readonly detail: string
+}
+
+/**
+ * Seal a UI-neutral progress event to a PWA. Prompt text, unknown types, and
+ * oversized details fail closed so model credentials stay on the desktop.
+ */
+export function sealDesktopRelaySessionEvent(
+  input: SealDesktopRelaySessionEventInput,
+): Record<string, unknown> {
+  const payload: RelayApplicationPayload = {
+    kind: 'session-event',
+    sessionId: input.sessionId,
+    type: input.type,
+    detail: input.detail,
+  }
+  assertNoPlaintextRelayFields(payload as unknown as Record<string, unknown>, 'desktop relay progress')
+  if (input.sessionId.length === 0 || /[\0\r\n]/u.test(input.sessionId)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay progress session id is required')
+  }
+  if (!DESKTOP_RELAY_PROGRESS_TYPES.has(input.type)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay progress type is not supported')
+  }
+  if (input.detail.length === 0 || /[\0\r\n]/u.test(input.detail)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay progress detail is required')
+  }
+  if (input.detail.length > MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay progress detail is too large')
+  }
+  return input.identity.sealTo({
+    id: input.id,
+    sentAt: input.sentAt,
+    userId: input.userId,
+    recipientEncryptionPublicKey: input.recipientEncryptionPublicKey,
+    payload,
+  })
+}
+
+/**
+ * Send one sealed progress event to a PWA over the outbound socket. This never
+ * listens and never includes prompt text.
+ */
+export async function sendDesktopRelaySessionEvent(input: SealDesktopRelaySessionEventInput & {
+  readonly connection: DesktopRelayConnection
+  readonly destinationDeviceId: string
+}): Promise<{
+  readonly envelopeId: string
+  readonly toDeviceId: string
+  readonly outcome: 'delivered' | 'queued' | 'duplicate'
+}> {
+  if (input.destinationDeviceId.length === 0 || /[\0\r\n]/u.test(input.destinationDeviceId)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay progress destination is required')
+  }
+  return input.connection.send({
+    envelope: sealDesktopRelaySessionEvent(input),
+    destinationDeviceId: input.destinationDeviceId,
+  })
+}
 
 /** Sinks used to apply opened PWA mail without exposing model credentials. */
 export interface DesktopRelayApplySinks {

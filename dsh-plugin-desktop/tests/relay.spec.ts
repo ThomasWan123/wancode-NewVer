@@ -8,8 +8,11 @@ import {
   createDesktopRelayFollowUpSink,
   drainDesktopRelayMail,
   MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
+  MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS,
   prepareDesktopRelay,
   processDesktopRelayMail,
+  sealDesktopRelaySessionEvent,
+  sendDesktopRelaySessionEvent,
   type Config as RelayConfig,
 } from '../src/relay.ts'
 
@@ -432,6 +435,99 @@ describe('desktop outbound relay Host plugin', () => {
       getRequest: () => undefined,
     })({ sessionId: 'sess-1', requestId: 'req-missing' })).rejects.toMatchObject({
       code: 'malformed',
+    })
+  })
+
+  it('seals allowed session progress to a PWA without prompt text', async () => {
+    const envelope = { id: 'evt-1', kind: 'session-event' }
+    const sealTo = vi.fn(() => envelope)
+    expect(sealDesktopRelaySessionEvent({
+      identity: { sealTo },
+      id: 'evt-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      sessionId: 'sess-1',
+      type: 'notify.tool',
+      detail: 'Waiting for approval',
+    })).toBe(envelope)
+    expect(sealTo).toHaveBeenCalledWith({
+      id: 'evt-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      payload: {
+        kind: 'session-event',
+        sessionId: 'sess-1',
+        type: 'notify.tool',
+        detail: 'Waiting for approval',
+      },
+    })
+    expectRelayError(
+      () => sealDesktopRelaySessionEvent({
+        identity: { sealTo },
+        id: 'evt-2',
+        sentAt: 1_700_000_000_000,
+        userId: 'user-a',
+        recipientEncryptionPublicKey: 'enc-pwa',
+        sessionId: 'sess-1',
+        type: 'prompt',
+        detail: 'review the login form',
+      }),
+      'malformed',
+    )
+    expectRelayError(
+      () => sealDesktopRelaySessionEvent({
+        identity: { sealTo },
+        id: 'evt-3',
+        sentAt: 1_700_000_000_000,
+        userId: 'user-a',
+        recipientEncryptionPublicKey: 'enc-pwa',
+        sessionId: 'sess-1',
+        type: 'assistant.delta',
+        detail: 'x'.repeat(MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS + 1),
+      }),
+      'malformed',
+    )
+    expect(sealTo).toHaveBeenCalledOnce()
+  })
+
+  it('sends sealed progress over the outbound socket without listening', async () => {
+    const envelope = { id: 'evt-1', kind: 'session-event' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(async () => ({
+        envelopeId: 'evt-1',
+        toDeviceId: 'pwa-1',
+        outcome: 'delivered' as const,
+      })),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    await expect(sendDesktopRelaySessionEvent({
+      connection,
+      destinationDeviceId: 'pwa-1',
+      identity: { sealTo: vi.fn(() => envelope) },
+      id: 'evt-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      sessionId: 'sess-1',
+      type: 'assistant.done',
+      detail: 'Complete',
+    })).resolves.toEqual({
+      envelopeId: 'evt-1',
+      toDeviceId: 'pwa-1',
+      outcome: 'delivered',
+    })
+    expect(connection.send).toHaveBeenCalledWith({
+      envelope,
+      destinationDeviceId: 'pwa-1',
     })
   })
 })

@@ -37,7 +37,10 @@ Status: active
   immediately. Follow-up text is required and capped. Checked-in `public/`
   shell files, including PNG icons, match the generators. Desktop identity can
   open sealed PWA follow-ups without exposing private keys,
-  and can `sealTo` a PWA encryption public key. `drainDesktopRelayMail` reclaims
+  and can `sealTo` a PWA encryption public key. `sealDesktopRelaySessionEvent`
+  allows only compact progress types and never seals prompt text.
+  `sendDesktopRelaySessionEvent` pushes that box over the outbound socket.
+  `drainDesktopRelayMail` reclaims
   queued boxes and acks only queued ids. `processDesktopRelayMail` applies
   follow-ups locally first and acks queued ids only after that sink succeeds.
   `applyDesktopRelayPayloads` hands follow-ups to a local session sink so
