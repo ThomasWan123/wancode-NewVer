@@ -13,6 +13,8 @@ import {
   processDesktopRelayMail,
   sealDesktopRelaySessionEvent,
   sendDesktopRelaySessionEvent,
+  sealDesktopRelayPresence,
+  sendDesktopRelayPresence,
   type Config as RelayConfig,
 } from '../src/relay.ts'
 
@@ -584,5 +586,86 @@ describe('desktop outbound relay Host plugin', () => {
     })
     handle?.dispose()
     expect(connection.close).toHaveBeenCalledOnce()
+  })
+
+  it('seals presence to a PWA and refuses unknown states', () => {
+    const envelope = { id: 'pres-1', kind: 'presence' }
+    const sealTo = vi.fn(() => envelope)
+    expect(sealDesktopRelayPresence({
+      identity: { sealTo },
+      id: 'pres-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      state: 'offline',
+    })).toBe(envelope)
+    expect(sealTo).toHaveBeenCalledWith({
+      id: 'pres-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      payload: { kind: 'presence', state: 'offline' },
+    })
+    expectRelayError(
+      () => sealDesktopRelayPresence({
+        identity: { sealTo },
+        id: 'pres-2',
+        sentAt: 1_700_000_000_000,
+        userId: 'user-a',
+        recipientEncryptionPublicKey: 'enc-pwa',
+        state: 'away' as 'online',
+      }),
+      'malformed',
+    )
+    expect(sealTo).toHaveBeenCalledOnce()
+  })
+
+  it('sends sealed presence over the outbound socket without listening', async () => {
+    const envelope = { id: 'pres-1', kind: 'presence' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(async () => ({
+        envelopeId: 'pres-1',
+        toDeviceId: 'pwa-1',
+        outcome: 'delivered' as const,
+      })),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    await expect(sendDesktopRelayPresence({
+      connection,
+      destinationDeviceId: 'pwa-1',
+      identity: { sealTo: vi.fn(() => envelope) },
+      id: 'pres-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      state: 'online',
+    })).resolves.toEqual({
+      envelopeId: 'pres-1',
+      toDeviceId: 'pwa-1',
+      outcome: 'delivered',
+    })
+  })
+
+  it('refuses to send presence before the outbound socket is connected', async () => {
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn())
+    await expect(handle?.sendPresence({
+      destinationDeviceId: 'pwa-1',
+      identity: { sealTo: vi.fn() },
+      id: 'pres-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'user-a',
+      recipientEncryptionPublicKey: 'enc-pwa',
+      state: 'online',
+    })).rejects.toMatchObject({ code: 'malformed' })
   })
 })

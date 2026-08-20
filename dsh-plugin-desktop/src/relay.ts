@@ -150,6 +150,13 @@ export interface DesktopRelayHandle {
     readonly toDeviceId: string
     readonly outcome: 'delivered' | 'queued' | 'duplicate'
   }>
+  sendPresence(input: SealDesktopRelayPresenceInput & {
+    readonly destinationDeviceId: string
+  }): Promise<{
+    readonly envelopeId: string
+    readonly toDeviceId: string
+    readonly outcome: 'delivered' | 'queued' | 'duplicate'
+  }>
   dispose(): void
 }
 
@@ -243,6 +250,12 @@ export function prepareDesktopRelay(
       }
       return sendDesktopRelaySessionEvent({ connection, ...input })
     },
+    async sendPresence(input) {
+      if (connection === undefined) {
+        throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
+      }
+      return sendDesktopRelayPresence({ connection, ...input })
+    },
     dispose() {
       connection?.close()
       connection = undefined
@@ -329,6 +342,56 @@ export async function sendDesktopRelaySessionEvent(input: SealDesktopRelaySessio
   }
   return input.connection.send({
     envelope: sealDesktopRelaySessionEvent(input),
+    destinationDeviceId: input.destinationDeviceId,
+  })
+}
+
+/** Inputs used to seal desktop presence to a PWA. Prompt text never appears. */
+export interface SealDesktopRelayPresenceInput {
+  readonly identity: Pick<DesktopRelayIdentity, 'sealTo'>
+  readonly id: string
+  readonly sentAt: number
+  readonly userId: string
+  readonly recipientEncryptionPublicKey: string
+  readonly state: 'online' | 'offline'
+}
+
+/**
+ * Seal a presence frame to a PWA. Unknown states fail closed.
+ */
+export function sealDesktopRelayPresence(
+  input: SealDesktopRelayPresenceInput,
+): Record<string, unknown> {
+  if (input.state !== 'online' && input.state !== 'offline') {
+    throw new RelayAuthorizationError('malformed', 'desktop relay presence state is invalid')
+  }
+  const payload: RelayApplicationPayload = { kind: 'presence', state: input.state }
+  assertNoPlaintextRelayFields(payload as unknown as Record<string, unknown>, 'desktop relay presence')
+  return input.identity.sealTo({
+    id: input.id,
+    sentAt: input.sentAt,
+    userId: input.userId,
+    recipientEncryptionPublicKey: input.recipientEncryptionPublicKey,
+    payload,
+  })
+}
+
+/**
+ * Send one sealed presence frame to a PWA over the outbound socket.
+ */
+export async function sendDesktopRelayPresence(input: SealDesktopRelayPresenceInput & {
+  readonly connection: DesktopRelayConnection
+  readonly destinationDeviceId: string
+}): Promise<{
+  readonly envelopeId: string
+  readonly toDeviceId: string
+  readonly outcome: 'delivered' | 'queued' | 'duplicate'
+}> {
+  if (input.destinationDeviceId.length === 0 || /[\0\r\n]/u.test(input.destinationDeviceId)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay presence destination is required')
+  }
+  return input.connection.send({
+    envelope: sealDesktopRelayPresence(input),
     destinationDeviceId: input.destinationDeviceId,
   })
 }

@@ -42,7 +42,7 @@ Status: active
   allows only compact progress types and never seals prompt text.
   `sendDesktopRelaySessionEvent` pushes that box over the outbound socket.
   After connect, `sendProgress` uses the same path and refuses to send before
-  the socket exists. `drainDesktopRelayMail` reclaims
+  the socket exists. `sendPresence` seals online/offline frames the same way. `drainDesktopRelayMail` reclaims
   queued boxes and acks only queued ids. `processDesktopRelayMail` applies
   follow-ups locally first and acks queued ids only after that sink succeeds.
   `applyDesktopRelayPayloads` hands follow-ups to a local session sink so
@@ -51,7 +51,9 @@ Status: active
   request ids.
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail
-  closed. It does not listen on a public interface. `assertPwaShellOrigin`
+  closed. It does not listen on a public interface. `createPwaDeployFiles`
+  includes PNG icons so a static HTTPS origin can host the shell.
+  `assertPwaShellOrigin`
   requires HTTPS or loopback HTTP so a public install cannot use cleartext.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
