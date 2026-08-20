@@ -40,6 +40,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   `createPwaShellIcons` 返回 192 与 512 PNG。检入的副本在 `public/`，必须与
   生成器一致。`createPwaDeployFiles` 附带 PNG 图标，静态 HTTPS 源可托管可安装
   shell，而本包自己不监听。首页表单只收集 Relay origin，从不命名 token 字段。
+  首页包含 Apple 与 Android 主屏安装 meta。
   `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL 失败关闭。
   `@wancode/relay-pwa/host` 只在 127.0.0.1 上托管该 shell，公网
   绑定和非回环 Host / Origin / Referer 头失败关闭，且不在默认导出中。

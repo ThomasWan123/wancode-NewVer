@@ -19,7 +19,7 @@ export const PWA_SHELL_PATHS = [
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list or worker changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v3'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v4'
 
 /** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
 export type PwaCacheRetention = 'keep' | 'delete'
@@ -250,6 +250,10 @@ export function createPwaIndexHtml(): string {
     '  <meta charset="utf-8">',
     '  <meta name="viewport" content="width=device-width, initial-scale=1">',
     '  <meta name="theme-color" content="#0b0f14">',
+    '  <meta name="mobile-web-app-capable" content="yes">',
+    '  <meta name="apple-mobile-web-app-capable" content="yes">',
+    '  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
+    '  <meta name="apple-mobile-web-app-title" content="Wan Code">',
     '  <link rel="manifest" href="./manifest.webmanifest">',
     '  <link rel="apple-touch-icon" href="./icons/wancode-192.png">',
     '  <title>Wan Code</title>',
