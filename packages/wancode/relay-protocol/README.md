@@ -61,7 +61,7 @@ that handshake, the same default export can `registerOutboundRelayDevice`,
 `revokeOutboundRelayDevice` over HTTPS (or loopback HTTP). Device list uses
 POST `/v1/devices/list` with the assertion in the body, never on the query
 string. Listed signing and encryption keys must be Ed25519 and X25519.
-Only live devices on the presented account are returned; private
+The account list omits rows whose keys fail that check. Only live devices on the presented account are returned; private
 keys are omitted. Redirects are re-checked, credentials never appear on the
 URL or request, and private keys are refused. This package
 is not an inbound Host surface. `@wancode/relay-protocol/loopback` is a

@@ -80,7 +80,8 @@ export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevic
 
 /**
  * List live devices for one account. Revoked rows are omitted. Device records
- * never carry private keys.
+ * never carry private keys. Rows whose signing or encryption keys are not
+ * Ed25519 or X25519 are omitted so a poisoned store cannot fail the whole list.
  */
 export function listRelayAccountDevices(input: {
   readonly userId: string
@@ -91,7 +92,21 @@ export function listRelayAccountDevices(input: {
   return input.store.listDevices().filter(device => (
     device.userId === userId
     && (device.revokedAt === undefined || device.revokedAt > input.now)
+    && hasTrustedListedKeys(device)
   ))
+}
+
+function hasTrustedListedKeys(device: RelayDevice): boolean {
+  try {
+    assertDevicePublicKey(device.publicKey)
+    if (device.encryptionPublicKey !== undefined) {
+      assertDeviceEncryptionPublicKey(device.encryptionPublicKey)
+    }
+    return true
+  } catch (cause) {
+    if (cause instanceof RelayAuthorizationError) return false
+    throw cause
+  }
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   createStaticOidcIdentityProvider,
   dispatchRelayEnvelope,
   generateDeviceKeyPair,
+  listRelayAccountDevices,
   registerRelayDevice,
   revokeRelayDevice,
 } from '../src/index.ts'
@@ -198,5 +199,32 @@ describe('replaceable OIDC identity and device registration', () => {
       now: NOW,
       store,
     }), 'untrusted-key')
+  })
+
+  it('omits listed devices whose keys are not Ed25519 or X25519', () => {
+    const store = createMemoryRelayStore()
+    const keys = generateDeviceKeyPair()
+    store.putDevice({
+      deviceId: 'desktop-good',
+      userId: 'user-a',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+    })
+    store.putDevice({
+      deviceId: 'desktop-bad',
+      userId: 'user-a',
+      publicKey: 'not-ed25519',
+      encryptionPublicKey: 'not-x25519',
+    })
+    expect(listRelayAccountDevices({
+      userId: 'user-a',
+      now: NOW,
+      store,
+    })).toEqual([{
+      deviceId: 'desktop-good',
+      userId: 'user-a',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+    }])
   })
 })
