@@ -641,6 +641,40 @@ export function createDesktopRelayCancelSink(input: {
   }
 }
 
+/**
+ * Bind follow-up, approval, and cancel to live desktop lookups. Missing
+ * sessions or request ids fail closed so PWA mail cannot hit the wrong Host
+ * session. This does not listen and does not inject Host services.
+ */
+export function createDesktopRelayApplySinks(input: {
+  readonly getSession: (sessionId: string) => {
+    readonly submit: (text: string) => Promise<void>
+  } | undefined
+  readonly getRequest: (input: {
+    readonly sessionId: string
+    readonly requestId: string
+  }) => {
+    readonly decide: (approved: boolean) => Promise<void>
+    readonly cancel: () => Promise<void>
+  } | undefined
+}): Required<DesktopRelayApplySinks> {
+  return {
+    followUp: createDesktopRelayFollowUpSink({ getSession: input.getSession }),
+    approval: createDesktopRelayApprovalSink({
+      getRequest: request => {
+        const found = input.getRequest(request)
+        return found === undefined ? undefined : { decide: found.decide }
+      },
+    }),
+    cancel: createDesktopRelayCancelSink({
+      getRequest: request => {
+        const found = input.getRequest(request)
+        return found === undefined ? undefined : { cancel: found.cancel }
+      },
+    }),
+  }
+}
+
 function relayEnvelopeId(envelope: unknown): string {
   if (envelope !== null && typeof envelope === 'object' && !Array.isArray(envelope)) {
     const id = (envelope as { id?: unknown }).id

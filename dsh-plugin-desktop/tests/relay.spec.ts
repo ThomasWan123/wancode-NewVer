@@ -6,6 +6,7 @@ import {
   createDesktopRelayApprovalSink,
   createDesktopRelayCancelSink,
   createDesktopRelayFollowUpSink,
+  createDesktopRelayApplySinks,
   drainDesktopRelayMail,
   MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
   MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS,
@@ -449,6 +450,35 @@ describe('desktop outbound relay Host plugin', () => {
     })({ sessionId: 'sess-1', requestId: 'req-missing' })).rejects.toMatchObject({
       code: 'malformed',
     })
+  })
+
+  it('builds follow-up, approval, and cancel sinks from one live lookup', async () => {
+    const submit = vi.fn(async () => undefined)
+    const decide = vi.fn(async () => undefined)
+    const cancel = vi.fn(async () => undefined)
+    const sinks = createDesktopRelayApplySinks({
+      getSession: sessionId => sessionId === 'sess-1' ? { submit } : undefined,
+      getRequest: request => (
+        request.sessionId === 'sess-1' && request.requestId === 'req-1'
+          ? { decide, cancel }
+          : undefined
+      ),
+    })
+    await sinks.followUp({ sessionId: 'sess-1', text: 'review the login form' })
+    await sinks.approval({ sessionId: 'sess-1', requestId: 'req-1', approved: true })
+    await sinks.cancel({ sessionId: 'sess-1', requestId: 'req-1' })
+    expect(submit).toHaveBeenCalledWith('review the login form')
+    expect(decide).toHaveBeenCalledWith(true)
+    expect(cancel).toHaveBeenCalledOnce()
+    await expect(sinks.followUp({
+      sessionId: 'sess-missing',
+      text: 'review the login form',
+    })).rejects.toMatchObject({ code: 'malformed' })
+    await expect(sinks.approval({
+      sessionId: 'sess-1',
+      requestId: 'req-missing',
+      approved: false,
+    })).rejects.toMatchObject({ code: 'malformed' })
   })
 
   it('seals allowed session progress to a PWA without prompt text', async () => {
