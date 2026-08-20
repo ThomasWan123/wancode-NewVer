@@ -128,5 +128,13 @@ describe('PWA session projections', () => {
       }),
       'malformed',
     )
+    expectRelayError(
+      () => projectRelaySessionView({
+        kind: 'cancel',
+        sessionId: 'sess-1',
+        requestId: '',
+      }),
+      'malformed',
+    )
   })
 })

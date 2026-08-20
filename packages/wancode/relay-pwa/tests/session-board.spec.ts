@@ -121,6 +121,15 @@ describe('PWA session board', () => {
       () => board.snapshot(''),
       'malformed',
     )
+    expectRelayError(
+      () => board.apply({
+        kind: 'approval',
+        sessionId: 'sess-1',
+        requestId: '',
+        approved: true,
+      }),
+      'malformed',
+    )
   })
 
   it('refuses model credential fields on a session view', () => {

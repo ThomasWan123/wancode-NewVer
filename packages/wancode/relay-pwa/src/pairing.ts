@@ -23,6 +23,8 @@ import { assertPwaShellOrigin } from './shell.ts'
 import {
   projectRelayNotification,
   projectRelaySessionView,
+  assertPwaSessionId,
+  assertPwaRequestId,
   type RelayNotificationView,
   type RelaySessionView,
 } from './session-view.ts'
@@ -188,6 +190,7 @@ export async function createPwaRelayController(
       if (followUp.text.length > MAX_PWA_FOLLOW_UP_CHARS) {
         throw new RelayAuthorizationError('malformed', 'pwa follow-up text is too large')
       }
+      assertPwaSessionId(followUp.sessionId)
       const delivery = await sendSealed('prompt', followUp.id, {
         kind: 'prompt',
         sessionId: followUp.sessionId,
@@ -198,6 +201,8 @@ export async function createPwaRelayController(
     },
     async sendApproval(approval) {
       assertPwaRelayRecord(approval as unknown as Record<string, unknown>, 'pwa approval')
+      assertPwaSessionId(approval.sessionId)
+      assertPwaRequestId(approval.requestId)
       const delivery = await sendSealed('approval', approval.id, {
         kind: 'approval',
         sessionId: approval.sessionId,
@@ -214,6 +219,8 @@ export async function createPwaRelayController(
     },
     async sendCancel(cancel) {
       assertPwaRelayRecord(cancel as unknown as Record<string, unknown>, 'pwa cancel')
+      assertPwaSessionId(cancel.sessionId)
+      assertPwaRequestId(cancel.requestId)
       const delivery = await sendSealed('cancel', cancel.id, {
         kind: 'cancel',
         sessionId: cancel.sessionId,

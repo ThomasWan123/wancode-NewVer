@@ -5,6 +5,7 @@ export {
   projectRelaySessionView,
   assertPwaProgressDetail,
   assertPwaSessionId,
+  assertPwaRequestId,
   MAX_PWA_PROGRESS_DETAIL_CHARS,
   type RelayNotificationView,
   type RelaySessionView,

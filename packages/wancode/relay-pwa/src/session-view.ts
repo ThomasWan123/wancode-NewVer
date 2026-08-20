@@ -49,6 +49,7 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
       }
     case 'approval':
       assertPwaSessionId(payload.sessionId)
+      assertPwaRequestId(payload.requestId)
       return {
         kind: 'approval',
         sessionId: payload.sessionId,
@@ -57,6 +58,7 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
       }
     case 'cancel':
       assertPwaSessionId(payload.sessionId)
+      assertPwaRequestId(payload.requestId)
       return {
         kind: 'cancel',
         sessionId: payload.sessionId,
@@ -100,5 +102,14 @@ export function assertPwaProgressDetail(detail: string): void {
 export function assertPwaSessionId(sessionId: string): void {
   if (typeof sessionId !== 'string' || sessionId.length === 0 || /[\0\r\n]/u.test(sessionId)) {
     throw new RelayAuthorizationError('malformed', 'pwa session id is required')
+  }
+}
+
+/**
+ * Refuse an empty request id so a PWA cannot approve or cancel the wrong tool.
+ */
+export function assertPwaRequestId(requestId: string): void {
+  if (typeof requestId !== 'string' || requestId.length === 0 || /[\0\r\n]/u.test(requestId)) {
+    throw new RelayAuthorizationError('malformed', 'pwa request id is required')
   }
 }
