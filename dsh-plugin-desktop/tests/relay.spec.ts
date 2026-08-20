@@ -8,7 +8,9 @@ import {
   createDesktopRelayFollowUpSink,
   createDesktopRelayApplySinks,
   createDesktopRelayHostApplySinks,
+  lookupDesktopRelayHostApplySinks,
   drainDesktopRelayMail,
+  inject,
   MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
   MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS,
   prepareDesktopRelay,
@@ -40,6 +42,7 @@ describe('desktop outbound relay Host plugin', () => {
     const effect = vi.fn()
     apply({ effect } as unknown as Context, idleConfig())
     expect(effect).not.toHaveBeenCalled()
+    expect(inject).toEqual([])
   })
 
   it('refuses a cleartext non-loopback URL and does not open a socket', () => {
@@ -469,6 +472,44 @@ describe('desktop outbound relay Host plugin', () => {
     })
     await expect(handle?.processMail({
       identity: { openSealed: vi.fn() },
+    })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
+  it('probes optional Host sessions without injecting them', async () => {
+    expect(lookupDesktopRelayHostApplySinks({ get: () => undefined })).toBeUndefined()
+    const prompt = vi.fn(async () => undefined)
+    const respond = vi.fn(async () => undefined)
+    const cancel = vi.fn(async () => undefined)
+    const sinks = lookupDesktopRelayHostApplySinks({
+      get(name) {
+        if (name === 'sessions') {
+          return {
+            get: (sessionId: string) => sessionId === 'sess-1' ? { prompt } : undefined,
+          }
+        }
+        if (name === 'approvals') {
+          return {
+            get: (request: { sessionId: string, requestId: string }) => (
+              request.sessionId === 'sess-1' && request.requestId === 'req-1'
+                ? { respond, cancel }
+                : undefined
+            ),
+          }
+        }
+        return undefined
+      },
+    })
+    expect(sinks).toBeDefined()
+    await sinks?.followUp({ sessionId: 'sess-1', text: 'review the login form' })
+    await sinks?.approval({ sessionId: 'sess-1', requestId: 'req-1', approved: true })
+    expect(prompt).toHaveBeenCalledWith(
+      [{ type: 'text', text: 'review the login form' }],
+      'queue',
+    )
+    expect(respond).toHaveBeenCalledWith('allowed-once')
+    await expect(sinks?.followUp({
+      sessionId: 'sess-missing',
+      text: 'review the login form',
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 

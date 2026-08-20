@@ -797,12 +797,59 @@ function relayEnvelopeId(envelope: unknown): string {
 }
 
 /**
+ * Probe optional Host services for PWA mail sinks. Missing sessions return
+ * undefined so the plugin stays idle without injecting Host services.
+ */
+export function lookupDesktopRelayHostApplySinks(ctx: {
+  readonly get: (name: string) => unknown
+}): Required<DesktopRelayApplySinks> | undefined {
+  const sessions = ctx.get('sessions')
+  if (!hasGet(sessions)) return undefined
+  const approvals = ctx.get('approvals')
+  return createDesktopRelayHostApplySinks({
+    getSession: sessionId => asHostSession(sessions.get(sessionId)),
+    getRequest: request => asHostApprovalRequest(approvals, request),
+  })
+}
+
+function hasGet(value: unknown): value is { get: (id: string) => unknown } {
+  return value !== null && typeof value === 'object' && typeof (value as { get?: unknown }).get === 'function'
+}
+
+function asHostSession(value: unknown): DesktopRelayHostSession | undefined {
+  if (value === null || typeof value !== 'object') return undefined
+  if (typeof (value as { prompt?: unknown }).prompt !== 'function') return undefined
+  return value as DesktopRelayHostSession
+}
+
+function asHostApprovalRequest(
+  store: unknown,
+  request: { readonly sessionId: string, readonly requestId: string },
+): DesktopRelayHostApprovalRequest | undefined {
+  if (store === null || typeof store !== 'object') return undefined
+  const get = (store as { get?: unknown }).get
+  if (typeof get !== 'function') return undefined
+  const record = (get as (input: {
+    readonly sessionId: string
+    readonly requestId: string
+  }) => unknown).call(store, request)
+  if (record === null || typeof record !== 'object') return undefined
+  if (typeof (record as { respond?: unknown }).respond !== 'function') return undefined
+  if (typeof (record as { cancel?: unknown }).cancel !== 'function') return undefined
+  return record as DesktopRelayHostApprovalRequest
+}
+
+/**
  * Register an effect-scoped outbound relay handle. No listener is created.
- * @param ctx - Host context used only for effect disposal.
+ * Optional Host sessions are probed without adding a required inject.
+ * @param ctx - Host context used for effect disposal and optional lookups.
  * @param config - validated opt-in relay policy.
  */
 export function apply(ctx: Context, config: Config): void {
-  const handle = prepareDesktopRelay(config)
+  const applySinks = typeof ctx.get === 'function' ? lookupDesktopRelayHostApplySinks(ctx) : undefined
+  const handle = applySinks === undefined
+    ? prepareDesktopRelay(config)
+    : prepareDesktopRelay(config, connectOutboundRelay, defaultControl, applySinks)
   if (handle === undefined) return
   ctx.effect(
     () => () => { handle.dispose() },
