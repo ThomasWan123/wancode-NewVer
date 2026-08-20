@@ -42,6 +42,7 @@ export {
 export {
   createPwaRelayController,
   assertPwaDesktopSelection,
+  isSelectablePwaDesktop,
   type CreatePwaRelayControllerInput,
   type PwaRelayController,
   type PwaRelayDesktop,

@@ -120,6 +120,29 @@ export function assertPwaDesktopSelection(
 }
 
 /**
+ * Whether a listed device can be a pairing target. Local ids and untrusted
+ * encryption keys are omitted rather than offered for follow-ups.
+ */
+export function isSelectablePwaDesktop(
+  device: {
+    readonly deviceId: string
+    readonly encryptionPublicKey?: string
+  },
+  selfDeviceId: string,
+): boolean {
+  if (typeof device.encryptionPublicKey !== 'string') return false
+  try {
+    assertPwaDesktopSelection({
+      deviceId: device.deviceId,
+      encryptionPublicKey: device.encryptionPublicKey,
+    }, selfDeviceId)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Register the PWA device, mint a token, and dial the relay outbound.
  * Model credentials are refused. The desktop keeps those keys locally.
  */
@@ -195,10 +218,7 @@ export async function createPwaRelayController(
         httpUrl: input.httpUrl,
         assertion: input.assertion,
       })
-      return devices.filter(device => (
-        device.deviceId !== published.deviceId
-        && typeof device.encryptionPublicKey === 'string'
-      ))
+      return devices.filter(device => isSelectablePwaDesktop(device, published.deviceId))
     },
     selectDesktop(desktop) {
       assertPwaRelayRecord(desktop as unknown as Record<string, unknown>, 'pwa relay desktop')

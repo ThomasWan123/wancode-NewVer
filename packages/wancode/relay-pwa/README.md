@@ -29,7 +29,8 @@ directory links.
 -   `createPwaRelayController` registers the PWA device, mints a short-lived
   token, and dials the relay. Public HTTP origins fail closed before enroll. The desktop may be selected later via
   `listDesktops` / `selectDesktop`. Selecting the local PWA device, an empty
-  desktop id, or a non-X25519 encryption key fails closed. Revoked desktops are omitted. Follow-ups, approvals, and cancels are
+  desktop id, or a non-X25519 encryption key fails closed. `listDesktops`
+  omits those same devices. Revoked desktops are omitted. Follow-ups, approvals, and cancels are
   sealed to that desktop encryption public key. Presence frames are sealed the
   same way. Follow-up text is required and capped so low-bandwidth links stay
   bounded. Handshake nonces come from WebCrypto, not `node:crypto`. Closed sessions refuse send and drain until `reconnect`.

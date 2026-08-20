@@ -40,6 +40,7 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('MAX_PWA_PROGRESS_DETAIL_CHARS')
     expect(pwa).toHaveProperty('createPwaRelayController')
     expect(pwa).toHaveProperty('assertPwaDesktopSelection')
+    expect(pwa).toHaveProperty('isSelectablePwaDesktop')
     expect(pwa).toHaveProperty('createPwaSessionBoard')
     expect(pwa).toHaveProperty('createPwaWebManifest')
     expect(pwa).toHaveProperty('createPwaIndexHtml')

@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, assertPwaDesktopSelection } from '../src/index.ts'
+import { createPwaRelayController, assertPwaDesktopSelection, isSelectablePwaDesktop } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -515,6 +515,26 @@ describe('PWA relay pairing', () => {
         encryptionPublicKey: pwa.keyPair.encryptionPublicKey,
       },
     }), 'malformed')
+  })
+
+  it('omits the local PWA and untrusted encryption keys from desktop lists', () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    expect(isSelectablePwaDesktop({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }, pwa.deviceId)).toBe(true)
+    expect(isSelectablePwaDesktop({
+      deviceId: pwa.deviceId,
+      encryptionPublicKey: pwa.keyPair.encryptionPublicKey,
+    }, pwa.deviceId)).toBe(false)
+    expect(isSelectablePwaDesktop({
+      deviceId: desktop.deviceId,
+    }, pwa.deviceId)).toBe(false)
+    expect(isSelectablePwaDesktop({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: 'not-an-x25519-key',
+    }, pwa.deviceId)).toBe(false)
   })
 
   it('refuses to pair when a model credential is supplied', async () => {

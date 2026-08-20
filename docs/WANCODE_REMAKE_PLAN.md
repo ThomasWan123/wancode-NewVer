@@ -29,7 +29,8 @@ Status: active
 - M3 started: `@wancode/relay-pwa` projects session events without prompt text
   or model credentials, lists same-account desktops, and can enroll as a PWA
   device then send sealed follow-ups, approvals, and cancels over outbound
-  HTTPS/WSS. Selecting the local PWA as the desktop fails closed. Handshake nonces use WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
+  HTTPS/WSS. Selecting the local PWA as the desktop fails closed.
+  `listDesktops` omits local ids and untrusted encryption keys. Handshake nonces use WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. Progress details are
   capped. Empty session ids and empty approval request ids fail closed. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
