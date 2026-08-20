@@ -1,10 +1,13 @@
 /* Wan Code PWA shell. Never listen. Never cache credentials. */
 'use strict';
-const CACHE = "wancode-pwa-shell-v2";
+const CACHE = "wancode-pwa-shell-v3";
 const SHELL = ["/","/index.html","/manifest.webmanifest","/sw.js","/pair.js","/icons/wancode-192.png","/icons/wancode-512.png"];
 const CREDENTIAL_QUERY = /token|secret|credential|password|authorization/iu;
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (event) => {
+  event.waitUntil(caches.keys().then((names) => Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (event) => {
   const request = event.request;

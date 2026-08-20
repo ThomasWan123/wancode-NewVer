@@ -41,8 +41,9 @@ directory links.
 - `createPwaWebManifest` returns a standalone install record with a relative
   `start_url`. `decidePwaCacheAction` caches only shell GET assets; token query
   keys and model credentials fail closed. POST control-plane calls stay
-  network-only. `createPwaServiceWorkerSource` emits the matching worker; it
-  never listens. `createPwaShellFiles` returns `index.html`, the manifest,
+  network-only. `decidePwaCacheRetention` keeps only the current shell cache
+  name. `createPwaServiceWorkerSource` emits the matching worker; on activate
+  it deletes stale caches, then claims clients. It never listens. `createPwaShellFiles` returns `index.html`, the manifest,
   `sw.js`, and `pair.js`. The index has no inline script. `PWA_SHELL_CSP`
   forbids `unsafe-inline`, frames, and plugins. Loopback responses also send
   `X-Content-Type-Options: nosniff`. `createPwaShellIcons` returns the 192 and 512 PNG marks. Checked-in

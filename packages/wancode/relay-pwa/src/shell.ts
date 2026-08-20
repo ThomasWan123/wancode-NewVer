@@ -18,8 +18,11 @@ export const PWA_SHELL_PATHS = [
   '/icons/wancode-512.png',
 ] as const
 
-/** Cache name for the installable shell. Bump when the asset list changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v2'
+/** Cache name for the installable shell. Bump when the asset list or worker changes. */
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v3'
+
+/** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
+export type PwaCacheRetention = 'keep' | 'delete'
 
 /** Loopback host policy. No inline script, no credentialed connect-src. */
 export const PWA_SHELL_CSP = [
@@ -114,6 +117,20 @@ export function decidePwaCacheAction(input: {
   return 'network-only'
 }
 
+/**
+ * Keep only the current shell cache. Stale versions, including the previous
+ * inline-script shell, are deleted on activate so they cannot be served.
+ */
+export function decidePwaCacheRetention(name: string): PwaCacheRetention {
+  if (typeof name !== 'string' || name.length === 0 || /[\0\r\n]/u.test(name)) {
+    throw new RelayAuthorizationError('malformed', 'pwa cache name is required')
+  }
+  if (CREDENTIAL_QUERY.test(name)) {
+    throw new RelayAuthorizationError('plaintext', 'pwa cache name must not carry credentials')
+  }
+  return name === PWA_SHELL_CACHE ? 'keep' : 'delete'
+}
+
 function parsePwaRequestUrl(url: string): URL {
   let parsed: URL
   try {
@@ -171,7 +188,10 @@ export function createPwaServiceWorkerSource(): string {
     `const SHELL = ${JSON.stringify([...PWA_SHELL_PATHS])};`,
     'const CREDENTIAL_QUERY = /token|secret|credential|password|authorization/iu;',
     "self.addEventListener('install', (event) => {",
-    '  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));',
+    '  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));',
+    '});',
+    "self.addEventListener('activate', (event) => {",
+    '  event.waitUntil(caches.keys().then((names) => Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name)))).then(() => self.clients.claim()));',
     '});',
     "self.addEventListener('fetch', (event) => {",
     '  const request = event.request;',

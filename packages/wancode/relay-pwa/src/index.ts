@@ -23,10 +23,12 @@ export {
   createPwaDeployFiles,
   createPwaWebManifest,
   decidePwaCacheAction,
+  decidePwaCacheRetention,
   PWA_SHELL_CACHE,
   PWA_SHELL_CSP,
   PWA_SHELL_PATHS,
   type PwaCacheDecision,
+  type PwaCacheRetention,
   type PwaWebManifest,
 } from './shell.ts'
 export {

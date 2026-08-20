@@ -11,6 +11,7 @@ import {
   createPwaShellIcons,
   createPwaWebManifest,
   decidePwaCacheAction,
+  decidePwaCacheRetention,
   assertPwaShellOrigin,
   PWA_SHELL_CACHE,
   PWA_SHELL_CSP,
@@ -35,7 +36,7 @@ describe('PWA installable shell', () => {
     expect(manifest.scope).toBe('./')
     expect(manifest.name).toBe('Wan Code')
     expect(JSON.stringify(manifest)).not.toMatch(/token|secret|credential|password|authorization/i)
-    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v2')
+    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v3')
     expect(PWA_SHELL_CSP).toContain("script-src 'self'")
     expect(PWA_SHELL_CSP).toContain("object-src 'none'")
     expect(PWA_SHELL_CSP).toContain("frame-ancestors 'none'")
@@ -85,6 +86,14 @@ describe('PWA installable shell', () => {
     )
   })
 
+  it('deletes stale shell caches and refuses credentialed cache names', () => {
+    expect(decidePwaCacheRetention(PWA_SHELL_CACHE)).toBe('keep')
+    expect(decidePwaCacheRetention('wancode-pwa-shell-v1')).toBe('delete')
+    expect(decidePwaCacheRetention('wancode-pwa-shell-v2')).toBe('delete')
+    expectRelayError(() => decidePwaCacheRetention(''), 'malformed')
+    expectRelayError(() => decidePwaCacheRetention('token-cache'), 'plaintext')
+  })
+
   it('accepts HTTPS or loopback origins and refuses credentialed public HTTP', () => {
     expect(assertPwaShellOrigin('https://pwa.wancode.example/').href).toBe('https://pwa.wancode.example/')
     expect(assertPwaShellOrigin('http://127.0.0.1:4173/').href).toBe('http://127.0.0.1:4173/')
@@ -106,7 +115,11 @@ describe('PWA installable shell', () => {
     const source = createPwaServiceWorkerSource()
     expect(source).toContain(PWA_SHELL_CACHE)
     expect(source).toContain("self.addEventListener('install'")
+    expect(source).toContain("self.addEventListener('activate'")
     expect(source).toContain("self.addEventListener('fetch'")
+    expect(source).toContain('self.skipWaiting()')
+    expect(source).toContain('self.clients.claim()')
+    expect(source).toContain('caches.delete(name)')
     expect(source).toContain('CREDENTIAL_QUERY')
     expect(source).not.toContain('listen(')
     expect(source).not.toContain('createServer')

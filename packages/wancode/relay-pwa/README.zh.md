@@ -31,7 +31,9 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
 - `createPwaWebManifest` 返回 `display: standalone` 且 `start_url` 为相对路径
   的安装记录。`decidePwaCacheAction` 只缓存 shell GET 资源；令牌查询参数和
   模型凭据失败关闭。控制面 POST 保持 network-only。
-  `createPwaServiceWorkerSource` 生成对应的 worker 源码，从不监听。
+  `decidePwaCacheRetention` 只保留当前 shell 缓存名。
+  `createPwaServiceWorkerSource` 生成对应的 worker 源码；activate 时删除过期
+  缓存并接管客户端，从不监听。
   `createPwaShellFiles` 返回 `index.html`、manifest、`sw.js` 和 `pair.js`。
   首页没有内联脚本。`PWA_SHELL_CSP` 禁止 `unsafe-inline`、嵌套框架和插件。
   回环响应还发送 `X-Content-Type-Options: nosniff`。
