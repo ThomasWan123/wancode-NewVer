@@ -33,7 +33,9 @@ Status: active
   `listDesktops` omits local ids and untrusted encryption keys. Handshake nonces use WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. Progress details are
   capped. Empty session ids and empty approval request ids fail closed. A denied
-  approval keeps the request id. The installable Web App
+  approval keeps `pendingRequestId` until the request is cancelled or replaced.
+  Missing desktop apply sinks fail closed instead of acknowledging the mail.
+  Listed control-plane devices refuse non-Ed25519 / non-X25519 keys. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,

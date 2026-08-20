@@ -175,6 +175,26 @@ describe('outbound relay control client', () => {
     expect(listed.map(device => device.deviceId)).not.toContain('device-b')
   })
 
+  it('refuses listed devices whose keys are not Ed25519 or X25519', async () => {
+    await expectRelayErrorAsync(() => listOutboundRelayDevices({
+      httpUrl: 'https://relay.wancode.example',
+      assertion: assertion(),
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        arrayBuffer: async () => new TextEncoder().encode(JSON.stringify({
+          devices: [{
+            deviceId: 'desktop-bad',
+            userId: 'user-a',
+            publicKey: 'not-ed25519',
+            encryptionPublicKey: 'not-x25519',
+          }],
+        })).buffer,
+      }),
+    }), 'untrusted-key')
+  })
+
   it('refuses to send private key material and public cleartext control URLs', async () => {
     const keys = generateDeviceKeyPair()
     await expectRelayErrorAsync(() => registerOutboundRelayDevice({

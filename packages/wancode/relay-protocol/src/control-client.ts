@@ -2,6 +2,7 @@
 
 import { assertNoPlaintextRelayFields } from './envelope.ts'
 import { RelayAuthorizationError, isRelayErrorCode } from './errors.ts'
+import { assertDeviceEncryptionPublicKey, assertDevicePublicKey } from './device-keys.ts'
 import { assertOutboundRelayUrl } from './url.ts'
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
@@ -173,7 +174,8 @@ export interface ListOutboundRelayDevicesInput {
 
 /**
  * POST `/v1/devices/list` over HTTPS (or loopback HTTP). Only live devices on
- * the presented account are returned. Private keys are refused.
+ * the presented account are returned. Private keys are refused. Listed signing
+ * and encryption keys must be Ed25519 and X25519.
  */
 export async function listOutboundRelayDevices(
   input: ListOutboundRelayDevicesInput,
@@ -281,24 +283,26 @@ function controlFailure(json: Record<string, unknown>): RelayAuthorizationError 
 function parsePublicDevice(record: Record<string, unknown>): OutboundRelayDevice {
   assertNoPlaintextRelayFields(record, 'relay control device')
   refusePrivateKeyMaterial(record, 'relay control device')
-  if (typeof record.deviceId !== 'string' || record.deviceId.length === 0) {
+  if (typeof record.deviceId !== 'string' || record.deviceId.length === 0 || /[\0\r\n]/u.test(record.deviceId)) {
     throw new RelayAuthorizationError('malformed', 'relay control device id is required')
   }
-  if (typeof record.userId !== 'string' || record.userId.length === 0) {
+  if (typeof record.userId !== 'string' || record.userId.length === 0 || /[\0\r\n]/u.test(record.userId)) {
     throw new RelayAuthorizationError('malformed', 'relay control user id is required')
   }
-  if (typeof record.publicKey !== 'string' || record.publicKey.length === 0) {
+  if (typeof record.publicKey !== 'string' || record.publicKey.length === 0 || /[\0\r\n]/u.test(record.publicKey)) {
     throw new RelayAuthorizationError('malformed', 'relay control public key is required')
   }
+  assertDevicePublicKey(record.publicKey)
   const device: OutboundRelayDevice = {
     deviceId: record.deviceId,
     userId: record.userId,
     publicKey: record.publicKey,
   }
   if (record.encryptionPublicKey === undefined) return device
-  if (typeof record.encryptionPublicKey !== 'string' || record.encryptionPublicKey.length === 0) {
+  if (typeof record.encryptionPublicKey !== 'string' || record.encryptionPublicKey.length === 0 || /[\0\r\n]/u.test(record.encryptionPublicKey)) {
     throw new RelayAuthorizationError('malformed', 'relay control encryption public key is required')
   }
+  assertDeviceEncryptionPublicKey(record.encryptionPublicKey)
   return { ...device, encryptionPublicKey: record.encryptionPublicKey }
 }
 
