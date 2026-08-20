@@ -17,8 +17,8 @@ Wan Code Cloud Relay（M2）的 fail-closed 远程控制契约和仅出站 WebSo
   handshake、ack 或密封 ciphertext 中。安全存储可以保存含私钥的身份 blob；
   `publicDeviceIdentity` 不含私钥，公钥与私钥不匹配一律失败关闭。
 - 应用层的 prompt、approval、cancel、session-event 和 presence 帧会按目的设备
-  加密公钥密封。Relay 只保存密文盒；错误设备密钥和 handshake ciphertext 一律
-  失败关闭。
+  加密公钥密封。空 envelope id 会在加密前失败关闭。Relay 只保存密文盒；错误
+  设备密钥和 handshake ciphertext 一律失败关闭。
 - 握手必须声明 `direction: "outbound"`，并对照已注册设备公钥验签。入站声明、
   不可信签名、未知 capability 和重复 nonce 一律失败关闭。
 - 生产 Relay URL 必须使用 `wss:`。明文 `ws:` 只允许回环地址。访问令牌放在首个

@@ -22,7 +22,8 @@ plugin entry.
   `publicDeviceIdentity` omits them, and a public key that does not match the
   private material fails closed.
 - Application prompt, approval, cancel, session-event, and presence frames are
-  sealed to the recipient encryption public key. The relay stores the box
+  sealed to the recipient encryption public key. Empty envelope ids fail
+  closed before encryption. The relay stores the box
   opaquely; the wrong device key and handshake ciphertext fail closed.
 - A handshake must claim `direction: "outbound"` and verify against the
   registered device public key. Inbound claims, untrusted signatures, unknown

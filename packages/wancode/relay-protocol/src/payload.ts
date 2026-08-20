@@ -71,6 +71,9 @@ export function assertSealedApplicationEnvelope(envelope: unknown): RelayEnvelop
  * recipient encryption private key. The relay stores this blob opaquely.
  */
 export function createSealedRelayEnvelope(input: SealedRelayEnvelopeInput): Record<string, unknown> {
+  if (typeof input.id !== 'string' || input.id.length === 0 || /[\0\r\n]/u.test(input.id)) {
+    throw new RelayAuthorizationError('malformed', 'relay sealed envelope id is required')
+  }
   if (input.payload.kind !== input.kind) {
     throw new RelayAuthorizationError('malformed', 'relay sealed payload kind must match the envelope kind')
   }

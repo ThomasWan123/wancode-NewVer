@@ -133,4 +133,18 @@ describe('device-sealed application payloads', () => {
       payload: { kind: 'prompt', sessionId: 'sess-1', text: SECRET },
     }), 'untrusted-key')
   })
+
+  it('refuses an empty sealed envelope id before encrypting', () => {
+    const sender = generateDeviceKeyPair()
+    const recipient = generateDeviceKeyPair()
+    expectRelayError(() => createSealedRelayEnvelope({
+      id: '',
+      sentAt: NOW,
+      actor: ACTOR,
+      kind: 'prompt',
+      sender,
+      recipientEncryptionPublicKey: recipient.encryptionPublicKey,
+      payload: { kind: 'prompt', sessionId: 'sess-1', text: SECRET },
+    }), 'malformed')
+  })
 })

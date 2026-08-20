@@ -219,7 +219,8 @@ closed capability list, and refuses inbound claims, untrusted keys, unknown
 capabilities, and reused nonces. Handshake and ack ciphertext never include
 the private key or application plaintext. Application prompt, approval,
 cancel, session-event, and presence frames are sealed to the recipient
-encryption public key so the relay never opens the box. Desktop
+encryption public key so the relay never opens the box. Empty envelope ids
+fail closed before encryption. Desktop
 initiates the cloud connection over outbound WSS. The same package sends the
 signed handshake as the first JSON frame after presenting a short-lived token,
 waits for `handshake-ack`, and refuses non-loopback cleartext WebSocket. After

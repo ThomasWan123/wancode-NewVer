@@ -459,6 +459,15 @@ describe('PWA relay pairing', () => {
       sessionId: 'sess-1',
       requestId: '',
     }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendFollowUp({
+      id: '',
+      sessionId: 'sess-1',
+      text: 'ok',
+    }), 'malformed')
+    await expectRelayErrorAsync(() => controller.sendPresence({
+      id: '',
+      state: 'online',
+    }), 'malformed')
     controller.close()
   })
 
