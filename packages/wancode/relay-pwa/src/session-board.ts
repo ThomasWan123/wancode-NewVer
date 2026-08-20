@@ -2,6 +2,7 @@
 
 import { assertPwaRelayRecord } from './credentials.ts'
 import {
+  assertPwaProgressDetail,
   projectRelayNotification,
   type RelayNotificationView,
   type RelaySessionView,
@@ -47,6 +48,7 @@ export function createPwaSessionBoard(): PwaSessionBoard {
     apply(view) {
       assertPwaRelayRecord(view as unknown as Record<string, unknown>, 'pwa session view')
       if (view.kind === 'presence') return undefined
+      if (view.kind === 'progress') assertPwaProgressDetail(view.detail)
       const current = sessions.get(view.sessionId) ?? {
         sessionId: view.sessionId,
         status: 'idle' as const,

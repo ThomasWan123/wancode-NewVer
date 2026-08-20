@@ -30,7 +30,8 @@ Status: active
   or model credentials, lists same-account desktops, and can enroll as a PWA
   device then send sealed follow-ups, approvals, and cancels over outbound
   HTTPS/WSS. Reconnect drains mailbox mail, folds streaming progress into
-  session snapshots, and projects `notify.*` events. The installable Web App
+  session snapshots, and projects `notify.*` events. Progress details are
+  capped. The installable Web App
   Manifest and fail-closed cache policy exist; `createPwaServiceWorkerSource`
   emits the matching worker. `createPwaShellFiles` returns the static index,
   manifest, and worker. The PWA can also send sealed presence and revoke itself

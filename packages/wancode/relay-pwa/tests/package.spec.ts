@@ -34,6 +34,8 @@ describe('relay-pwa package surface', () => {
     })
     expect(pwa).toHaveProperty('projectRelaySessionView')
     expect(pwa).toHaveProperty('projectRelayNotification')
+    expect(pwa).toHaveProperty('assertPwaProgressDetail')
+    expect(pwa).toHaveProperty('MAX_PWA_PROGRESS_DETAIL_CHARS')
     expect(pwa).toHaveProperty('createPwaRelayController')
     expect(pwa).toHaveProperty('createPwaSessionBoard')
     expect(pwa).toHaveProperty('createPwaWebManifest')

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
-import { projectRelayNotification, projectRelaySessionView } from '../src/index.ts'
+import { projectRelayNotification, projectRelaySessionView, MAX_PWA_PROGRESS_DETAIL_CHARS } from '../src/index.ts'
 
 function expectRelayError(run: () => unknown, code: string): void {
   try {
@@ -86,6 +86,27 @@ describe('PWA session projections', () => {
         DEEPSEEK_API_KEY: 'sk-secret',
       } as never),
       'plaintext',
+    )
+  })
+
+  it('refuses empty and oversized progress details', () => {
+    expectRelayError(
+      () => projectRelaySessionView({
+        kind: 'session-event',
+        sessionId: 'sess-1',
+        type: 'assistant.delta',
+        detail: '',
+      }),
+      'malformed',
+    )
+    expectRelayError(
+      () => projectRelaySessionView({
+        kind: 'session-event',
+        sessionId: 'sess-1',
+        type: 'assistant.delta',
+        detail: 'x'.repeat(MAX_PWA_PROGRESS_DETAIL_CHARS + 1),
+      }),
+      'malformed',
     )
   })
 })

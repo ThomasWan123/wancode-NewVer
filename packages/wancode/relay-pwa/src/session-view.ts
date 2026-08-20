@@ -6,6 +6,9 @@ import {
 } from '../../relay-protocol/src/index.ts'
 import { assertPwaRelayRecord } from './credentials.ts'
 
+/** Compact progress detail for low-bandwidth PWA links. Matches the desktop sender. */
+export const MAX_PWA_PROGRESS_DETAIL_CHARS = 512
+
 /** UI-neutral projection of one opened relay application payload. */
 export type RelaySessionView =
   | { readonly kind: 'follow-up', readonly sessionId: string }
@@ -35,6 +38,7 @@ export function projectRelaySessionView(payload: RelayApplicationPayload): Relay
     case 'prompt':
       return { kind: 'follow-up', sessionId: payload.sessionId }
     case 'session-event':
+      assertPwaProgressDetail(payload.detail)
       return {
         kind: 'progress',
         sessionId: payload.sessionId,
@@ -74,5 +78,14 @@ export function projectRelayNotification(view: RelaySessionView): RelayNotificat
     sessionId: view.sessionId,
     type: view.type,
     detail: view.detail,
+  }
+}
+
+export function assertPwaProgressDetail(detail: string): void {
+  if (typeof detail !== 'string' || detail.length === 0 || /[\0\r\n]/u.test(detail)) {
+    throw new RelayAuthorizationError('malformed', 'pwa progress detail is required')
+  }
+  if (detail.length > MAX_PWA_PROGRESS_DETAIL_CHARS) {
+    throw new RelayAuthorizationError('malformed', 'pwa progress detail is too large')
   }
 }

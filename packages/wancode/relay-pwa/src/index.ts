@@ -3,6 +3,8 @@
 export {
   projectRelayNotification,
   projectRelaySessionView,
+  assertPwaProgressDetail,
+  MAX_PWA_PROGRESS_DETAIL_CHARS,
   type RelayNotificationView,
   type RelaySessionView,
 } from './session-view.ts'

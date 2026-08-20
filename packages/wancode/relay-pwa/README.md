@@ -19,7 +19,8 @@ directory links.
 ## Guarantees
 
 - `projectRelaySessionView` maps opened application payloads to a UI-neutral
-  view. Prompt text is omitted so logs and snapshots cannot leak it.
+  view. Prompt text is omitted so logs and snapshots cannot leak it. Progress
+  details are capped so low-bandwidth links stay bounded.
 - Model credential field names (`DEEPSEEK_API_KEY`, `apiKey`, and the shared
   plaintext envelope fields) fail closed before pairing or send. Device
   private keys on PWA JSON also fail closed.

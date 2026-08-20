@@ -98,6 +98,19 @@ describe('PWA session board', () => {
     })
   })
 
+  it('refuses oversized progress details on the board', () => {
+    const board = createPwaSessionBoard()
+    expectRelayError(
+      () => board.apply({
+        kind: 'progress',
+        sessionId: 'sess-1',
+        type: 'assistant.delta',
+        detail: 'x'.repeat(513),
+      }),
+      'malformed',
+    )
+  })
+
   it('refuses model credential fields on a session view', () => {
     const board = createPwaSessionBoard()
     expectRelayError(
