@@ -45,7 +45,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   `@wancode/relay-pwa/host` 只在 127.0.0.1 上托管该 shell，公网
   绑定和非回环 Host / Origin / Referer 头失败关闭。回环响应发送
   `Referrer-Policy: no-referrer`，并关闭摄像头、麦克风和定位。
-  该 host 不在默认导出中。
+  编码路径或 `..` 失败关闭。该 host 不在默认导出中。
 - 默认导出没有监听器，也没有 loopback/cloud 接收端。
 
 这还不是公网上已交付的 iOS / Android 安装。图形界面启动保持显式。

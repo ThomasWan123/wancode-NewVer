@@ -148,4 +148,30 @@ describe('PWA loopback shell host', () => {
     expect(denied.status).toBe(403)
     expect(JSON.parse(denied.body)).toEqual({ error: { code: 'inbound-forbidden' } })
   })
+
+  it('refuses path traversal before serving an indexed shell file', async () => {
+    const host = await startPwaShellHost()
+    hosts.push(host)
+    for (const path of ['/foo/../pair.js', '/icons/%2e%2e/pair.js', '/..%2fpair.js']) {
+      const denied = await new Promise<{ status: number, body: string }>((resolve, reject) => {
+        const request = httpRequest({
+          host: '127.0.0.1',
+          port: host.port,
+          path,
+          headers: { host: `127.0.0.1:${host.port}` },
+        }, response => {
+          const chunks: Buffer[] = []
+          response.on('data', chunk => chunks.push(chunk))
+          response.on('end', () => resolve({
+            status: response.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString('utf8'),
+          }))
+        })
+        request.on('error', reject)
+        request.end()
+      })
+      expect(denied.status).toBe(400)
+      expect(JSON.parse(denied.body)).toEqual({ error: { code: 'malformed' } })
+    }
+  })
 })

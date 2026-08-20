@@ -111,6 +111,7 @@ function handleShellHttp(
     if (method !== 'GET' && method !== 'HEAD') {
       throw new RelayAuthorizationError('malformed', 'pwa shell method is not supported')
     }
+    assertRawShellPath(request.url)
     const url = new URL(request.url ?? '/', 'http://127.0.0.1/')
     for (const key of url.searchParams.keys()) {
       if (CREDENTIAL_QUERY.test(key)) {
@@ -191,6 +192,18 @@ function assertPwaShellLoopbackNavigation(value: string, port: number, message: 
   ])
   if (!allowed.has(parsed.origin)) {
     throw new RelayAuthorizationError('inbound-forbidden', message)
+  }
+}
+
+function assertRawShellPath(url: string | undefined): void {
+  const raw = (url ?? '/').split('?')[0] ?? '/'
+  if (
+    raw.includes('..')
+    || raw.includes('\\')
+    || raw.includes('\0')
+    || /%(?:2e|2f|5c)/iu.test(raw)
+  ) {
+    throw new RelayAuthorizationError('malformed', 'pwa shell path is not allowed')
   }
 }
 

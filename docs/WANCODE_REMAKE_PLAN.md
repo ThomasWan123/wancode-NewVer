@@ -55,7 +55,7 @@ Status: active
   closed. It does not listen on a public interface. Non-loopback Origin and
   Referer headers also fail closed. Loopback responses send
   `Referrer-Policy: no-referrer` and disable camera, microphone, and
-  geolocation. `createPwaDeployFiles`
+  geolocation. Encoded or `..` paths fail closed. `createPwaDeployFiles`
   includes PNG icons so a static HTTPS origin can host the shell.
   `assertPwaShellOrigin`
   requires HTTPS or loopback HTTP so a public install cannot use cleartext.

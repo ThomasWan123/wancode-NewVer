@@ -56,7 +56,8 @@ directory links.
   127.0.0.1 only; public binds and non-loopback Host, Origin, or Referer
   headers fail
   closed. Loopback responses send `Referrer-Policy: no-referrer` and disable
-  camera, microphone, and geolocation. It is not part of the default export.
+  camera, microphone, and geolocation. Encoded or `..` paths fail closed.
+  It is not part of the default export.
 - The default export has no listener and no loopback/cloud acceptor.
 
 This is not yet a shipped iOS or Android install on the public internet.
