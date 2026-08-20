@@ -9,6 +9,7 @@ import {
   createPwaShellIcons,
   createPwaWebManifest,
   decidePwaCacheAction,
+  assertPwaShellOrigin,
   PWA_SHELL_CACHE,
   PWA_SHELL_PATHS,
 } from '../src/index.ts'
@@ -72,6 +73,23 @@ describe('PWA installable shell', () => {
     )
   })
 
+  it('accepts HTTPS or loopback origins and refuses credentialed public HTTP', () => {
+    expect(assertPwaShellOrigin('https://pwa.wancode.example/').href).toBe('https://pwa.wancode.example/')
+    expect(assertPwaShellOrigin('http://127.0.0.1:4173/').href).toBe('http://127.0.0.1:4173/')
+    expectRelayError(
+      () => assertPwaShellOrigin('http://pwa.example.invalid/'),
+      'cleartext-transport',
+    )
+    expectRelayError(
+      () => assertPwaShellOrigin('https://pwa.wancode.example/?access_token=tok-live'),
+      'plaintext',
+    )
+    expectRelayError(
+      () => assertPwaShellOrigin('https://user:pass@pwa.wancode.example/'),
+      'plaintext',
+    )
+  })
+
   it('emits a service worker that caches the shell and never listens', () => {
     const source = createPwaServiceWorkerSource()
     expect(source).toContain(PWA_SHELL_CACHE)
@@ -91,6 +109,9 @@ describe('PWA installable shell', () => {
     expect(files['index.html']).toContain('rel="apple-touch-icon"')
     expect(files['index.html']).toContain("navigator.serviceWorker.register('./sw.js')")
     expect(files['index.html']).toContain('<title>Wan Code</title>')
+    expect(files['index.html']).toContain('name="origin"')
+    expect(files['index.html']).toContain('event.preventDefault()')
+    expect(files['index.html']).not.toContain('name="token"')
     expect(files['index.html']).toBe(createPwaIndexHtml())
     expect(JSON.stringify(files)).not.toMatch(/access_token|DEEPSEEK_API_KEY|privateKey/)
     expect(JSON.stringify(files)).not.toContain('listen(')

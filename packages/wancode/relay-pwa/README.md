@@ -43,9 +43,12 @@ directory links.
   network-only. `createPwaServiceWorkerSource` emits the matching worker; it
   never listens. `createPwaShellFiles` returns `index.html`, the manifest, and
   `sw.js`. `createPwaShellIcons` returns the 192 and 512 PNG marks. Checked-in
-  copies live under `public/` and must match those generators.
-  `@wancode/relay-pwa/host` may serve that shell on 127.0.0.1 only; public binds
-  and non-loopback Host headers fail closed. It is not part of the default export.
+  copies live under `public/` and must match those generators. The index form
+  accepts a relay origin and never names token fields.
+  `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
+  credentialed URLs. `@wancode/relay-pwa/host` may serve that shell on
+  127.0.0.1 only; public binds and non-loopback Host headers fail closed. It
+  is not part of the default export.
 - The default export has no listener and no loopback/cloud acceptor.
 
 This is not yet a shipped iOS or Android install on the public internet.

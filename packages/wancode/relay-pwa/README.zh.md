@@ -33,7 +33,9 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   `createPwaServiceWorkerSource` 生成对应的 worker 源码，从不监听。
   `createPwaShellFiles` 返回 `index.html`、manifest 和 `sw.js`。
   `createPwaShellIcons` 返回 192 与 512 PNG。检入的副本在 `public/`，必须与
-  生成器一致。`@wancode/relay-pwa/host` 只在 127.0.0.1 上托管该 shell，公网
+  生成器一致。首页表单只收集 Relay origin，从不命名 token 字段。
+  `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL 失败关闭。
+  `@wancode/relay-pwa/host` 只在 127.0.0.1 上托管该 shell，公网
   绑定和非回环 Host 头失败关闭，且不在默认导出中。
 - 默认导出没有监听器，也没有 loopback/cloud 接收端。
 

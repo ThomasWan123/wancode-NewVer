@@ -105,12 +105,30 @@ function parsePwaRequestUrl(url: string): URL {
   } catch {
     throw new RelayAuthorizationError('malformed', 'pwa cache url is not a valid url')
   }
+  return assertPwaTransportUrl(parsed, 'pwa cache url')
+}
+
+/**
+ * Accept only HTTPS origins, or loopback HTTP for local preview.
+ * Credentialed URLs fail closed. This is not a public listener.
+ */
+export function assertPwaShellOrigin(url: string): URL {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'pwa shell origin is not a valid url')
+  }
+  return assertPwaTransportUrl(parsed, 'pwa shell origin')
+}
+
+function assertPwaTransportUrl(parsed: URL, label: string): URL {
   if (parsed.username !== '' || parsed.password !== '') {
-    throw new RelayAuthorizationError('plaintext', 'pwa cache url must not embed credentials')
+    throw new RelayAuthorizationError('plaintext', `${label} must not embed credentials`)
   }
   for (const key of parsed.searchParams.keys()) {
     if (CREDENTIAL_QUERY.test(key)) {
-      throw new RelayAuthorizationError('plaintext', 'pwa cache url must not carry credentials')
+      throw new RelayAuthorizationError('plaintext', `${label} must not carry credentials`)
     }
   }
   if (parsed.protocol === 'https:') return parsed
@@ -118,10 +136,10 @@ function parsePwaRequestUrl(url: string): URL {
   if (parsed.protocol === 'http:') {
     throw new RelayAuthorizationError(
       'cleartext-transport',
-      'cleartext pwa cache is only allowed to loopback',
+      `cleartext ${label} is only allowed to loopback`,
     )
   }
-  throw new RelayAuthorizationError('malformed', 'pwa cache url must use https or loopback http')
+  throw new RelayAuthorizationError('malformed', `${label} must use https or loopback http`)
 }
 
 /**
@@ -174,11 +192,31 @@ export function createPwaIndexHtml(): string {
     '  <main>',
     '    <h1>Wan Code</h1>',
     '    <p>Pair a desktop. Model keys stay on that machine.</p>',
+    '    <form id="pair" method="post" action="#">',
+    '      <label>Relay origin <input name="origin" type="url" required></label>',
+    '      <button type="submit">Pair desktop</button>',
+    '    </form>',
+    '    <p id="status">Do not paste API keys or tokens.</p>',
     '  </main>',
     '  <script>',
     "    if ('serviceWorker' in navigator) {",
     "      navigator.serviceWorker.register('./sw.js');",
     '    }',
+    "    document.getElementById('pair').addEventListener('submit', function (event) {",
+    '      event.preventDefault();',
+    "      var status = document.getElementById('status');",
+    '      try {',
+    "        var parsed = new URL(event.target.elements.origin.value);",
+    "        if (parsed.username !== '' || parsed.password !== '') throw new Error('origin');",
+    "        parsed.searchParams.forEach(function (_value, key) {",
+    "          if (/token|secret|credential|password|authorization/i.test(key)) throw new Error('origin');",
+    '        });',
+    "        if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');",
+    "        status.textContent = 'Desktop keys stay on that machine.';",
+    '      } catch (error) {',
+    "        status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';",
+    '      }',
+    '    });',
     '  </script>',
     '</body>',
     '</html>',

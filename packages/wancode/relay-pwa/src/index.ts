@@ -13,6 +13,7 @@ export {
   type PwaSessionStatus,
 } from './session-board.ts'
 export {
+  assertPwaShellOrigin,
   createPwaIndexHtml,
   createPwaServiceWorkerSource,
   createPwaShellFiles,

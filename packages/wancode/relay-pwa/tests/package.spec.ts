@@ -43,6 +43,7 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('createPwaShellIcons')
     expect(pwa).toHaveProperty('createPwaServiceWorkerSource')
     expect(pwa).toHaveProperty('decidePwaCacheAction')
+    expect(pwa).toHaveProperty('assertPwaShellOrigin')
     expect(pwa).not.toHaveProperty('startPwaShellHost')
     expect(pwa).not.toHaveProperty('startRelayCloud')
     expect(pwa).not.toHaveProperty('startLoopbackRelay')

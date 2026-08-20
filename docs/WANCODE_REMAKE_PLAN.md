@@ -49,7 +49,8 @@ Status: active
   request ids.
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail
-  closed. It does not listen on a public interface.
+  closed. It does not listen on a public interface. `assertPwaShellOrigin`
+  requires HTTPS or loopback HTTP so a public install cannot use cleartext.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.
