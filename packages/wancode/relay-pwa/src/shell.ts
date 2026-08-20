@@ -19,7 +19,7 @@ export const PWA_SHELL_PATHS = [
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list or worker changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v6'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v7'
 
 /** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
 export type PwaCacheRetention = 'keep' | 'delete'
@@ -170,6 +170,9 @@ function assertPwaTransportUrl(parsed: URL, label: string): URL {
       throw new RelayAuthorizationError('plaintext', `${label} must not carry credentials`)
     }
   }
+  if (parsed.hash.length > 0) {
+    throw new RelayAuthorizationError('plaintext', `${label} must not carry credentials`)
+  }
   if (parsed.protocol === 'https:') return parsed
   if (parsed.protocol === 'http:' && LOOPBACK_HOSTS.has(parsed.hostname)) return parsed
   if (parsed.protocol === 'http:') {
@@ -231,6 +234,7 @@ export function createPwaPairingScriptSource(): string {
     '  parsed.searchParams.forEach(function (_value, key) {',
     "    if (/token|secret|credential|password|authorization/i.test(key)) throw new Error('origin');",
     '  });',
+    "  if (parsed.hash.length > 0) throw new Error('origin');",
     "  if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');",
     '  return parsed.origin;',
     '}',

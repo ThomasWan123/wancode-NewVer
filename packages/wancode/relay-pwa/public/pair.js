@@ -9,6 +9,7 @@ function allowedOrigin(value) {
   parsed.searchParams.forEach(function (_value, key) {
     if (/token|secret|credential|password|authorization/i.test(key)) throw new Error('origin');
   });
+  if (parsed.hash.length > 0) throw new Error('origin');
   if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');
   return parsed.origin;
 }

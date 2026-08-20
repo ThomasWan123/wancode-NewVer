@@ -39,7 +39,7 @@ describe('PWA installable shell', () => {
     expect(manifest.scope).toBe('./')
     expect(manifest.name).toBe('Wan Code')
     expect(JSON.stringify(manifest)).not.toMatch(/token|secret|credential|password|authorization/i)
-    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v6')
+    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v7')
     expect(PWA_SHELL_CSP).toContain("script-src 'self'")
     expect(PWA_SHELL_CSP).toContain("object-src 'none'")
     expect(PWA_SHELL_CSP).toContain("frame-ancestors 'none'")
@@ -75,6 +75,13 @@ describe('PWA installable shell', () => {
     expectRelayError(
       () => decidePwaCacheAction({
         method: 'GET',
+        url: 'https://pwa.wancode.example/#access_token=tok-live',
+      }),
+      'plaintext',
+    )
+    expectRelayError(
+      () => decidePwaCacheAction({
+        method: 'GET',
         url: 'http://pwa.example.invalid/',
       }),
       'cleartext-transport',
@@ -96,6 +103,7 @@ describe('PWA installable shell', () => {
     expect(decidePwaCacheRetention('wancode-pwa-shell-v3')).toBe('delete')
     expect(decidePwaCacheRetention('wancode-pwa-shell-v4')).toBe('delete')
     expect(decidePwaCacheRetention('wancode-pwa-shell-v5')).toBe('delete')
+    expect(decidePwaCacheRetention('wancode-pwa-shell-v6')).toBe('delete')
     expectRelayError(() => decidePwaCacheRetention(''), 'malformed')
     expectRelayError(() => decidePwaCacheRetention('token-cache'), 'plaintext')
   })
@@ -113,6 +121,10 @@ describe('PWA installable shell', () => {
     )
     expectRelayError(
       () => assertPwaShellOrigin('https://user:pass@pwa.wancode.example/'),
+      'plaintext',
+    )
+    expectRelayError(
+      () => assertPwaShellOrigin('https://pwa.wancode.example/#access_token=tok-live'),
       'plaintext',
     )
   })
@@ -148,6 +160,7 @@ describe('PWA installable shell', () => {
     expect(files['pair.js']).toContain('event.preventDefault()')
     expect(files['pair.js']).toContain("navigator.serviceWorker.register('./sw.js')")
     expect(files['pair.js']).toContain('sessionStorage')
+    expect(files['pair.js']).toContain('parsed.hash.length > 0')
     expect(files['pair.js']).not.toContain('localStorage')
     expect(files['index.html']).not.toContain('name="token"')
     expect(files['index.html']).toBe(createPwaIndexHtml())
