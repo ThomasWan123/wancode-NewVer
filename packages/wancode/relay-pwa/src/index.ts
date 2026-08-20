@@ -54,6 +54,7 @@ export {
   bindPwaRelayIdentityStorage,
   loadPwaRelayIdentity,
   peekPwaRelayPublicIdentity,
+  resolvePwaRelayIdentity,
   type PwaRelayIdentityStorage,
   type PwaRelayKeyedStorage,
 } from './identity.ts'

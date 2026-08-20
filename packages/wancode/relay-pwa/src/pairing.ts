@@ -31,13 +31,18 @@ import {
   type RelaySessionView,
 } from './session-view.ts'
 import { createPwaSessionBoard, type PwaSessionSnapshot } from './session-board.ts'
+import {
+  resolvePwaRelayIdentity,
+  type PwaRelayIdentityStorage,
+} from './identity.ts'
 
 /** Inputs used to enroll a PWA device and open an outbound session. */
 export interface CreatePwaRelayControllerInput {
   readonly httpUrl: string
   readonly url: string
   readonly assertion: unknown
-  readonly identity: StoredDeviceIdentity
+  readonly identity?: StoredDeviceIdentity
+  readonly identityStorage?: PwaRelayIdentityStorage
   readonly desktop?: {
     readonly deviceId: string
     readonly encryptionPublicKey: string
@@ -157,7 +162,8 @@ export async function createPwaRelayController(
     assertPwaRelayRecord(input.assertion as Record<string, unknown>, 'pwa relay assertion')
   }
   const userId = assertionUserId(input.assertion)
-  const published = publicDeviceIdentity(input.identity)
+  const identity = await resolvePwaRelayIdentity(input)
+  const published = publicDeviceIdentity(identity)
   if (input.desktop !== undefined) {
     assertPwaRelayRecord(input.desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
     assertPwaDesktopSelection(input.desktop, published.deviceId)
@@ -171,7 +177,7 @@ export async function createPwaRelayController(
     encryptionPublicKey: published.encryptionPublicKey,
   })
   let selected = input.desktop
-  let connection = await openSession(input, published, userId, now)
+  let connection = await openSession(input, identity, published, userId, now)
   const board = createPwaSessionBoard()
   let closed = false
 
@@ -200,7 +206,7 @@ export async function createPwaRelayController(
         sentAt: now,
         actor: { userId: connection.userId, deviceId: connection.deviceId },
         kind,
-        sender: input.identity.keyPair,
+        sender: identity.keyPair,
         recipientEncryptionPublicKey: desktop.encryptionPublicKey,
         payload,
       }),
@@ -301,7 +307,7 @@ export async function createPwaRelayController(
       for (const envelope of [...queued, ...live]) {
         if (seen.has(envelope.id)) continue
         seen.add(envelope.id)
-        const payload = await openWebCryptoSealedRelayPayload(envelope, input.identity.keyPair)
+        const payload = await openWebCryptoSealedRelayPayload(envelope, identity.keyPair)
         const view = projectRelaySessionView(payload)
         views.push(view)
         board.apply(view)
@@ -318,7 +324,7 @@ export async function createPwaRelayController(
     },
     async reconnect() {
       connection.close()
-      connection = await openSession(input, published, userId, now)
+      connection = await openSession(input, identity, published, userId, now)
       closed = false
     },
     async revoke() {
@@ -339,7 +345,8 @@ export async function createPwaRelayController(
 }
 
 async function openSession(
-  input: CreatePwaRelayControllerInput,
+  input: Pick<CreatePwaRelayControllerInput, 'httpUrl' | 'url' | 'assertion'>,
+  identity: StoredDeviceIdentity,
   published: { readonly deviceId: string },
   userId: string,
   now: number,
@@ -357,7 +364,7 @@ async function openSession(
       id: `hs:${published.deviceId}:${nonce}`,
       sentAt: now,
       actor: { userId, deviceId: published.deviceId },
-      keyPair: input.identity.keyPair,
+      keyPair: identity.keyPair,
       nonce,
       capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
     }),

@@ -28,6 +28,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   避免低带宽链路被撑爆。握手 nonce 来自 WebCrypto，而不是 `node:crypto`。设备身份可用
   `createWebCryptoDeviceIdentity` 生成。`loadPwaRelayIdentity` 只在调用方提供的
   存储里生成一次并回读；`peekPwaRelayPublicIdentity` 从不返回私钥。
+  `resolvePwaRelayIdentity` 只接受该存储或现成身份，不能两者同时给。
+  `createPwaRelayController` 可用 `identityStorage` 注册。
   `bindPwaRelayIdentityStorage` 拒绝 origin 的 `sessionStorage` 键和凭据风格
   键名。握手签名走 `createWebCryptoSignedHandshakeEnvelope`。follow-up 密封走 `createWebCryptoSealedRelayEnvelope`。drain 用 `openWebCryptoSealedRelayPayload` 打开密文盒。关闭后的会话在 `reconnect` 之前拒绝 send 和 drain。
   `listDesktops` 走仅出站 HTTPS，关闭后仍可用。`drain` 领取排队邮件和在线推送，只 ack 排队

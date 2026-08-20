@@ -37,6 +37,8 @@ directory links.
   identities can be minted with `createWebCryptoDeviceIdentity`.
   `loadPwaRelayIdentity` mints once into caller-supplied storage and reloads
   that blob; `peekPwaRelayPublicIdentity` never returns private keys.
+  `resolvePwaRelayIdentity` accepts either that store or a supplied identity,
+  not both. `createPwaRelayController` can enroll from `identityStorage`.
   `bindPwaRelayIdentityStorage` refuses the origin `sessionStorage` key and
   credential-like keys. Handshake
   signatures use `createWebCryptoSignedHandshakeEnvelope`. Follow-ups are

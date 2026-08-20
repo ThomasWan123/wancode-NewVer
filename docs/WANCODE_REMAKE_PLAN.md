@@ -43,7 +43,9 @@ Status: active
   `createWebCryptoDeviceIdentity` mints Ed25519 and X25519 keys without
   `node:crypto`; missing WebCrypto fails closed. `loadPwaRelayIdentity`
   mints that identity once into caller-supplied storage; public peeks omit
-  private keys, and the origin `sessionStorage` key cannot hold identity. The installable Web App
+  private keys, and the origin `sessionStorage` key cannot hold identity.
+  `createPwaRelayController` can enroll from that store without taking private
+  keys on the pairing input. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
   emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,

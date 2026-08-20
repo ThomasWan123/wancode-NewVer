@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   RelayAuthorizationError,
+  createStoredDeviceIdentity,
   serializeStoredDeviceIdentity,
 } from '../../relay-protocol/src/index.ts'
 import {
@@ -9,6 +10,7 @@ import {
   bindPwaRelayIdentityStorage,
   loadPwaRelayIdentity,
   peekPwaRelayPublicIdentity,
+  resolvePwaRelayIdentity,
   type PwaRelayIdentityStorage,
 } from '../src/index.ts'
 
@@ -104,6 +106,20 @@ describe('PWA device identity store', () => {
     expectRelayError(
       () => bindPwaRelayIdentityStorage(web, 'access_token'),
       'plaintext',
+    )
+  })
+
+  it('resolves exactly one of a supplied identity or a storage load', async () => {
+    const identity = createStoredDeviceIdentity()
+    expect(await resolvePwaRelayIdentity({ identity })).toBe(identity)
+    const storage = memoryStorage()
+    const minted = await resolvePwaRelayIdentity({ identityStorage: storage })
+    expect(minted.deviceId).toMatch(/^[0-9a-f]{32}$/u)
+    expect(await resolvePwaRelayIdentity({ identityStorage: storage })).toEqual(minted)
+    await expectRelayErrorAsync(() => resolvePwaRelayIdentity({}), 'malformed')
+    await expectRelayErrorAsync(
+      () => resolvePwaRelayIdentity({ identity, identityStorage: storage }),
+      'malformed',
     )
   })
 })

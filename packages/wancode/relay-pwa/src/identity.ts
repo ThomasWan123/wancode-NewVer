@@ -84,6 +84,25 @@ export function peekPwaRelayPublicIdentity(
   return publicDeviceIdentity(parseStoredPwaIdentity(existing))
 }
 
+/**
+ * Load identity from storage, or use a caller-supplied blob. Supplying both,
+ * or neither, fails closed so private keys are not duplicated onto pairing
+ * input while a store also exists.
+ */
+export async function resolvePwaRelayIdentity(input: {
+  readonly identity?: StoredDeviceIdentity
+  readonly identityStorage?: PwaRelayIdentityStorage
+}): Promise<StoredDeviceIdentity> {
+  const identity = input.identity
+  const storage = input.identityStorage
+  if (identity !== undefined && storage !== undefined) {
+    throw new RelayAuthorizationError('malformed', 'pwa relay identity must not be supplied twice')
+  }
+  if (storage !== undefined) return loadPwaRelayIdentity(storage)
+  if (identity !== undefined) return identity
+  throw new RelayAuthorizationError('malformed', 'pwa relay identity is required')
+}
+
 function readStoredIdentity(storage: PwaRelayIdentityStorage): string | undefined {
   const existing = storage.get()
   if (existing === undefined || existing === '') return undefined

@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, assertPwaDesktopSelection, isSelectablePwaDesktop } from '../src/index.ts'
+import { createPwaRelayController, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -586,5 +586,73 @@ describe('PWA relay pairing', () => {
         encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
       },
     }), 'cleartext-transport')
+  })
+
+  it('enrolls from identity storage without private keys on the pairing input', async () => {
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await fetch(`${cloud.httpUrl}/v1/devices`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        assertion: assertion(),
+        deviceId: desktop.deviceId,
+        publicKey: desktop.keyPair.publicKey,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      }),
+    })
+    let stored: string | undefined
+    const identityStorage: PwaRelayIdentityStorage = {
+      get() {
+        return stored
+      },
+      set(value) {
+        stored = value
+      },
+      clear() {
+        stored = undefined
+      },
+    }
+    const first = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      url: cloud.url,
+      assertion: assertion(),
+      identityStorage,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+      now: NOW,
+    })
+    expect(JSON.stringify(first)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    expect(first.deviceId).toMatch(/^[0-9a-f]{32}$/u)
+    expect(await first.sendFollowUp({
+      id: 'msg-stored',
+      sessionId: 'sess-1',
+      text: 'review the login form',
+    })).toEqual({
+      envelopeId: 'msg-stored',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+    first.close()
+    const second = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      url: cloud.url,
+      assertion: assertion(),
+      identityStorage,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+      now: NOW,
+    })
+    expect(second.deviceId).toBe(first.deviceId)
+    second.close()
   })
 })
