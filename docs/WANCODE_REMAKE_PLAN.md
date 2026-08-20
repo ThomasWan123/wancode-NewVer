@@ -43,8 +43,8 @@ Status: active
   `applyDesktopRelayPayloads` hands follow-ups to a local session sink so
   model credentials stay on the desktop.
   The installable shell includes PNG icons and may be served from
-  `@wancode/relay-pwa/host` on 127.0.0.1 only. It does not listen on a public
-  interface.
+  `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail
+  closed. It does not listen on a public interface.
 - The Windows package gate currently passes with 252 focused tests plus the
   runtime-closure verifier. Cross-platform macOS-only tests are not treated as
   Windows release gates.

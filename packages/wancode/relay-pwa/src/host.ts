@@ -45,8 +45,9 @@ export async function startPwaShellHost(
 ): Promise<PwaShellHost> {
   const bindAddress = assertPwaShellBindAddress(input.bindAddress ?? '127.0.0.1')
   const files = indexShellFiles(input.files ?? defaultShellFiles())
+  let boundPort: number | undefined
   const httpServer = createServer((request, response) => {
-    handleShellHttp(request, response, files)
+    handleShellHttp(request, response, files, boundPort)
   })
   await new Promise<void>((resolve, reject) => {
     httpServer.once('error', reject)
@@ -57,6 +58,7 @@ export async function startPwaShellHost(
     httpServer.close()
     throw new RelayAuthorizationError('malformed', 'pwa shell did not bind a tcp port')
   }
+  boundPort = address.port
   return {
     url: `http://127.0.0.1:${address.port}/`,
     address: bindAddress,
@@ -94,8 +96,13 @@ function handleShellHttp(
   request: IncomingMessage,
   response: ServerResponse,
   files: Map<string, { readonly body: Buffer, readonly type: string }>,
+  boundPort: number | undefined,
 ): void {
   try {
+    if (boundPort === undefined) {
+      throw new RelayAuthorizationError('malformed', 'pwa shell is not listening')
+    }
+    assertPwaShellHostHeader(request.headers.host, boundPort)
     const method = request.method ?? 'GET'
     if (method !== 'GET' && method !== 'HEAD') {
       throw new RelayAuthorizationError('malformed', 'pwa shell method is not supported')
@@ -128,6 +135,20 @@ function handleShellHttp(
       'content-length': Buffer.byteLength(payload),
     })
     response.end(payload)
+  }
+}
+
+function assertPwaShellHostHeader(header: string | undefined, port: number): void {
+  if (typeof header !== 'string' || header.length === 0 || /[\0\r\n]/u.test(header)) {
+    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell host header is required')
+  }
+  const allowed = new Set([
+    `127.0.0.1:${port}`,
+    `localhost:${port}`,
+    `[::1]:${port}`,
+  ])
+  if (!allowed.has(header)) {
+    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell host header must be loopback')
   }
 }
 
