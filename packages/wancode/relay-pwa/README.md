@@ -50,7 +50,8 @@ directory links.
   accepts a relay origin and never names token fields.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs.   `@wancode/relay-pwa/host` may serve that shell on
-  127.0.0.1 only; public binds and non-loopback Host or Origin headers fail
+  127.0.0.1 only; public binds and non-loopback Host, Origin, or Referer
+  headers fail
   closed. It is not part of the default export.
 - The default export has no listener and no loopback/cloud acceptor.
 

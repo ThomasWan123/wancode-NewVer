@@ -96,6 +96,7 @@ function handleShellHttp(
     }
     assertPwaShellHostHeader(request.headers.host, boundPort)
     assertPwaShellOriginHeader(request.headers.origin, boundPort)
+    assertPwaShellRefererHeader(request.headers.referer, boundPort)
     const method = request.method ?? 'GET'
     if (method !== 'GET' && method !== 'HEAD') {
       throw new RelayAuthorizationError('malformed', 'pwa shell method is not supported')
@@ -150,11 +151,23 @@ function assertPwaShellOriginHeader(header: string | string[] | undefined, port:
   if (Array.isArray(header) || header.length === 0 || /[\0\r\n]/u.test(header) || header === 'null') {
     throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell origin header must be loopback')
   }
+  assertPwaShellLoopbackNavigation(header, port, 'pwa shell origin header must be loopback')
+}
+
+function assertPwaShellRefererHeader(header: string | string[] | undefined, port: number): void {
+  if (header === undefined || header === '') return
+  if (Array.isArray(header) || /[\0\r\n]/u.test(header)) {
+    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell referer header must be loopback')
+  }
+  assertPwaShellLoopbackNavigation(header, port, 'pwa shell referer header must be loopback')
+}
+
+function assertPwaShellLoopbackNavigation(value: string, port: number, message: string): void {
   let parsed: URL
   try {
-    parsed = new URL(header)
+    parsed = new URL(value)
   } catch {
-    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell origin header must be loopback')
+    throw new RelayAuthorizationError('inbound-forbidden', message)
   }
   const allowed = new Set([
     `http://127.0.0.1:${port}`,
@@ -162,7 +175,7 @@ function assertPwaShellOriginHeader(header: string | string[] | undefined, port:
     `http://[::1]:${port}`,
   ])
   if (!allowed.has(parsed.origin)) {
-    throw new RelayAuthorizationError('inbound-forbidden', 'pwa shell origin header must be loopback')
+    throw new RelayAuthorizationError('inbound-forbidden', message)
   }
 }
 

@@ -38,7 +38,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   shell，而本包自己不监听。首页表单只收集 Relay origin，从不命名 token 字段。
   `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL 失败关闭。
   `@wancode/relay-pwa/host` 只在 127.0.0.1 上托管该 shell，公网
-  绑定和非回环 Host / Origin 头失败关闭，且不在默认导出中。
+  绑定和非回环 Host / Origin / Referer 头失败关闭，且不在默认导出中。
 - 默认导出没有监听器，也没有 loopback/cloud 接收端。
 
 这还不是公网上已交付的 iOS / Android 安装。图形界面启动保持显式。
