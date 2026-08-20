@@ -608,13 +608,13 @@ describe('PWA relay pairing', () => {
     })
     let stored: string | undefined
     const identityStorage: PwaRelayIdentityStorage = {
-      get() {
+      async get() {
         return stored
       },
-      set(value) {
+      async set(value) {
         stored = value
       },
-      clear() {
+      async clear() {
         stored = undefined
       },
     }

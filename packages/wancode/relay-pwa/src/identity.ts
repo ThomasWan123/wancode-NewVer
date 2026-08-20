@@ -21,9 +21,9 @@ const CREDENTIAL_STORAGE_KEY = /token|secret|credential|password|authorization/i
 
 /** Opaque string store used to persist one device identity. */
 export interface PwaRelayIdentityStorage {
-  get(): string | undefined
-  set(value: string): void
-  clear(): void
+  get(): Promise<string | undefined>
+  set(value: string): Promise<void>
+  clear(): Promise<void>
 }
 
 /** Web Storage-shaped adapter used by `bindPwaRelayIdentityStorage`. */
@@ -33,25 +33,56 @@ export interface PwaRelayKeyedStorage {
   readonly removeItem: (key: string) => void
 }
 
+/** Async key/value adapter used by IndexedDB-backed identity storage. */
+export interface PwaRelayAsyncKv {
+  readonly get: (key: string) => Promise<string | undefined>
+  readonly put: (key: string, value: string) => Promise<void>
+  readonly delete: (key: string) => Promise<void>
+}
+
 /**
- * Bind identity to a keyed store. The origin sessionStorage key and
+ * Bind identity to a keyed store. sessionStorage, the origin key, and
  * credential-like keys fail closed so private keys cannot share that slot.
  */
 export function bindPwaRelayIdentityStorage(
   storage: PwaRelayKeyedStorage,
   key = PWA_RELAY_IDENTITY_STORAGE_KEY,
 ): PwaRelayIdentityStorage {
+  assertNotSessionStorage(storage)
   assertPwaIdentityStorageKey(key)
   return {
-    get() {
+    async get() {
       const value = storage.getItem(key)
       return value === null || value === '' ? undefined : value
     },
-    set(value) {
+    async set(value) {
       storage.setItem(key, value)
     },
-    clear() {
+    async clear() {
       storage.removeItem(key)
+    },
+  }
+}
+
+/**
+ * Bind identity to an async key/value store such as IndexedDB. The origin
+ * sessionStorage key and credential-like keys fail closed.
+ */
+export function bindPwaRelayAsyncIdentityStorage(
+  storage: PwaRelayAsyncKv,
+  key = PWA_RELAY_IDENTITY_STORAGE_KEY,
+): PwaRelayIdentityStorage {
+  assertPwaIdentityStorageKey(key)
+  return {
+    async get() {
+      const value = await storage.get(key)
+      return value === undefined || value === '' ? undefined : value
+    },
+    async set(value) {
+      await storage.put(key, value)
+    },
+    async clear() {
+      await storage.delete(key)
     },
   }
 }
@@ -63,10 +94,10 @@ export function bindPwaRelayIdentityStorage(
 export async function loadPwaRelayIdentity(
   storage: PwaRelayIdentityStorage,
 ): Promise<StoredDeviceIdentity> {
-  const existing = readStoredIdentity(storage)
+  const existing = await readStoredIdentity(storage)
   if (existing === undefined) {
     const minted = await createWebCryptoDeviceIdentity()
-    storage.set(serializeStoredDeviceIdentity(minted))
+    await storage.set(serializeStoredDeviceIdentity(minted))
     return minted
   }
   return parseStoredPwaIdentity(existing)
@@ -76,10 +107,10 @@ export async function loadPwaRelayIdentity(
  * Return the public identity if one is stored. Empty stores return undefined.
  * Private keys never appear on the result.
  */
-export function peekPwaRelayPublicIdentity(
+export async function peekPwaRelayPublicIdentity(
   storage: PwaRelayIdentityStorage,
-): PublicDeviceIdentity | undefined {
-  const existing = readStoredIdentity(storage)
+): Promise<PublicDeviceIdentity | undefined> {
+  const existing = await readStoredIdentity(storage)
   if (existing === undefined) return undefined
   return publicDeviceIdentity(parseStoredPwaIdentity(existing))
 }
@@ -103,8 +134,8 @@ export async function resolvePwaRelayIdentity(input: {
   throw new RelayAuthorizationError('malformed', 'pwa relay identity is required')
 }
 
-function readStoredIdentity(storage: PwaRelayIdentityStorage): string | undefined {
-  const existing = storage.get()
+async function readStoredIdentity(storage: PwaRelayIdentityStorage): Promise<string | undefined> {
+  const existing = await storage.get()
   if (existing === undefined || existing === '') return undefined
   if (typeof existing !== 'string' || /[\0\r\n]/u.test(existing)) {
     throw new RelayAuthorizationError('malformed', 'pwa relay identity is required')
@@ -124,6 +155,13 @@ function parseStoredPwaIdentity(raw: string): StoredDeviceIdentity {
   }
   assertPwaModelCredentials(parsed as Record<string, unknown>, 'pwa relay identity')
   return parseStoredDeviceIdentity(raw)
+}
+
+function assertNotSessionStorage(storage: PwaRelayKeyedStorage): void {
+  const session = (globalThis as { sessionStorage?: PwaRelayKeyedStorage }).sessionStorage
+  if (session !== undefined && storage === session) {
+    throw new RelayAuthorizationError('malformed', 'pwa relay identity must not use sessionStorage')
+  }
 }
 
 function assertPwaIdentityStorageKey(key: string): void {

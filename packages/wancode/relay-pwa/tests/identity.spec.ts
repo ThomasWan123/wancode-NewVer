@@ -8,6 +8,7 @@ import {
   PWA_RELAY_IDENTITY_STORAGE_KEY,
   PWA_RELAY_ORIGIN_STORAGE_KEY,
   bindPwaRelayIdentityStorage,
+  bindPwaRelayAsyncIdentityStorage,
   loadPwaRelayIdentity,
   peekPwaRelayPublicIdentity,
   resolvePwaRelayIdentity,
@@ -37,13 +38,13 @@ async function expectRelayErrorAsync(run: () => Promise<unknown>, code: string):
 function memoryStorage(initial?: string): PwaRelayIdentityStorage {
   let value = initial
   return {
-    get() {
+    async get() {
       return value
     },
-    set(next) {
+    async set(next) {
       value = next
     },
-    clear() {
+    async clear() {
       value = undefined
     },
   }
@@ -52,12 +53,12 @@ function memoryStorage(initial?: string): PwaRelayIdentityStorage {
 describe('PWA device identity store', () => {
   it('mints a WebCrypto identity once and peeks only public fields', async () => {
     const storage = memoryStorage()
-    expect(peekPwaRelayPublicIdentity(storage)).toBeUndefined()
+    expect(await peekPwaRelayPublicIdentity(storage)).toBeUndefined()
     const first = await loadPwaRelayIdentity(storage)
     const second = await loadPwaRelayIdentity(storage)
     expect(second.deviceId).toBe(first.deviceId)
     expect(second.keyPair.publicKey).toBe(first.keyPair.publicKey)
-    const published = peekPwaRelayPublicIdentity(storage)
+    const published = await peekPwaRelayPublicIdentity(storage)
     expect(published).toEqual({
       deviceId: first.deviceId,
       publicKey: first.keyPair.publicKey,
@@ -74,13 +75,13 @@ describe('PWA device identity store', () => {
       () => loadPwaRelayIdentity(memoryStorage(JSON.stringify(poisoned))),
       'plaintext',
     )
-    expectRelayError(
+    await expectRelayErrorAsync(
       () => peekPwaRelayPublicIdentity(memoryStorage(JSON.stringify(poisoned))),
       'plaintext',
     )
   })
 
-  it('binds a keyed store and refuses the origin or credential slots', () => {
+  it('binds a keyed store and refuses the origin or credential slots', async () => {
     const items = new Map<string, string>()
     const web = {
       getItem(key: string) {
@@ -94,10 +95,10 @@ describe('PWA device identity store', () => {
       },
     }
     const storage = bindPwaRelayIdentityStorage(web)
-    expect(storage.get()).toBeUndefined()
-    storage.set('identity-blob')
+    expect(await storage.get()).toBeUndefined()
+    await storage.set('identity-blob')
     expect(items.get(PWA_RELAY_IDENTITY_STORAGE_KEY)).toBe('identity-blob')
-    storage.clear()
+    await storage.clear()
     expect(items.has(PWA_RELAY_IDENTITY_STORAGE_KEY)).toBe(false)
     expectRelayError(
       () => bindPwaRelayIdentityStorage(web, PWA_RELAY_ORIGIN_STORAGE_KEY),
@@ -107,6 +108,43 @@ describe('PWA device identity store', () => {
       () => bindPwaRelayIdentityStorage(web, 'access_token'),
       'plaintext',
     )
+  })
+
+  it('refuses sessionStorage and loads identity from an async key/value store', async () => {
+    const session = {
+      getItem(_key: string) {
+        return null
+      },
+      setItem(_key: string, _value: string) {},
+      removeItem(_key: string) {},
+    }
+    const host = globalThis as unknown as { sessionStorage?: typeof session }
+    const previous = host.sessionStorage
+    host.sessionStorage = session
+    try {
+      expectRelayError(() => bindPwaRelayIdentityStorage(session), 'malformed')
+    } finally {
+      if (previous === undefined) {
+        delete host.sessionStorage
+      } else {
+        host.sessionStorage = previous
+      }
+    }
+    const values = new Map<string, string>()
+    const storage = bindPwaRelayAsyncIdentityStorage({
+      async get(key) {
+        return values.get(key)
+      },
+      async put(key, value) {
+        values.set(key, value)
+      },
+      async delete(key) {
+        values.delete(key)
+      },
+    })
+    const first = await loadPwaRelayIdentity(storage)
+    expect(values.get(PWA_RELAY_IDENTITY_STORAGE_KEY)).toContain(first.deviceId)
+    expect((await peekPwaRelayPublicIdentity(storage))?.deviceId).toBe(first.deviceId)
   })
 
   it('resolves exactly one of a supplied identity or a storage load', async () => {

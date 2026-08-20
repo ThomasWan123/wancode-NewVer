@@ -39,8 +39,9 @@ directory links.
   that blob; `peekPwaRelayPublicIdentity` never returns private keys.
   `resolvePwaRelayIdentity` accepts either that store or a supplied identity,
   not both. `createPwaRelayController` can enroll from `identityStorage`.
-  `bindPwaRelayIdentityStorage` refuses the origin `sessionStorage` key and
-  credential-like keys. Handshake
+  `bindPwaRelayIdentityStorage` refuses `sessionStorage`, the origin key, and
+  credential-like keys. `bindPwaRelayAsyncIdentityStorage` binds IndexedDB-style
+  async stores. Handshake
   signatures use `createWebCryptoSignedHandshakeEnvelope`. Follow-ups are
   sealed with `createWebCryptoSealedRelayEnvelope`. Drain opens those boxes
   with `openWebCryptoSealedRelayPayload`. Closed sessions refuse send and drain until `reconnect`.
