@@ -5,7 +5,7 @@ import {
   assertDeviceEncryptionPublicKey,
   connectOutboundRelay,
   createRelayHandshakeNonce,
-  createSealedRelayEnvelope,
+  createWebCryptoSealedRelayEnvelope,
   createWebCryptoSignedHandshakeEnvelope,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
@@ -195,7 +195,7 @@ export async function createPwaRelayController(
       throw new RelayAuthorizationError('malformed', 'pwa sealed payload kind must match the frame')
     }
     return connection.send({
-      envelope: createSealedRelayEnvelope({
+      envelope: await createWebCryptoSealedRelayEnvelope({
         id,
         sentAt: now,
         actor: { userId: connection.userId, deviceId: connection.deviceId },

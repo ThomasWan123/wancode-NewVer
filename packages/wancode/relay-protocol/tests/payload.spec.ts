@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   RelayAuthorizationError,
   createSealedRelayEnvelope,
+  createWebCryptoSealedRelayEnvelope,
   createSignedHandshakeEnvelope,
   generateDeviceKeyPair,
   openSealedRelayPayload,
@@ -48,6 +49,27 @@ describe('device-sealed application payloads', () => {
     })
     expectRelayError(() => openSealedRelayPayload(envelope, stranger), 'untrusted-key')
     expectRelayError(() => openSealedRelayPayload(envelope, sender), 'untrusted-key')
+  })
+
+  it('lets the recipient open a WebCrypto-sealed prompt', async () => {
+    const sender = generateDeviceKeyPair()
+    const recipient = generateDeviceKeyPair()
+    const envelope = await createWebCryptoSealedRelayEnvelope({
+      id: 'msg-webcrypto',
+      sentAt: NOW,
+      actor: ACTOR,
+      kind: 'prompt',
+      sender,
+      recipientEncryptionPublicKey: recipient.encryptionPublicKey,
+      payload: { kind: 'prompt', sessionId: 'sess-1', text: SECRET },
+    })
+
+    expect(JSON.stringify(envelope)).not.toContain(SECRET)
+    expect(openSealedRelayPayload(envelope, recipient)).toEqual({
+      kind: 'prompt',
+      sessionId: 'sess-1',
+      text: SECRET,
+    })
   })
 
   it('seals approval and cancel frames for the same recipient', () => {

@@ -35,7 +35,8 @@ directory links.
   same way. Presence state must be online or offline. Follow-up text is required and capped so low-bandwidth links stay
   bounded. Handshake nonces come from WebCrypto, not `node:crypto`. Device
   identities can be minted with `createWebCryptoDeviceIdentity`. Handshake
-  signatures use `createWebCryptoSignedHandshakeEnvelope`. Closed sessions refuse send and drain until `reconnect`.
+  signatures use `createWebCryptoSignedHandshakeEnvelope`. Follow-ups are
+  sealed with `createWebCryptoSealedRelayEnvelope`. Closed sessions refuse send and drain until `reconnect`.
   `listDesktops` uses outbound HTTPS and still works after close. `drain` reclaims queued mail
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so
   the handshake is not replay. `revoke` closes the socket and revokes the PWA

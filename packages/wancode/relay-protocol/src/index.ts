@@ -161,6 +161,7 @@ export {
 export {
   assertSealedApplicationEnvelope,
   createSealedRelayEnvelope,
+  createWebCryptoSealedRelayEnvelope,
   openSealedRelayPayload,
   type RelayApplicationKind,
   type RelayApplicationPayload,

@@ -21,6 +21,7 @@ import {
   type RelayFrameKind,
 } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
+import { encodeStandardBase64, sealWebCryptoX25519Box } from './webcrypto-keys.ts'
 
 const BOX_PREFIX = 'v1:box:'
 const HKDF_INFO = 'wancode-relay-v1'
@@ -71,6 +72,55 @@ export function assertSealedApplicationEnvelope(envelope: unknown): RelayEnvelop
  * recipient encryption private key. The relay stores this blob opaquely.
  */
 export function createSealedRelayEnvelope(input: SealedRelayEnvelopeInput): Record<string, unknown> {
+  const prepared = prepareSealedEnvelope(input)
+  const key = deriveBoxKey(
+    input.sender.encryptionPrivateKey,
+    input.recipientEncryptionPublicKey,
+    input.id,
+  )
+  const iv = randomBytes(12)
+  const cipher = createCipheriv('aes-256-gcm', key, iv)
+  cipher.setAAD(prepared.aad)
+  const encrypted = Buffer.concat([cipher.update(prepared.plaintext), cipher.final()])
+  return sealedEnvelopeRecord(input, {
+    alg: 'x25519-hkdf-aes-256-gcm',
+    senderEncryptionPublicKey: input.sender.encryptionPublicKey,
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    ciphertext: encrypted.toString('base64'),
+  })
+}
+
+/**
+ * Build the same sealed envelope through WebCrypto so a PWA does not import
+ * `node:crypto` to seal follow-ups. Missing WebCrypto fails closed.
+ */
+export async function createWebCryptoSealedRelayEnvelope(
+  input: SealedRelayEnvelopeInput,
+): Promise<Record<string, unknown>> {
+  const prepared = prepareSealedEnvelope(input)
+  const sealed = await sealWebCryptoX25519Box({
+    senderEncryptionPrivateKey: input.sender.encryptionPrivateKey,
+    recipientEncryptionPublicKey: input.recipientEncryptionPublicKey,
+    envelopeId: input.id,
+    info: HKDF_INFO,
+    aad: prepared.aad,
+    plaintext: prepared.plaintext,
+  })
+  return sealedEnvelopeRecord(input, {
+    alg: 'x25519-hkdf-aes-256-gcm',
+    senderEncryptionPublicKey: input.sender.encryptionPublicKey,
+    iv: sealed.iv,
+    tag: sealed.tag,
+    ciphertext: sealed.ciphertext,
+  })
+}
+
+function prepareSealedEnvelope(input: SealedRelayEnvelopeInput): {
+  readonly payload: RelayApplicationPayload
+  readonly aad: Uint8Array
+  readonly plaintext: Uint8Array
+} {
   if (typeof input.id !== 'string' || input.id.length === 0 || /[\0\r\n]/u.test(input.id)) {
     throw new RelayAuthorizationError('malformed', 'relay sealed envelope id is required')
   }
@@ -83,28 +133,28 @@ export function createSealedRelayEnvelope(input: SealedRelayEnvelopeInput): Reco
   assertDeviceEncryptionPublicKey(input.sender.encryptionPublicKey)
   assertDeviceEncryptionPublicKey(input.recipientEncryptionPublicKey)
   const payload = parseApplicationPayload(input.payload)
-  const aad = associatedData({
-    id: input.id,
-    kind: input.kind,
-    sentAt: input.sentAt,
-    actor: input.actor,
-  })
-  const key = deriveBoxKey(
-    input.sender.encryptionPrivateKey,
-    input.recipientEncryptionPublicKey,
-    input.id,
-  )
-  const iv = randomBytes(12)
-  const cipher = createCipheriv('aes-256-gcm', key, iv)
-  cipher.setAAD(aad)
-  const encrypted = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()])
-  const box = {
-    alg: 'x25519-hkdf-aes-256-gcm',
-    senderEncryptionPublicKey: input.sender.encryptionPublicKey,
-    iv: iv.toString('base64'),
-    tag: cipher.getAuthTag().toString('base64'),
-    ciphertext: encrypted.toString('base64'),
+  return {
+    payload,
+    aad: associatedData({
+      id: input.id,
+      kind: input.kind,
+      sentAt: input.sentAt,
+      actor: input.actor,
+    }),
+    plaintext: new TextEncoder().encode(JSON.stringify(payload)),
   }
+}
+
+function sealedEnvelopeRecord(
+  input: SealedRelayEnvelopeInput,
+  box: {
+    readonly alg: string
+    readonly senderEncryptionPublicKey: string
+    readonly iv: string
+    readonly tag: string
+    readonly ciphertext: string
+  },
+): Record<string, unknown> {
   assertNoPlaintextRelayFields(box, 'relay sealed box')
   return {
     protocolVersion: 1,
@@ -112,7 +162,7 @@ export function createSealedRelayEnvelope(input: SealedRelayEnvelopeInput): Reco
     kind: input.kind,
     sentAt: input.sentAt,
     actor: input.actor,
-    ciphertext: `${BOX_PREFIX}${Buffer.from(JSON.stringify(box), 'utf8').toString('base64')}`,
+    ciphertext: `${BOX_PREFIX}${encodeStandardBase64(new TextEncoder().encode(JSON.stringify(box)))}`,
   }
 }
 
@@ -260,15 +310,15 @@ function associatedData(envelope: {
   kind: RelayFrameKind | RelayApplicationKind
   sentAt: number
   actor: RelayActor
-}): Buffer {
-  return Buffer.from([
+}): Uint8Array {
+  return new TextEncoder().encode([
     envelope.id,
     envelope.kind,
     String(envelope.sentAt),
     envelope.actor.userId,
     envelope.actor.deviceId,
     envelope.actor.sessionId ?? '',
-  ].join('\n'), 'utf8')
+  ].join('\n'))
 }
 
 function deriveBoxKey(

@@ -23,7 +23,8 @@ plugin entry.
   private material fails closed.
 - Application prompt, approval, cancel, session-event, and presence frames are
   sealed to the recipient encryption public key. Empty envelope ids fail
-  closed before encryption. The relay stores the box
+  closed before encryption. `createWebCryptoSealedRelayEnvelope` seals the
+  same box through WebCrypto so a PWA does not import `node:crypto`. The relay stores the box
   opaquely; the wrong device key and handshake ciphertext fail closed.
 - A handshake must claim `direction: "outbound"` and verify against the
   registered device public key. Inbound claims, untrusted signatures, unknown
