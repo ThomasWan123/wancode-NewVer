@@ -62,6 +62,8 @@ export {
 } from './devices.ts'
 export {
   RELAY_CAPABILITIES,
+  RELAY_HANDSHAKE_NONCE_BYTES,
+  createRelayHandshakeNonce,
   createSignedHandshakeEnvelope,
   openOutboundSession,
   parseHandshakeAck,

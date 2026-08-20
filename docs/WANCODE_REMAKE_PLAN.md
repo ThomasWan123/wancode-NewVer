@@ -29,7 +29,7 @@ Status: active
 - M3 started: `@wancode/relay-pwa` projects session events without prompt text
   or model credentials, lists same-account desktops, and can enroll as a PWA
   device then send sealed follow-ups, approvals, and cancels over outbound
-  HTTPS/WSS. Reconnect drains mailbox mail, folds streaming progress into
+  HTTPS/WSS. Handshake nonces use WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. Progress details are
   capped. The installable Web App
   Manifest and fail-closed cache policy exist; `createPwaServiceWorkerSource`

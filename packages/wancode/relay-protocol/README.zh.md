@@ -21,6 +21,7 @@ Wan Code Cloud Relay（M2）的 fail-closed 远程控制契约和仅出站 WebSo
   设备密钥和 handshake ciphertext 一律失败关闭。
 - 握手必须声明 `direction: "outbound"`，并对照已注册设备公钥验签。入站声明、
   不可信签名、未知 capability 和重复 nonce 一律失败关闭。
+  `createRelayHandshakeNonce` 使用 WebCrypto，因此 PWA 握手不必导入 `node:crypto`。
 - 生产 Relay URL 必须使用 `wss:`。明文 `ws:` 只允许回环地址。访问令牌放在首个
   JSON 帧里，而不是查询参数。握手之后同一条 socket 可发送密封应用帧、领取本机
   邮箱并确认已拉取的密文盒。reclaim 和 ack 的设备 id 来自令牌，从不由客户端

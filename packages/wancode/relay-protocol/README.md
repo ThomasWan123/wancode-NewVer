@@ -27,7 +27,8 @@ plugin entry.
   opaquely; the wrong device key and handshake ciphertext fail closed.
 - A handshake must claim `direction: "outbound"` and verify against the
   registered device public key. Inbound claims, untrusted signatures, unknown
-  capabilities, and reused nonces fail closed.
+  capabilities, and reused nonces fail closed. `createRelayHandshakeNonce`
+  uses WebCrypto so a PWA handshake does not import `node:crypto`.
 - Production relay URLs must use `wss:`. Cleartext `ws:` is accepted only for
   loopback. The access token is the first JSON frame, not a query parameter.
   After handshake, the same socket may send sealed application frames, reclaim

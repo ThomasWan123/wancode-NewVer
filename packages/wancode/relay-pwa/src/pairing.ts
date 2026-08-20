@@ -1,9 +1,9 @@
 /** Outbound PWA pairing. The controller never listens and never stores model credentials. */
 
-import { randomBytes } from 'node:crypto'
 import {
   RelayAuthorizationError,
   connectOutboundRelay,
+  createRelayHandshakeNonce,
   createSealedRelayEnvelope,
   createSignedHandshakeEnvelope,
   issueOutboundRelayToken,
@@ -297,7 +297,7 @@ async function openSession(
     assertion: input.assertion,
     deviceId: published.deviceId,
   })
-  const nonce = randomBytes(16).toString('hex')
+  const nonce = createRelayHandshakeNonce()
   return connectOutboundRelay({
     url: input.url,
     accessToken: token.accessToken,

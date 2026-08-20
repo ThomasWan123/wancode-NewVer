@@ -21,7 +21,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   HTTP origin 会在注册前失败关闭。桌面可
   稍后通过 `listDesktops` / `selectDesktop` 选择。已撤销桌面不会出现。follow-up、approval 和
   cancel 按该桌面加密公钥密封。presence 帧同样密封。follow-up 正文必填且有上限，
-  避免低带宽链路被撑爆。关闭后的会话在 `reconnect` 之前拒绝 send 和 drain。
+  避免低带宽链路被撑爆。握手 nonce 来自 WebCrypto，而不是 `node:crypto`。关闭后的会话在 `reconnect` 之前拒绝 send 和 drain。
   `listDesktops` 走仅出站 HTTPS，关闭后仍可用。`drain` 领取排队邮件和在线推送，只 ack 排队
   id。`reconnect` 使用新 nonce，避免握手被当成重放。`revoke` 关闭 socket 并立即
   撤销该 PWA 设备 id。返回对象不含私钥。

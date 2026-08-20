@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   RelayAuthorizationError,
   createMemoryRelayStore,
+  createRelayHandshakeNonce,
   createSignedHandshakeEnvelope,
   dispatchRelayEnvelope,
   generateDeviceKeyPair,
@@ -22,6 +23,17 @@ function expectRelayError(run: () => unknown, code: string): void {
     expect((cause as RelayAuthorizationError).code).toBe(code)
   }
 }
+
+describe('relay handshake nonce', () => {
+  it('creates a unique hex nonce without node:crypto', () => {
+    const first = createRelayHandshakeNonce()
+    const second = createRelayHandshakeNonce()
+    expect(first).toMatch(/^[0-9a-f]{32}$/u)
+    expect(second).toMatch(/^[0-9a-f]{32}$/u)
+    expect(first).not.toBe(second)
+    expect(first).not.toMatch(/token|secret|credential/i)
+  })
+})
 
 function authorizedStore(publicKey: string, now = NOW) {
   const store = createMemoryRelayStore()

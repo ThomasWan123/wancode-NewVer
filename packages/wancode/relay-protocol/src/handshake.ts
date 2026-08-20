@@ -29,6 +29,23 @@ export type RelayCapability = (typeof RELAY_CAPABILITIES)[number]
 
 const ALLOWED_CAPABILITIES = new Set<string>(RELAY_CAPABILITIES)
 
+/** Hex handshake nonce length produced by WebCrypto. */
+export const RELAY_HANDSHAKE_NONCE_BYTES = 16
+
+/**
+ * Create a handshake nonce with WebCrypto so a PWA does not import `node:crypto`.
+ * Missing WebCrypto fails closed.
+ */
+export function createRelayHandshakeNonce(): string {
+  const crypto = globalThis.crypto
+  if (crypto === undefined || typeof crypto.getRandomValues !== 'function') {
+    throw new RelayAuthorizationError('malformed', 'relay handshake nonce requires webcrypto')
+  }
+  const bytes = new Uint8Array(RELAY_HANDSHAKE_NONCE_BYTES)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
 /** Direction claimed by a handshake. Only outbound desktop dials are accepted. */
 export type RelayHandshakeDirection = 'outbound' | 'inbound'
 

@@ -39,6 +39,8 @@ describe('relay-protocol package surface', () => {
     expect(protocol).toHaveProperty('reclaimRelayMailbox')
     expect(protocol).toHaveProperty('assertSealedApplicationEnvelope')
     expect(protocol).toHaveProperty('generateDeviceKeyPair')
+    expect(protocol).toHaveProperty('createSignedHandshakeEnvelope')
+    expect(protocol).toHaveProperty('createRelayHandshakeNonce')
     expect(protocol).toHaveProperty('createStoredDeviceIdentity')
     expect(protocol).toHaveProperty('parseStoredDeviceIdentity')
     expect(protocol).toHaveProperty('serializeStoredDeviceIdentity')
