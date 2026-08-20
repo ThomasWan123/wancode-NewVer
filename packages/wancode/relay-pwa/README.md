@@ -44,7 +44,9 @@ directory links.
   network-only. `createPwaServiceWorkerSource` emits the matching worker; it
   never listens. `createPwaShellFiles` returns `index.html`, the manifest, and
   `sw.js`. `createPwaShellIcons` returns the 192 and 512 PNG marks. Checked-in
-  copies live under `public/` and must match those generators. The index form
+  copies live under `public/` and must match those generators. `createPwaDeployFiles`
+  adds the PNG icons so a static HTTPS origin can host the installable shell
+  without this package listening. The index form
   accepts a relay origin and never names token fields.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs. `@wancode/relay-pwa/host` may serve that shell on

@@ -5,6 +5,7 @@ import {
   createPwaIndexHtml,
   createPwaServiceWorkerSource,
   createPwaShellFiles,
+  createPwaDeployFiles,
   createPwaShellIcon,
   createPwaShellIcons,
   createPwaWebManifest,
@@ -118,6 +119,25 @@ describe('PWA installable shell', () => {
     for (const name of ['index.html', 'manifest.webmanifest', 'sw.js'] as const) {
       expect(readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8')).toBe(files[name])
     }
+  })
+
+  it('returns deploy files that include icons and never start a listener', () => {
+    const files = createPwaDeployFiles()
+    expect(files['index.html']).toBe(createPwaShellFiles()['index.html'])
+    expect(files['icons/wancode-192.png']).toEqual(createPwaShellIcons()['icons/wancode-192.png'])
+    expect(files['icons/wancode-512.png']).toEqual(createPwaShellIcons()['icons/wancode-512.png'])
+    expect(Object.keys(files).sort()).toEqual([
+      'icons/wancode-192.png',
+      'icons/wancode-512.png',
+      'index.html',
+      'manifest.webmanifest',
+      'sw.js',
+    ])
+    expect(JSON.stringify({
+      html: files['index.html'],
+      manifest: files['manifest.webmanifest'],
+      sw: files['sw.js'],
+    })).not.toContain('listen(')
   })
 
   it('emits PNG icons that match the checked-in installable assets', () => {

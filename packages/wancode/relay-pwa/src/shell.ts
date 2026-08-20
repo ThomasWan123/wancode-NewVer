@@ -2,6 +2,7 @@
 
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
 import { assertPwaRelayRecord } from './credentials.ts'
+import { createPwaShellIcons } from './icons.ts'
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
 const CREDENTIAL_QUERY = /token|secret|credential|password|authorization/iu
@@ -234,5 +235,22 @@ export function createPwaShellFiles(): {
     'index.html': createPwaIndexHtml(),
     'manifest.webmanifest': `${JSON.stringify(createPwaWebManifest(), null, 2)}\n`,
     'sw.js': createPwaServiceWorkerSource(),
+  }
+}
+
+/**
+ * Static files for an HTTPS origin or the loopback host. This never starts a
+ * listener. Icon bytes are included so `cache.addAll` cannot 404.
+ */
+export function createPwaDeployFiles(): {
+  readonly 'index.html': string
+  readonly 'manifest.webmanifest': string
+  readonly 'sw.js': string
+  readonly 'icons/wancode-192.png': Buffer
+  readonly 'icons/wancode-512.png': Buffer
+} {
+  return {
+    ...createPwaShellFiles(),
+    ...createPwaShellIcons(),
   }
 }

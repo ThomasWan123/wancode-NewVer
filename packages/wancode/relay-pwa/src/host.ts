@@ -2,8 +2,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { RelayAuthorizationError } from '../../relay-protocol/src/index.ts'
-import { createPwaShellIcons } from './icons.ts'
-import { createPwaShellFiles } from './shell.ts'
+import { createPwaDeployFiles } from './shell.ts'
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
 const CREDENTIAL_QUERY = /token|secret|credential|password|authorization/iu
@@ -44,7 +43,7 @@ export async function startPwaShellHost(
   input: StartPwaShellHostInput = {},
 ): Promise<PwaShellHost> {
   const bindAddress = assertPwaShellBindAddress(input.bindAddress ?? '127.0.0.1')
-  const files = indexShellFiles(input.files ?? defaultShellFiles())
+  const files = indexShellFiles(input.files ?? createPwaDeployFiles())
   let boundPort: number | undefined
   const httpServer = createServer((request, response) => {
     handleShellHttp(request, response, files, boundPort)
@@ -68,13 +67,6 @@ export async function startPwaShellHost(
         httpServer.close(error => error ? reject(error) : resolve())
       })
     },
-  }
-}
-
-function defaultShellFiles(): Record<string, string | Uint8Array> {
-  return {
-    ...createPwaShellFiles(),
-    ...createPwaShellIcons(),
   }
 }
 

@@ -19,6 +19,7 @@ export {
   createPwaIndexHtml,
   createPwaServiceWorkerSource,
   createPwaShellFiles,
+  createPwaDeployFiles,
   createPwaWebManifest,
   decidePwaCacheAction,
   PWA_SHELL_CACHE,
