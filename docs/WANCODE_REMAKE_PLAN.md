@@ -70,7 +70,8 @@ Status: active
   refuses missing session ids. Approval and cancel sinks refuse missing
   request ids. `createDesktopRelayApplySinks` binds those lookups together.
   `createDesktopRelayHostApplySinks` queues follow-ups through Host
-  `prompt([{ type: 'text', text }], 'queue')` without injecting Host services.
+  `prompt([{ type: 'text', text }], 'queue')` and maps approvals to Host
+  `respond('allowed-once' | 'rejected')` without injecting Host services.
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail
   closed. It does not listen on a public interface. Non-loopback Origin and

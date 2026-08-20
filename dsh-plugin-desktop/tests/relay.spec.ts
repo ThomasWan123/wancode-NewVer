@@ -514,6 +514,36 @@ describe('desktop outbound relay Host plugin', () => {
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 
+  it('answers Host approvals with allowed-once or rejected without injecting services', async () => {
+    const respond = vi.fn(async () => undefined)
+    const other = vi.fn(async () => undefined)
+    const cancel = vi.fn(async () => undefined)
+    const sinks = createDesktopRelayHostApplySinks({
+      getSession: () => undefined,
+      getRequest: request => {
+        if (request.sessionId === 'sess-1' && request.requestId === 'req-1') {
+          return { respond, cancel }
+        }
+        return { respond: other, cancel: other }
+      },
+    })
+    await sinks.approval({ sessionId: 'sess-1', requestId: 'req-1', approved: true })
+    await sinks.approval({ sessionId: 'sess-1', requestId: 'req-1', approved: false })
+    await sinks.cancel({ sessionId: 'sess-1', requestId: 'req-1' })
+    expect(respond).toHaveBeenNthCalledWith(1, 'allowed-once')
+    expect(respond).toHaveBeenNthCalledWith(2, 'rejected')
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(other).not.toHaveBeenCalled()
+    await expect(createDesktopRelayHostApplySinks({
+      getSession: () => undefined,
+      getRequest: () => undefined,
+    }).approval({
+      sessionId: 'sess-1',
+      requestId: 'req-missing',
+      approved: true,
+    })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
   it('seals allowed session progress to a PWA without prompt text', async () => {
     const envelope = { id: 'evt-1', kind: 'session-event' }
     const sealTo = vi.fn(() => envelope)

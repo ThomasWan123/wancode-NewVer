@@ -709,26 +709,36 @@ export function createDesktopRelayHostFollowUpSink(input: {
 }
 
 /**
+ * Host/client approval shape used to answer a pending tool request. Client
+ * answers are `allowed-once` or `rejected`. This is not a Cordis inject.
+ */
+export interface DesktopRelayHostApprovalRequest {
+  readonly respond: (outcome: 'allowed-once' | 'rejected') => Promise<unknown>
+  readonly cancel: () => Promise<unknown>
+}
+
+/**
  * Bind follow-up, approval, and cancel to live Host lookups. Follow-ups use
- * `prompt(..., 'queue')`. Missing sessions or request ids fail closed. This
- * does not listen and does not inject Host services.
+ * `prompt(..., 'queue')`. Approvals map to Host `respond('allowed-once' |
+ * 'rejected')`. Missing sessions or request ids fail closed. This does not
+ * listen and does not inject Host services.
  */
 export function createDesktopRelayHostApplySinks(input: {
   readonly getSession: (sessionId: string) => DesktopRelayHostSession | undefined
   readonly getRequest: (input: {
     readonly sessionId: string
     readonly requestId: string
-  }) => {
-    readonly decide: (approved: boolean) => Promise<void>
-    readonly cancel: () => Promise<void>
-  } | undefined
+  }) => DesktopRelayHostApprovalRequest | undefined
 }): Required<DesktopRelayApplySinks> {
   return createDesktopRelayApplySinks({
     getSession: sessionId => {
       const session = input.getSession(sessionId)
       return session === undefined ? undefined : bindDesktopRelayHostSession(session)
     },
-    getRequest: input.getRequest,
+    getRequest: request => {
+      const found = input.getRequest(request)
+      return found === undefined ? undefined : bindDesktopRelayHostApprovalRequest(found)
+    },
   })
 }
 
@@ -738,6 +748,20 @@ function bindDesktopRelayHostSession(session: DesktopRelayHostSession): {
   return {
     async submit(text) {
       await session.prompt([{ type: 'text', text }], 'queue')
+    },
+  }
+}
+
+function bindDesktopRelayHostApprovalRequest(request: DesktopRelayHostApprovalRequest): {
+  readonly decide: (approved: boolean) => Promise<void>
+  readonly cancel: () => Promise<void>
+} {
+  return {
+    async decide(approved) {
+      await request.respond(approved ? 'allowed-once' : 'rejected')
+    },
+    async cancel() {
+      await request.cancel()
     },
   }
 }
