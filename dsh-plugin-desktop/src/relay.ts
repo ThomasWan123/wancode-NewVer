@@ -139,7 +139,7 @@ export interface DesktopRelayHandle {
   }>
   listDevices(input: DesktopRelayListInput): Promise<readonly DesktopRelayPublicDevice[]>
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
-  processMail(input: ProcessDesktopRelayMailInput): Promise<{
+  processMail(input: Pick<ProcessDesktopRelayMailInput, 'identity'> & Partial<DesktopRelayApplySinks>): Promise<{
     readonly applied: number
     readonly ignored: number
   }>
@@ -186,6 +186,7 @@ export function prepareDesktopRelay(
   config: Config,
   connect: DesktopRelayConnect = connectOutboundRelay,
   control: DesktopRelayControl = defaultControl,
+  applySinks?: Required<DesktopRelayApplySinks>,
 ): DesktopRelayHandle | undefined {
   if (!config.enabled || config.url.length === 0) return undefined
   const url = assertOutboundRelayUrl(config.url)
@@ -242,7 +243,11 @@ export function prepareDesktopRelay(
       if (connection === undefined) {
         throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
       }
-      return processDesktopRelayMail({ connection, ...input })
+      return processDesktopRelayMail({
+        connection,
+        identity: input.identity,
+        ...mergeDesktopRelayApplySinks(input, applySinks),
+      })
     },
     async sendProgress(input) {
       if (connection === undefined) {
@@ -763,6 +768,23 @@ function bindDesktopRelayHostApprovalRequest(request: DesktopRelayHostApprovalRe
     async cancel() {
       await request.cancel()
     },
+  }
+}
+
+function mergeDesktopRelayApplySinks(
+  input: Partial<DesktopRelayApplySinks>,
+  defaults: Required<DesktopRelayApplySinks> | undefined,
+): DesktopRelayApplySinks {
+  const followUp = input.followUp ?? defaults?.followUp
+  if (followUp === undefined) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay follow-up sink is required')
+  }
+  const approval = input.approval ?? defaults?.approval
+  const cancel = input.cancel ?? defaults?.cancel
+  return {
+    followUp,
+    ...(approval === undefined ? {} : { approval }),
+    ...(cancel === undefined ? {} : { cancel }),
   }
 }
 

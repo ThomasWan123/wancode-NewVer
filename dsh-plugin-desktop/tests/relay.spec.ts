@@ -391,6 +391,87 @@ describe('desktop outbound relay Host plugin', () => {
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 
+  it('applies mail through prepared Host sinks without injecting sessions', async () => {
+    const queued = { id: 'msg-1', kind: 'prompt' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => [queued]),
+      receive: vi.fn(async () => []),
+      acknowledge: vi.fn(async () => ({
+        envelopeId: 'msg-1',
+        toDeviceId: 'device-a',
+        outcome: 'delivered' as const,
+      })),
+      close: vi.fn(),
+    }
+    const prompt = vi.fn(async () => undefined)
+    const connect = vi.fn(async () => connection)
+    const handle = prepareDesktopRelay(
+      idleConfig({
+        enabled: true,
+        url: 'wss://relay.example.invalid/v1',
+      }),
+      connect,
+      {
+        register: vi.fn(),
+        issueToken: vi.fn(),
+        revoke: vi.fn(),
+        listDevices: vi.fn(),
+      },
+      createDesktopRelayHostApplySinks({
+        getSession: sessionId => sessionId === 'sess-1' ? { prompt } : undefined,
+        getRequest: () => undefined,
+      }),
+    )
+    await handle?.connect({
+      accessToken: 'tok-live',
+      envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
+    })
+    await expect(handle?.processMail({
+      identity: {
+        openSealed: vi.fn(() => ({
+          kind: 'prompt' as const,
+          sessionId: 'sess-1',
+          text: 'review the login form',
+        })),
+      },
+    })).resolves.toEqual({ applied: 1, ignored: 0 })
+    expect(prompt).toHaveBeenCalledWith(
+      [{ type: 'text', text: 'review the login form' }],
+      'queue',
+    )
+    expect(connection.acknowledge).toHaveBeenCalledWith({ envelopeId: 'msg-1' })
+  })
+
+  it('refuses to process mail without a follow-up sink', async () => {
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => []),
+      receive: vi.fn(async () => []),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn(async () => connection))
+    await handle?.connect({
+      accessToken: 'tok-live',
+      envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
+    })
+    await expect(handle?.processMail({
+      identity: { openSealed: vi.fn() },
+    })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
   it('submits follow-ups only to the matching live desktop session', async () => {
     const submit = vi.fn(async () => undefined)
     const other = vi.fn(async () => undefined)
