@@ -38,8 +38,10 @@ Status: active
   shell files, including PNG icons, match the generators. Desktop identity can
   open sealed PWA follow-ups without exposing private keys,
   and can `sealTo` a PWA encryption public key. `drainDesktopRelayMail` reclaims
-  queued boxes and acks only queued ids. `applyDesktopRelayPayloads` hands
-  follow-ups to a local session sink so model credentials stay on the desktop.
+  queued boxes and acks only queued ids. `processDesktopRelayMail` applies
+  follow-ups locally first and acks queued ids only after that sink succeeds.
+  `applyDesktopRelayPayloads` hands follow-ups to a local session sink so
+  model credentials stay on the desktop.
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. It does not listen on a public
   interface.

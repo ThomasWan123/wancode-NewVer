@@ -138,6 +138,10 @@ export interface DesktopRelayHandle {
   }>
   listDevices(input: DesktopRelayListInput): Promise<readonly DesktopRelayPublicDevice[]>
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
+  processMail(input: ProcessDesktopRelayMailInput): Promise<{
+    readonly applied: number
+    readonly ignored: number
+  }>
   dispose(): void
 }
 
@@ -219,6 +223,12 @@ export function prepareDesktopRelay(
       connection = next
       return next
     },
+    async processMail(input) {
+      if (connection === undefined) {
+        throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
+      }
+      return processDesktopRelayMail({ connection, ...input })
+    },
     dispose() {
       connection?.close()
       connection = undefined
@@ -226,45 +236,11 @@ export function prepareDesktopRelay(
   }
 }
 
-/**
- * Drain queued and live sealed mail, then open it with the stored identity.
- * Only queued ids are acknowledged. Private keys stay inside `openSealed`.
- */
-export async function drainDesktopRelayMail(input: {
-  readonly connection: DesktopRelayConnection
-  readonly identity: Pick<DesktopRelayIdentity, 'openSealed'>
-}): Promise<{
-  readonly payloads: readonly RelayApplicationPayload[]
-}> {
-  const queued = [...await input.connection.reclaim()]
-  let live: readonly unknown[] = []
-  try {
-    live = await input.connection.receive({ timeoutMs: 25 })
-  } catch {
-    live = []
-  }
-  const seen = new Set<string>()
-  const payloads: RelayApplicationPayload[] = []
-  const queuedIds = new Set(queued.map(relayEnvelopeId))
-  for (const envelope of [...queued, ...live]) {
-    const envelopeId = relayEnvelopeId(envelope)
-    if (seen.has(envelopeId)) continue
-    seen.add(envelopeId)
-    payloads.push(input.identity.openSealed(envelope))
-    if (queuedIds.has(envelopeId)) {
-      await input.connection.acknowledge({ envelopeId })
-    }
-  }
-  return { payloads }
-}
+/** Same 8192-character follow-up cap as the PWA sender. */
+export const MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS = 8_192
 
-/**
- * Apply opened PWA payloads on the desktop. Prompt text is handed to the
- * caller-supplied follow-up sink so model credentials stay local. Session
- * events and presence are ignored; they travel desktop to PWA, not back.
- */
-export async function applyDesktopRelayPayloads(input: {
-  readonly payloads: readonly RelayApplicationPayload[]
+/** Sinks used to apply opened PWA mail without exposing model credentials. */
+export interface DesktopRelayApplySinks {
   readonly followUp: (input: {
     readonly sessionId: string
     readonly text: string
@@ -278,7 +254,71 @@ export async function applyDesktopRelayPayloads(input: {
     readonly sessionId: string
     readonly requestId: string
   }) => Promise<void>
+}
+
+/** Drain, apply, then ack. Identity and sinks stay on the desktop. */
+export interface ProcessDesktopRelayMailInput extends DesktopRelayApplySinks {
+  readonly identity: Pick<DesktopRelayIdentity, 'openSealed'>
+}
+
+/**
+ * Drain queued and live sealed mail, then open it with the stored identity.
+ * Only queued ids are acknowledged. Private keys stay inside `openSealed`.
+ */
+export async function drainDesktopRelayMail(input: {
+  readonly connection: DesktopRelayConnection
+  readonly identity: Pick<DesktopRelayIdentity, 'openSealed'>
 }): Promise<{
+  readonly payloads: readonly RelayApplicationPayload[]
+}> {
+  const payloads: RelayApplicationPayload[] = []
+  for (const item of await collectDesktopRelayMail(input.connection)) {
+    payloads.push(input.identity.openSealed(item.envelope))
+    if (item.queued) {
+      await input.connection.acknowledge({ envelopeId: item.envelopeId })
+    }
+  }
+  return { payloads }
+}
+
+/**
+ * Open sealed PWA mail, apply it locally, then ack only queued ids that
+ * applied or were ignored. A refused follow-up is not acknowledged so it can
+ * be retried. Model credentials stay on the desktop.
+ */
+export async function processDesktopRelayMail(input: {
+  readonly connection: DesktopRelayConnection
+} & ProcessDesktopRelayMailInput): Promise<{
+  readonly applied: number
+  readonly ignored: number
+}> {
+  let applied = 0
+  let ignored = 0
+  for (const item of await collectDesktopRelayMail(input.connection)) {
+    const payload = input.identity.openSealed(item.envelope)
+    const result = await applyDesktopRelayPayloads({
+      payloads: [payload],
+      followUp: input.followUp,
+      ...(input.approval === undefined ? {} : { approval: input.approval }),
+      ...(input.cancel === undefined ? {} : { cancel: input.cancel }),
+    })
+    applied += result.applied
+    ignored += result.ignored
+    if (item.queued) {
+      await input.connection.acknowledge({ envelopeId: item.envelopeId })
+    }
+  }
+  return { applied, ignored }
+}
+
+/**
+ * Apply opened PWA payloads on the desktop. Prompt text is handed to the
+ * caller-supplied follow-up sink so model credentials stay local. Session
+ * events and presence are ignored; they travel desktop to PWA, not back.
+ */
+export async function applyDesktopRelayPayloads(input: {
+  readonly payloads: readonly RelayApplicationPayload[]
+} & DesktopRelayApplySinks): Promise<{
   readonly applied: number
   readonly ignored: number
 }> {
@@ -287,6 +327,7 @@ export async function applyDesktopRelayPayloads(input: {
   for (const payload of input.payloads) {
     switch (payload.kind) {
       case 'prompt':
+        assertDesktopRelayFollowUp(payload)
         await input.followUp({ sessionId: payload.sessionId, text: payload.text })
         applied += 1
         break
@@ -324,6 +365,46 @@ export async function applyDesktopRelayPayloads(input: {
     }
   }
   return { applied, ignored }
+}
+
+async function collectDesktopRelayMail(connection: DesktopRelayConnection): Promise<readonly {
+  readonly envelope: unknown
+  readonly envelopeId: string
+  readonly queued: boolean
+}[]> {
+  const queued = [...await connection.reclaim()]
+  let live: readonly unknown[] = []
+  try {
+    live = await connection.receive({ timeoutMs: 25 })
+  } catch {
+    live = []
+  }
+  const queuedIds = new Set(queued.map(relayEnvelopeId))
+  const seen = new Set<string>()
+  const collected: {
+    readonly envelope: unknown
+    readonly envelopeId: string
+    readonly queued: boolean
+  }[] = []
+  for (const envelope of [...queued, ...live]) {
+    const envelopeId = relayEnvelopeId(envelope)
+    if (seen.has(envelopeId)) continue
+    seen.add(envelopeId)
+    collected.push({ envelope, envelopeId, queued: queuedIds.has(envelopeId) })
+  }
+  return collected
+}
+
+function assertDesktopRelayFollowUp(payload: Extract<RelayApplicationPayload, { kind: 'prompt' }>): void {
+  if (payload.sessionId.length === 0 || /[\0\r\n]/u.test(payload.sessionId)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay follow-up session id is required')
+  }
+  if (payload.text.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay follow-up text is required')
+  }
+  if (payload.text.length > MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay follow-up text is too large')
+  }
 }
 
 function relayEnvelopeId(envelope: unknown): string {

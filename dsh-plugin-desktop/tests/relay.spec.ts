@@ -4,7 +4,9 @@ import {
   apply,
   applyDesktopRelayPayloads,
   drainDesktopRelayMail,
+  MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
   prepareDesktopRelay,
+  processDesktopRelayMail,
   type Config as RelayConfig,
 } from '../src/relay.ts'
 
@@ -271,5 +273,91 @@ describe('desktop outbound relay Host plugin', () => {
       followUp,
     })).resolves.toEqual({ applied: 0, ignored: 2 })
     expect(followUp).not.toHaveBeenCalled()
+  })
+
+  it('refuses empty and oversized follow-up text before the local sink runs', async () => {
+    const followUp = vi.fn(async () => undefined)
+    await expect(applyDesktopRelayPayloads({
+      payloads: [{ kind: 'prompt', sessionId: 'sess-1', text: '' }],
+      followUp,
+    })).rejects.toMatchObject({ code: 'malformed' })
+    await expect(applyDesktopRelayPayloads({
+      payloads: [{
+        kind: 'prompt',
+        sessionId: 'sess-1',
+        text: 'x'.repeat(MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS + 1),
+      }],
+      followUp,
+    })).rejects.toMatchObject({ code: 'malformed' })
+    expect(followUp).not.toHaveBeenCalled()
+  })
+
+  it('applies queued follow-ups then acks only after the local sink succeeds', async () => {
+    const queued = { id: 'msg-1', kind: 'prompt' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => [queued]),
+      receive: vi.fn(async () => []),
+      acknowledge: vi.fn(async () => ({
+        envelopeId: 'msg-1',
+        toDeviceId: 'device-a',
+        outcome: 'delivered' as const,
+      })),
+      close: vi.fn(),
+    }
+    const identity = {
+      openSealed: vi.fn(() => ({
+        kind: 'prompt' as const,
+        sessionId: 'sess-1',
+        text: 'review the login form',
+      })),
+    }
+    const followUp = vi.fn(async () => undefined)
+    await expect(processDesktopRelayMail({
+      connection,
+      identity,
+      followUp,
+    })).resolves.toEqual({ applied: 1, ignored: 0 })
+    expect(followUp).toHaveBeenCalledWith({ sessionId: 'sess-1', text: 'review the login form' })
+    expect(connection.acknowledge).toHaveBeenCalledOnce()
+    expect(connection.acknowledge).toHaveBeenCalledWith({ envelopeId: 'msg-1' })
+  })
+
+  it('does not ack queued mail when the follow-up is refused', async () => {
+    const queued = { id: 'msg-1', kind: 'prompt' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => [queued]),
+      receive: vi.fn(async () => []),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    await expect(processDesktopRelayMail({
+      connection,
+      identity: {
+        openSealed: vi.fn(() => ({ kind: 'prompt' as const, sessionId: 'sess-1', text: '' })),
+      },
+      followUp: vi.fn(async () => undefined),
+    })).rejects.toMatchObject({ code: 'malformed' })
+    expect(connection.acknowledge).not.toHaveBeenCalled()
+  })
+
+  it('refuses to process mail before the outbound socket is connected', async () => {
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn())
+    await expect(handle?.processMail({
+      identity: { openSealed: vi.fn() },
+      followUp: vi.fn(async () => undefined),
+    })).rejects.toMatchObject({ code: 'malformed' })
   })
 })
