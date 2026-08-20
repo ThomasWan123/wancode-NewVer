@@ -173,6 +173,63 @@ export async function sealWebCryptoX25519Box(input: {
   }
 }
 
+/**
+ * Open an X25519-HKDF-SHA-256 AES-256-GCM box through WebCrypto.
+ * The salt is the envelope id, matching `openSealedRelayPayload`.
+ */
+export async function openWebCryptoX25519Box(input: {
+  readonly recipientEncryptionPrivateKey: string
+  readonly senderEncryptionPublicKey: string
+  readonly envelopeId: string
+  readonly info: string
+  readonly aad: Uint8Array
+  readonly iv: string
+  readonly tag: string
+  readonly ciphertext: string
+}): Promise<Uint8Array> {
+  const subtle = requireSubtle()
+  try {
+    const privateKey = await subtle.importKey(
+      'pkcs8',
+      decodeStandardBase64(input.recipientEncryptionPrivateKey),
+      { name: 'X25519' },
+      false,
+      ['deriveBits'],
+    )
+    const publicKey = await subtle.importKey(
+      'spki',
+      decodeStandardBase64(input.senderEncryptionPublicKey),
+      { name: 'X25519' },
+      false,
+      [],
+    )
+    const shared = await subtle.deriveBits({ name: 'X25519', public: publicKey }, privateKey, 256)
+    const hkdfKey = await subtle.importKey('raw', shared, 'HKDF', false, ['deriveBits'])
+    const keyBytes = await subtle.deriveBits({
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new TextEncoder().encode(input.envelopeId),
+      info: new TextEncoder().encode(input.info),
+    }, hkdfKey, 256)
+    const aesKey = await subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt'])
+    const iv = decodeStandardBase64(input.iv)
+    const tag = decodeStandardBase64(input.tag)
+    const ciphertext = decodeStandardBase64(input.ciphertext)
+    const sealed = new Uint8Array(ciphertext.byteLength + tag.byteLength)
+    sealed.set(ciphertext, 0)
+    sealed.set(tag, ciphertext.byteLength)
+    return new Uint8Array(await subtle.decrypt({
+      name: 'AES-GCM',
+      iv,
+      additionalData: input.aad,
+      tagLength: 128,
+    }, aesKey, sealed))
+  } catch (cause) {
+    if (cause instanceof RelayAuthorizationError) throw cause
+    throw new RelayAuthorizationError('untrusted-key', 'relay sealed payload cannot be opened with this device key')
+  }
+}
+
 function requireSubtle(): WebCryptoSubtle {
   const crypto = globalThis.crypto
   if (
@@ -183,6 +240,7 @@ function requireSubtle(): WebCryptoSubtle {
     || typeof crypto.subtle.sign !== 'function'
     || typeof crypto.subtle.deriveBits !== 'function'
     || typeof crypto.subtle.encrypt !== 'function'
+    || typeof crypto.subtle.decrypt !== 'function'
   ) {
     throw new RelayAuthorizationError('malformed', 'relay device keys require webcrypto')
   }

@@ -21,7 +21,7 @@ import {
   type RelayFrameKind,
 } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
-import { encodeStandardBase64, sealWebCryptoX25519Box } from './webcrypto-keys.ts'
+import { decodeStandardBase64, encodeStandardBase64, openWebCryptoX25519Box, sealWebCryptoX25519Box } from './webcrypto-keys.ts'
 
 const BOX_PREFIX = 'v1:box:'
 const HKDF_INFO = 'wancode-relay-v1'
@@ -196,20 +196,63 @@ export function openSealedRelayPayload(
       decipher.update(Buffer.from(box.ciphertext, 'base64')),
       decipher.final(),
     ]).toString('utf8')
-    const record = JSON.parse(plain) as unknown
-    if (record === null || typeof record !== 'object' || Array.isArray(record)) {
-      throw new RelayAuthorizationError('malformed', 'relay sealed payload must be an object')
-    }
-    assertNoPlaintextRelayFields(record as Record<string, unknown>, 'relay sealed payload')
-    const payload = parseApplicationPayload(record)
-    if (payload.kind !== parsed.kind) {
-      throw new RelayAuthorizationError('malformed', 'relay sealed payload kind must match the envelope kind')
-    }
-    return payload
+    return openedApplicationPayload(plain, parsed.kind)
   } catch (cause) {
     if (cause instanceof RelayAuthorizationError) throw cause
     throw new RelayAuthorizationError('untrusted-key', 'relay sealed payload cannot be opened with this device key')
   }
+}
+
+/**
+ * Open the same sealed envelope through WebCrypto so a PWA does not import
+ * `node:crypto` to read progress. Missing WebCrypto fails closed.
+ */
+export async function openWebCryptoSealedRelayPayload(
+  envelope: unknown,
+  recipient: DeviceKeyPair,
+): Promise<RelayApplicationPayload> {
+  const parsed = parseRelayEnvelope(envelope)
+  const box = parseSealedBox(parsed.ciphertext)
+  assertDeviceEncryptionPublicKey(box.senderEncryptionPublicKey)
+  assertDeviceEncryptionPublicKey(recipient.encryptionPublicKey)
+  let plain: string
+  try {
+    plain = new TextDecoder().decode(await openWebCryptoX25519Box({
+      recipientEncryptionPrivateKey: recipient.encryptionPrivateKey,
+      senderEncryptionPublicKey: box.senderEncryptionPublicKey,
+      envelopeId: parsed.id,
+      info: HKDF_INFO,
+      aad: associatedData(parsed),
+      iv: box.iv,
+      tag: box.tag,
+      ciphertext: box.ciphertext,
+    }))
+  } catch (cause) {
+    if (cause instanceof RelayAuthorizationError) throw cause
+    throw new RelayAuthorizationError('untrusted-key', 'relay sealed payload cannot be opened with this device key')
+  }
+  return openedApplicationPayload(plain, parsed.kind)
+}
+
+function openedApplicationPayload(
+  plain: string,
+  kind: RelayFrameKind,
+): RelayApplicationPayload {
+  let record: unknown
+  try {
+    record = JSON.parse(plain) as unknown
+  } catch {
+    throw new RelayAuthorizationError('untrusted-key', 'relay sealed payload cannot be opened with this device key')
+  }
+  if (record === null || typeof record !== 'object' || Array.isArray(record)) {
+    throw new RelayAuthorizationError('malformed', 'relay sealed payload must be an object')
+  }
+  assertNoPlaintextRelayFields(record as Record<string, unknown>, 'relay sealed payload')
+  const payload = parseApplicationPayload(record)
+  if (payload.kind !== kind) {
+    throw new RelayAuthorizationError('malformed', 'relay sealed payload kind must match the envelope kind')
+  }
+  return payload
 }
 
 function parseSealedBox(ciphertext: string): {
@@ -224,7 +267,7 @@ function parseSealedBox(ciphertext: string): {
   }
   let record: Record<string, unknown>
   try {
-    record = JSON.parse(Buffer.from(ciphertext.slice(BOX_PREFIX.length), 'base64').toString('utf8')) as Record<string, unknown>
+    record = JSON.parse(new TextDecoder().decode(decodeStandardBase64(ciphertext.slice(BOX_PREFIX.length)))) as Record<string, unknown>
   } catch {
     throw new RelayAuthorizationError('malformed', 'relay sealed ciphertext is required')
   }

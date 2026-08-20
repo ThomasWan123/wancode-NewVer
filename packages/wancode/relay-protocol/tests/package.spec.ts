@@ -42,6 +42,7 @@ describe('relay-protocol package surface', () => {
     expect(protocol).toHaveProperty('createSignedHandshakeEnvelope')
     expect(protocol).toHaveProperty('createWebCryptoSignedHandshakeEnvelope')
     expect(protocol).toHaveProperty('createWebCryptoSealedRelayEnvelope')
+    expect(protocol).toHaveProperty('openWebCryptoSealedRelayPayload')
     expect(protocol).toHaveProperty('signWebCryptoDevicePayload')
     expect(protocol).toHaveProperty('createRelayHandshakeNonce')
     expect(protocol).toHaveProperty('createStoredDeviceIdentity')

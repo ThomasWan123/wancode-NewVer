@@ -6,6 +6,7 @@ import {
   createSignedHandshakeEnvelope,
   generateDeviceKeyPair,
   openSealedRelayPayload,
+  openWebCryptoSealedRelayPayload,
   parseRelayEnvelope,
 } from '../src/index.ts'
 
@@ -66,6 +67,33 @@ describe('device-sealed application payloads', () => {
 
     expect(JSON.stringify(envelope)).not.toContain(SECRET)
     expect(openSealedRelayPayload(envelope, recipient)).toEqual({
+      kind: 'prompt',
+      sessionId: 'sess-1',
+      text: SECRET,
+    })
+    await expect(openWebCryptoSealedRelayPayload(envelope, recipient)).resolves.toEqual({
+      kind: 'prompt',
+      sessionId: 'sess-1',
+      text: SECRET,
+    })
+    await expect(openWebCryptoSealedRelayPayload(envelope, sender)).rejects.toMatchObject({
+      code: 'untrusted-key',
+    })
+  })
+
+  it('opens a node-sealed prompt with WebCrypto', async () => {
+    const sender = generateDeviceKeyPair()
+    const recipient = generateDeviceKeyPair()
+    const envelope = createSealedRelayEnvelope({
+      id: 'msg-node',
+      sentAt: NOW,
+      actor: ACTOR,
+      kind: 'prompt',
+      sender,
+      recipientEncryptionPublicKey: recipient.encryptionPublicKey,
+      payload: { kind: 'prompt', sessionId: 'sess-1', text: SECRET },
+    })
+    await expect(openWebCryptoSealedRelayPayload(envelope, recipient)).resolves.toEqual({
       kind: 'prompt',
       sessionId: 'sess-1',
       text: SECRET,

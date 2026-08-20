@@ -36,7 +36,8 @@ directory links.
   bounded. Handshake nonces come from WebCrypto, not `node:crypto`. Device
   identities can be minted with `createWebCryptoDeviceIdentity`. Handshake
   signatures use `createWebCryptoSignedHandshakeEnvelope`. Follow-ups are
-  sealed with `createWebCryptoSealedRelayEnvelope`. Closed sessions refuse send and drain until `reconnect`.
+  sealed with `createWebCryptoSealedRelayEnvelope`. Drain opens those boxes
+  with `openWebCryptoSealedRelayPayload`. Closed sessions refuse send and drain until `reconnect`.
   `listDesktops` uses outbound HTTPS and still works after close. `drain` reclaims queued mail
   and live push, then acks only queued ids. `reconnect` mints a fresh nonce so
   the handshake is not replay. `revoke` closes the socket and revokes the PWA

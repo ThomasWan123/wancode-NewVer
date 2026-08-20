@@ -9,7 +9,7 @@ import {
   createWebCryptoSignedHandshakeEnvelope,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
-  openSealedRelayPayload,
+  openWebCryptoSealedRelayPayload,
   publicDeviceIdentity,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
@@ -301,7 +301,7 @@ export async function createPwaRelayController(
       for (const envelope of [...queued, ...live]) {
         if (seen.has(envelope.id)) continue
         seen.add(envelope.id)
-        const payload = openSealedRelayPayload(envelope, input.identity.keyPair)
+        const payload = await openWebCryptoSealedRelayPayload(envelope, input.identity.keyPair)
         const view = projectRelaySessionView(payload)
         views.push(view)
         board.apply(view)

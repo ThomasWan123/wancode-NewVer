@@ -31,7 +31,7 @@ Status: active
   device then send sealed follow-ups, approvals, and cancels over outbound
   HTTPS/WSS. Selecting the local PWA as the desktop fails closed.
   `listDesktops` omits local ids and untrusted encryption keys. Handshake nonces use WebCrypto.
-  PWA handshake signatures use WebCrypto. PWA follow-ups are sealed with WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
+  PWA handshake signatures use WebCrypto. PWA follow-ups are sealed and opened with WebCrypto. Reconnect drains mailbox mail, folds streaming progress into
   session snapshots, and projects `notify.*` events. Progress details are
   capped. Empty session ids and empty approval request ids fail closed. A denied
   approval keeps `pendingRequestId` until the request is cancelled or replaced.

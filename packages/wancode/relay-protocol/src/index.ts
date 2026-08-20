@@ -163,6 +163,7 @@ export {
   createSealedRelayEnvelope,
   createWebCryptoSealedRelayEnvelope,
   openSealedRelayPayload,
+  openWebCryptoSealedRelayPayload,
   type RelayApplicationKind,
   type RelayApplicationPayload,
   type SealedRelayEnvelopeInput,
