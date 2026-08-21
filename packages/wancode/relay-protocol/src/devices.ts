@@ -5,6 +5,9 @@ import type { RelayDevice, RelayStore } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
 import type { RelayIdentityClaims } from './identity.ts'
 
+/** Account id used when a loopback cloud enrolls a device without OIDC. */
+export const LOOPBACK_RELAY_USER_ID = 'loopback'
+
 /** Store that can persist registered devices. */
 export type RelayDeviceStore = RelayStore & {
   putDevice(device: RelayDevice): void

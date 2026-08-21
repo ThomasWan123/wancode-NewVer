@@ -8,6 +8,7 @@ import {
   assertRelayPairingCode,
   connectOutboundRelay,
   createRelayHandshakeNonce,
+  enrollOutboundRelayLoopbackDevice,
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
@@ -17,7 +18,8 @@ import {
   revokeOutboundRelayDevice,
   type RelayApplicationPayload,
 } from '@wancode/relay-protocol'
-import type { DesktopRelayHandshakeInput, DesktopRelayIdentity } from './relay-identity.ts'
+import { loadDesktopRelayIdentity, type DesktopRelayHandshakeInput, type DesktopRelayIdentity } from './relay-identity.ts'
+import { createWindowsCredentialStore } from './credentials-win.ts'
 import type { DesktopTrayItem, DesktopTrayItemRegistration } from './runtime.ts'
 
 export {
@@ -363,6 +365,47 @@ export async function openDesktopRelaySession(input: {
       id: `hs:${input.identity.deviceId}:${nonce}`,
       sentAt: input.now ?? Date.now(),
       userId: input.userId,
+      nonce,
+      capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
+    }),
+  })
+}
+
+const LOOPBACK_RELAY_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
+
+/**
+ * Enroll on loopback without OIDC, then dial. Public hosts fail closed.
+ * Private keys stay inside `createHandshake`. This still does not listen.
+ */
+export async function openDesktopRelayLoopbackSession(input: {
+  readonly handle: DesktopRelayHandle
+  readonly identity: Pick<DesktopRelayIdentity, 'deviceId' | 'publicKey' | 'encryptionPublicKey'> & {
+    createHandshake(input: DesktopRelayHandshakeInput): Record<string, unknown>
+  }
+  readonly nonce?: string
+  readonly now?: number
+  readonly enroll?: typeof enrollOutboundRelayLoopbackDevice
+}): Promise<DesktopRelayConnection> {
+  if (!LOOPBACK_RELAY_HOSTS.has(input.handle.httpUrl.hostname)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay loopback enroll is only allowed to loopback')
+  }
+  const nonce = input.nonce ?? createRelayHandshakeNonce()
+  if (typeof nonce !== 'string' || nonce.length === 0 || /[\0\r\n]/u.test(nonce)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay handshake nonce is required')
+  }
+  const enroll = input.enroll ?? enrollOutboundRelayLoopbackDevice
+  const enrolled = await enroll({
+    httpUrl: input.handle.httpUrl.href,
+    deviceId: input.identity.deviceId,
+    publicKey: input.identity.publicKey,
+    encryptionPublicKey: input.identity.encryptionPublicKey,
+  })
+  return input.handle.connect({
+    accessToken: enrolled.accessToken,
+    envelope: input.identity.createHandshake({
+      id: `hs:${input.identity.deviceId}:${nonce}`,
+      sentAt: input.now ?? Date.now(),
+      userId: enrolled.device.userId,
       nonce,
       capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
     }),
@@ -1097,6 +1140,69 @@ export function bindDesktopRelayPairingTray(
   }, 'dsh-plugin-desktop: outbound relay pairing code')
 }
 
+/**
+ * Register a tray command that enrolls on loopback and dials. Missing
+ * desktopRuntime stays idle without adding a required inject.
+ */
+export function bindDesktopRelayConnectTray(
+  ctx: {
+    readonly get?: (name: string) => unknown
+    effect(callback: () => () => void, label: string): void
+  },
+  handle: DesktopRelayHandle,
+  options?: {
+    readonly loadIdentity?: () => DesktopRelayIdentity | undefined
+    readonly enroll?: typeof enrollOutboundRelayLoopbackDevice
+  },
+): void {
+  const runtime = typeof ctx.get === 'function'
+    ? asRelayPairingPresentation(ctx.get('desktopRuntime'))
+    : undefined
+  if (runtime === undefined) return
+  const loadIdentity = options?.loadIdentity ?? probeDesktopRelayIdentity
+  ctx.effect(() => {
+    const registration = runtime.registerTrayItem({
+      group: 'tools',
+      order: 19,
+      label: () => 'Connect Relay',
+      enabled: () => handle.connectedDeviceId === undefined,
+      async invoke() {
+        try {
+          const identity = loadIdentity()
+          if (identity === undefined) {
+            throw new RelayAuthorizationError('malformed', 'desktop relay identity is required')
+          }
+          await openDesktopRelayLoopbackSession({
+            handle,
+            identity,
+            ...(options?.enroll === undefined ? {} : { enroll: options.enroll }),
+          })
+          runtime.notify?.({
+            title: 'Wan Code',
+            body: 'Desktop relay connected. Copy a pairing code next.',
+          })
+        } catch {
+          runtime.notify?.({
+            title: 'Wan Code',
+            body: 'Connect a loopback desktop relay after loading the device identity.',
+          })
+        }
+      },
+    })
+    return () => { registration.dispose() }
+  }, 'dsh-plugin-desktop: outbound relay connect')
+}
+
+function probeDesktopRelayIdentity(): DesktopRelayIdentity | undefined {
+  const home = process.env.DSH_HOME
+  if (typeof home !== 'string' || home.length === 0 || /[\0\r\n]/u.test(home)) return undefined
+  try {
+    return loadDesktopRelayIdentity({ home, store: createWindowsCredentialStore() })
+  } catch {
+    return undefined
+  }
+}
+
 function asRelayPairingPresentation(value: unknown): {
   readonly registerTrayItem: (item: DesktopTrayItem) => DesktopTrayItemRegistration
   readonly copyText: (text: string) => void
@@ -1133,5 +1239,6 @@ function asRelayPairingPresentation(value: unknown): {
 export function apply(ctx: Context, config: Config): void {
   const handle = bindDesktopRelay(ctx, config)
   if (handle === undefined) return
+  bindDesktopRelayConnectTray(ctx, handle)
   bindDesktopRelayPairingTray(ctx, handle)
 }

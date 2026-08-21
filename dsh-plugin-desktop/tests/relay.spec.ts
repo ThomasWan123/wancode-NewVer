@@ -18,6 +18,8 @@ import {
   presentDesktopRelayPairingGrant,
   copyDesktopRelayPairingGrant,
   bindDesktopRelayPairingTray,
+  bindDesktopRelayConnectTray,
+  openDesktopRelayLoopbackSession,
   processDesktopRelayMail,
   sealDesktopRelaySessionEvent,
   sendDesktopRelaySessionEvent,
@@ -1244,9 +1246,11 @@ describe('desktop outbound relay Host plugin', () => {
       url: 'wss://relay.example.invalid/v1',
     }))
     expect(inject).toEqual([])
-    expect(items).toHaveLength(1)
-    expect(items[0]?.label()).toBe('Copy Pairing Code')
-    expect(items[0]?.enabled?.()).toBe(false)
+    expect(items).toHaveLength(2)
+    expect(items[0]?.label()).toBe('Connect Relay')
+    expect(items[0]?.enabled?.()).toBe(true)
+    expect(items[1]?.label()).toBe('Copy Pairing Code')
+    expect(items[1]?.enabled?.()).toBe(false)
   })
 
   it('notifies from the tray when the desktop relay is not connected', async () => {
@@ -1294,5 +1298,146 @@ describe('desktop outbound relay Host plugin', () => {
       body: 'Connect the desktop relay before copying a pairing code.',
     })
     expect(JSON.stringify(notify.mock.calls)).not.toMatch(/tok-|accessToken|pairingCode/i)
+  })
+
+  it('enrolls a loopback desktop without an OIDC assertion then dials', async () => {
+    const identity = {
+      deviceId: 'device-a',
+      publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
+      createHandshake: vi.fn(() => ({ protocolVersion: 1, id: 'hs-1', kind: 'handshake' })),
+    }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'loopback',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const connect = vi.fn(async () => connection)
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'ws://127.0.0.1:9/v1',
+    }), connect)
+    const enroll = vi.fn(async () => ({
+      device: {
+        deviceId: 'device-a',
+        userId: 'loopback',
+        publicKey: 'pub-a',
+        encryptionPublicKey: 'enc-a',
+      },
+      accessToken: 'tok-loop',
+      expiresAt: 1_700_000_900_000,
+    }))
+    await expect(openDesktopRelayLoopbackSession({
+      handle: handle!,
+      identity,
+      enroll,
+      nonce: 'nonce-1',
+      now: 1_700_000_000_000,
+    })).resolves.toEqual(connection)
+    expect(enroll).toHaveBeenCalledWith({
+      httpUrl: 'http://127.0.0.1:9/',
+      deviceId: 'device-a',
+      publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
+    })
+    expect(connect).toHaveBeenCalledWith({
+      accessToken: 'tok-loop',
+      envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
+      url: 'ws://127.0.0.1:9/v1',
+    })
+    expect(identity.createHandshake).toHaveBeenCalledWith({
+      id: 'hs:device-a:nonce-1',
+      sentAt: 1_700_000_000_000,
+      userId: 'loopback',
+      nonce: 'nonce-1',
+      capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
+    })
+    expect(handle?.connectedDeviceId).toBe('device-a')
+  })
+
+  it('refuses loopback enroll toward a public host', async () => {
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn())
+    const enroll = vi.fn()
+    await expect(openDesktopRelayLoopbackSession({
+      handle: handle!,
+      identity: {
+        deviceId: 'device-a',
+        publicKey: 'pub-a',
+        encryptionPublicKey: 'enc-a',
+        createHandshake: vi.fn(),
+      },
+      enroll,
+    })).rejects.toMatchObject({ code: 'malformed' })
+    expect(enroll).not.toHaveBeenCalled()
+  })
+
+  it('connects the loopback relay from the tray after loading identity', async () => {
+    const identity = {
+      deviceId: 'device-a',
+      publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
+      createHandshake: vi.fn(() => ({ protocolVersion: 1, id: 'hs-1', kind: 'handshake' })),
+    }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'loopback',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'ws://127.0.0.1:9/v1',
+    }), vi.fn(async () => connection))
+    const copyText = vi.fn()
+    const notify = vi.fn()
+    const enroll = vi.fn(async () => ({
+      device: {
+        deviceId: 'device-a',
+        userId: 'loopback',
+        publicKey: 'pub-a',
+        encryptionPublicKey: 'enc-a',
+      },
+      accessToken: 'tok-loop',
+      expiresAt: 1_700_000_900_000,
+    }))
+    let invoke: (() => void | Promise<void>) | undefined
+    bindDesktopRelayConnectTray({
+      effect: callback => { callback() },
+      get: name => name === 'desktopRuntime'
+        ? {
+          registerTrayItem(item: { invoke(): void | Promise<void> }) {
+            invoke = item.invoke
+            return { refresh() {}, dispose() {} }
+          },
+          copyText,
+          updates: { notify },
+        }
+        : undefined,
+    }, handle!, {
+      loadIdentity: () => identity as never,
+      enroll,
+    })
+    await invoke?.()
+    expect(enroll).toHaveBeenCalledOnce()
+    expect(handle?.connectedDeviceId).toBe('device-a')
+    expect(notify).toHaveBeenCalledWith({
+      title: 'Wan Code',
+      body: 'Desktop relay connected. Copy a pairing code next.',
+    })
+    expect(JSON.stringify(notify.mock.calls)).not.toMatch(/tok-loop|accessToken/i)
   })
 })

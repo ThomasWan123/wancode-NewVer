@@ -55,7 +55,8 @@ OIDC assertion 或设备绑定访问令牌其中之一，从不放在查询字�
 `@wancode/relay-protocol/loopback` 只用于 `127.0.0.1` 测试接收端。
 `@wancode/relay-protocol/cloud` 在回环地址上提供设备注册、令牌签发和同一套
 出站 WebSocket 接收端；非回环绑定一律失败关闭，且不在默认导出中。回环 HTTP
-会回显回环浏览器 `Origin` 以允许配对页 POST redeem；公网 HTTPS origin 失败关闭。桌面 Host
+会回显回环浏览器 `Origin` 以允许配对页 POST redeem；公网 HTTPS origin 失败关闭。
+无 assertion 的 POST `/v1/devices` 会把回环设备登记为用户 `loopback` 并返回设备绑定令牌；公网主机仍需 OIDC。桌面 Host
 默认关闭 `dsh-plugin-desktop/relay`，并把该拨号器打包进桌面包，不使用 Yarn
 workspace 链接。启用后，插件从 WebSocket URL 推导 HTTPS 控制面源，先通过出站
 HTTP 注册、签发令牌、列出同一账号设备或撤销，再在 `connect` 时打开 socket。

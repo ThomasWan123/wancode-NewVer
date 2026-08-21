@@ -61,6 +61,7 @@ export {
 } from './oidc-jwks.ts'
 export {
   listRelayAccountDevices,
+  LOOPBACK_RELAY_USER_ID,
   registerRelayAccountDevice,
   registerRelayDevice,
   revokeRelayDevice,
@@ -110,6 +111,7 @@ export {
   mintOutboundRelayPairingGrant,
   redeemOutboundRelayPairingGrant,
   registerOutboundRelayDevice,
+  enrollOutboundRelayLoopbackDevice,
   revokeOutboundRelayDevice,
   type MintOutboundRelayPairingGrantInput,
   type OutboundRelayAccessToken,
@@ -120,6 +122,8 @@ export {
   type OutboundRelayRevocation,
   type RedeemOutboundRelayPairingGrantInput,
   type RegisterOutboundRelayDeviceInput,
+  type EnrollOutboundRelayLoopbackDeviceInput,
+  type OutboundRelayLoopbackEnrollment,
   type ListOutboundRelayDevicesInput,
   type RevokeOutboundRelayDeviceInput,
   type RelayControlFetch,

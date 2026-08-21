@@ -66,6 +66,19 @@ declare module '@wancode/relay-protocol' {
     readonly encryptionPublicKey: string
   }
 
+  export interface EnrollOutboundRelayLoopbackDeviceInput {
+    readonly httpUrl: string
+    readonly deviceId: string
+    readonly publicKey: string
+    readonly encryptionPublicKey: string
+  }
+
+  export interface OutboundRelayLoopbackEnrollment {
+    readonly device: OutboundRelayDevice
+    readonly accessToken: string
+    readonly expiresAt: number
+  }
+
   export interface OutboundRelayDevice {
     readonly deviceId: string
     readonly userId: string
@@ -86,6 +99,9 @@ declare module '@wancode/relay-protocol' {
   export function registerOutboundRelayDevice(
     input: RegisterOutboundRelayDeviceInput,
   ): Promise<OutboundRelayDevice>
+  export function enrollOutboundRelayLoopbackDevice(
+    input: EnrollOutboundRelayLoopbackDeviceInput,
+  ): Promise<OutboundRelayLoopbackEnrollment>
   export function issueOutboundRelayToken(
     input: OutboundRelayControlInput,
   ): Promise<OutboundRelayAccessToken>

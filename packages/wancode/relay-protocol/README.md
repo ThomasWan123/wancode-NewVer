@@ -75,7 +75,9 @@ is not an inbound Host surface. `@wancode/relay-protocol/loopback` is a
 HTTP device registration, token minting, and the same outbound WebSocket
 acceptor; it refuses non-loopback binds and is not part of the default export.
 Loopback HTTP echoes a loopback browser `Origin` for CORS so the pairing page
-can POST redeem; public HTTPS origins fail closed. The desktop Host loads `dsh-plugin-desktop/relay` disabled by default and
+can POST redeem; public HTTPS origins fail closed. POST `/v1/devices` without an
+assertion enrolls a loopback-only device as user `loopback` and returns a
+device-bound token; public hosts still require OIDC. The desktop Host loads `dsh-plugin-desktop/relay` disabled by default and
 bundles this dialer without declaring a Yarn workspace link. When enabled, the
 plugin derives an HTTPS control origin from the WebSocket URL, then registers,
 mints a token, lists same-account devices, or revokes over outbound HTTP before

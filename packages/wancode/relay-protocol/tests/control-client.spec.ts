@@ -5,6 +5,7 @@ import {
   createMemoryRelayStore,
   createStaticOidcIdentityProvider,
   generateDeviceKeyPair,
+  enrollOutboundRelayLoopbackDevice,
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
@@ -356,5 +357,31 @@ describe('outbound relay control client', () => {
       publicKey: generateDeviceKeyPair().publicKey,
       encryptionPublicKey: generateDeviceKeyPair().encryptionPublicKey,
     }), 'replay')
+  })
+
+  it('enrolls a loopback desktop without an assertion and refuses a public host', async () => {
+    const keys = generateDeviceKeyPair()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    const enrolled = await enrollOutboundRelayLoopbackDevice({
+      httpUrl: cloud.httpUrl,
+      deviceId: 'desktop-loop',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+    })
+    expect(enrolled.device.userId).toBe('loopback')
+    expect(enrolled.device.deviceId).toBe('desktop-loop')
+    expect(enrolled.accessToken.length).toBeGreaterThan(0)
+    expect(JSON.stringify(enrolled)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    await expectRelayErrorAsync(() => enrollOutboundRelayLoopbackDevice({
+      httpUrl: 'https://relay.example.invalid/',
+      deviceId: 'desktop-loop',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+    }), 'malformed')
   })
 })

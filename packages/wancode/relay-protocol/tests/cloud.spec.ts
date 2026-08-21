@@ -337,4 +337,30 @@ describe('relay cloud control plane', () => {
     })
     expect(denied.status).toBe(403)
   })
+
+  it('enrolls a loopback device without an OIDC assertion and returns a token', async () => {
+    const keys = generateDeviceKeyPair()
+    const identity = createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE })
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity,
+      now: NOW,
+    })
+    clouds.push(cloud)
+    const enrolled = await postJson(`${cloud.httpUrl}/v1/devices`, {
+      deviceId: 'desktop-loop',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+    })
+    expect(enrolled.status).toBe(201)
+    expect(enrolled.json.device).toEqual({
+      deviceId: 'desktop-loop',
+      userId: 'loopback',
+      publicKey: keys.publicKey,
+      encryptionPublicKey: keys.encryptionPublicKey,
+    })
+    expect(typeof enrolled.json.accessToken).toBe('string')
+    expect(enrolled.json.expiresAt).toBe(NOW + 15 * 60 * 1000)
+    expect(JSON.stringify(enrolled.json)).not.toContain(keys.privateKey)
+  })
 })

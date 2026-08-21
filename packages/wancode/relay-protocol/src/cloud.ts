@@ -7,7 +7,7 @@ import {
   type RelayMailbox,
   type RelayPresence,
 } from './delivery.ts'
-import { registerRelayDevice, revokeRelayDevice, listRelayAccountDevices, type RelayDeviceStore } from './devices.ts'
+import { LOOPBACK_RELAY_USER_ID, registerRelayDevice, revokeRelayDevice, listRelayAccountDevices, type RelayDeviceStore } from './devices.ts'
 import { assertNoPlaintextRelayFields, type RelayAccessToken, type RelayDevice } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
 import type { RelayIdentityClaims, RelayIdentityProvider } from './identity.ts'
@@ -18,7 +18,7 @@ import {
   type RelayPairingGrantStore,
 } from './pairing-grant.ts'
 import type { RelayRouteStore } from './route.ts'
-import { createMemoryRelayTokenIssuer, type RelayTokenIssuer } from './tokens.ts'
+import { RELAY_ACCESS_TOKEN_TTL_MS, createMemoryRelayTokenIssuer, type RelayTokenIssuer } from './tokens.ts'
 import { attachRelaySocket, createRelayLiveSink } from './acceptor.ts'
 import { NodeWebSocketServer, type RelayWebSocket } from './ws-runtime.ts'
 
@@ -202,6 +202,15 @@ async function handleCloudHttp(
       return
     }
     if (path === '/v1/devices') {
+      if (body.assertion === undefined) {
+        const enrolled = enrollLoopbackCloudDevice(body, context)
+        writeJson(response, 201, {
+          device: publicDevice(enrolled.device),
+          accessToken: enrolled.accessToken,
+          expiresAt: enrolled.expiresAt,
+        }, corsOrigin)
+        return
+      }
       writeJson(response, 201, { device: publicDevice(registerCloudDevice(body, context)) }, corsOrigin)
       return
     }
@@ -254,6 +263,45 @@ async function handleCloudHttp(
     const message = cause instanceof Error ? cause.message : 'relay cloud request failed'
     const status = cause instanceof RelayAuthorizationError && cause.code === 'malformed' ? 400 : 403
     writeJson(response, status, { error: { code, message } }, corsOrigin)
+  }
+}
+
+function enrollLoopbackCloudDevice(
+  body: Record<string, unknown>,
+  context: CloudHttpContext,
+): {
+  readonly device: RelayDevice
+  readonly accessToken: string
+  readonly expiresAt: number
+} {
+  if (body.accessToken !== undefined) {
+    throw new RelayAuthorizationError('malformed', 'relay loopback enroll must not carry an access token')
+  }
+  const deviceId = requiredText(body.deviceId, 'deviceId')
+  const publicKey = requiredText(body.publicKey, 'publicKey')
+  const encryptionPublicKey = requiredText(body.encryptionPublicKey, 'encryptionPublicKey')
+  const device = registerRelayDevice({
+    identity: {
+      issuer: 'relay-loopback',
+      audience: 'wancode-relay',
+      userId: LOOPBACK_RELAY_USER_ID,
+      expiresAt: context.now + RELAY_ACCESS_TOKEN_TTL_MS,
+    },
+    deviceId,
+    publicKey,
+    encryptionPublicKey,
+    now: context.now,
+    store: context.store,
+  })
+  const issued = context.tokens.issue({
+    userId: LOOPBACK_RELAY_USER_ID,
+    deviceId,
+    now: context.now,
+  })
+  return {
+    device,
+    accessToken: issued.accessToken,
+    expiresAt: issued.record.expiresAt,
   }
 }
 

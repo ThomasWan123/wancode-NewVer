@@ -138,6 +138,55 @@ export async function registerOutboundRelayDevice(
   return parsePublicDevice(device as Record<string, unknown>)
 }
 
+/** Inputs used to enroll a desktop on loopback without an OIDC assertion. */
+export interface EnrollOutboundRelayLoopbackDeviceInput {
+  readonly httpUrl: string
+  readonly deviceId: string
+  readonly publicKey: string
+  readonly encryptionPublicKey: string
+  readonly fetchImpl?: RelayControlFetch
+}
+
+/** Loopback enroll returns the public device and a short-lived access token. */
+export interface OutboundRelayLoopbackEnrollment {
+  readonly device: OutboundRelayDevice
+  readonly accessToken: string
+  readonly expiresAt: number
+}
+
+/**
+ * POST `/v1/devices` to loopback HTTP(S) without an assertion. Public hosts
+ * fail closed. The returned token is device-bound and is not a JWT paste target.
+ */
+export async function enrollOutboundRelayLoopbackDevice(
+  input: EnrollOutboundRelayLoopbackDeviceInput,
+): Promise<OutboundRelayLoopbackEnrollment> {
+  const parsed = assertOutboundRelayHttpUrl(input.httpUrl)
+  if (!LOOPBACK_HOSTS.has(parsed.hostname)) {
+    throw new RelayAuthorizationError('malformed', 'relay loopback enroll is only allowed to loopback')
+  }
+  const json = await postRelayControl(input, '/v1/devices', {
+    deviceId: input.deviceId,
+    publicKey: input.publicKey,
+    encryptionPublicKey: input.encryptionPublicKey,
+  })
+  const device = json.device
+  if (device === null || typeof device !== 'object' || Array.isArray(device)) {
+    throw new RelayAuthorizationError('malformed', 'relay control device is required')
+  }
+  if (typeof json.accessToken !== 'string' || json.accessToken.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control access token is required')
+  }
+  if (typeof json.expiresAt !== 'number' || !Number.isFinite(json.expiresAt)) {
+    throw new RelayAuthorizationError('malformed', 'relay control token expiry is required')
+  }
+  return {
+    device: parsePublicDevice(device as Record<string, unknown>),
+    accessToken: json.accessToken,
+    expiresAt: json.expiresAt,
+  }
+}
+
 /**
  * POST `/v1/tokens` over HTTPS (or loopback HTTP) for one registered device.
  */

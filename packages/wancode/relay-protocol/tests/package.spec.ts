@@ -26,6 +26,7 @@ describe('relay-protocol package surface', () => {
     expect(protocol).toHaveProperty('connectOutboundRelay')
     expect(protocol).toHaveProperty('assertOutboundRelayHttpUrl')
     expect(protocol).toHaveProperty('registerOutboundRelayDevice')
+    expect(protocol).toHaveProperty('enrollOutboundRelayLoopbackDevice')
     expect(protocol).toHaveProperty('issueOutboundRelayToken')
     expect(protocol).toHaveProperty('revokeOutboundRelayDevice')
     expect(protocol).toHaveProperty('listOutboundRelayDevices')
