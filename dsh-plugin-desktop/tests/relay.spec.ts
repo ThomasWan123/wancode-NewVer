@@ -20,6 +20,7 @@ import {
   bindDesktopRelayPairingTray,
   bindDesktopRelayConnectTray,
   openDesktopRelayLoopbackSession,
+  openDesktopRelayLoopbackMailbox,
   processDesktopRelayMail,
   sealDesktopRelaySessionEvent,
   sendDesktopRelaySessionEvent,
@@ -569,7 +570,7 @@ describe('desktop outbound relay Host plugin', () => {
       deviceId: 'device-a',
       grantedCapabilities: ['session.prompt'],
       send: vi.fn(),
-      reclaim: vi.fn(async () => []),
+      reclaim: vi.fn(async () => [{ id: 'msg-1' }]),
       receive: vi.fn(async () => []),
       acknowledge: vi.fn(),
       close: vi.fn(),
@@ -583,8 +584,15 @@ describe('desktop outbound relay Host plugin', () => {
       envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
     })
     await expect(handle?.processMail({
-      identity: { openSealed: vi.fn() },
+      identity: {
+        openSealed: vi.fn(() => ({
+          kind: 'prompt' as const,
+          sessionId: 'sess-1',
+          text: 'review the login form',
+        })),
+      },
     })).rejects.toMatchObject({ code: 'malformed' })
+    expect(connection.acknowledge).not.toHaveBeenCalled()
   })
 
   it('probes optional Host sessions without injecting them', async () => {
@@ -1380,12 +1388,84 @@ describe('desktop outbound relay Host plugin', () => {
     expect(enroll).not.toHaveBeenCalled()
   })
 
+  it('applies queued PWA mail after a loopback connect', async () => {
+    const prompt = vi.fn(async () => undefined)
+    const identity = {
+      deviceId: 'device-a',
+      publicKey: 'pub-a',
+      encryptionPublicKey: 'enc-a',
+      createHandshake: vi.fn(() => ({ protocolVersion: 1, id: 'hs-1', kind: 'handshake' })),
+      openSealed: vi.fn(() => ({
+        kind: 'prompt' as const,
+        sessionId: 'queue',
+        text: 'review the login form',
+      })),
+    }
+    const acknowledge = vi.fn(async () => ({
+      envelopeId: 'msg-1',
+      toDeviceId: 'device-a',
+      outcome: 'delivered' as const,
+    }))
+    const handle = prepareDesktopRelay(
+      idleConfig({
+        enabled: true,
+        url: 'ws://127.0.0.1:9/v1',
+      }),
+      vi.fn(async () => ({
+        sessionId: 'sess-1',
+        userId: 'loopback',
+        deviceId: 'device-a',
+        grantedCapabilities: ['session.prompt'],
+        send: vi.fn(),
+        reclaim: vi.fn(async () => [{ id: 'msg-1' }]),
+        receive: vi.fn(async () => []),
+        acknowledge,
+        close: vi.fn(),
+      })),
+      undefined,
+      undefined,
+      {
+        get(name) {
+          return name === 'sessions'
+            ? {
+              get() { return undefined },
+              create() { return { prompt } },
+            }
+            : undefined
+        },
+      },
+    )
+    const enroll = vi.fn(async () => ({
+      device: {
+        deviceId: 'device-a',
+        userId: 'loopback',
+        publicKey: 'pub-a',
+        encryptionPublicKey: 'enc-a',
+      },
+      accessToken: 'tok-loop',
+      expiresAt: 1_700_000_900_000,
+    }))
+    await expect(openDesktopRelayLoopbackMailbox({
+      handle: handle!,
+      identity,
+      enroll,
+      nonce: 'nonce-mail',
+      now: 1_700_000_000_000,
+    })).resolves.toEqual({ applied: 1, ignored: 0 })
+    expect(prompt).toHaveBeenCalledWith(
+      [{ type: 'text', text: 'review the login form' }],
+      'queue',
+    )
+    expect(acknowledge).toHaveBeenCalledWith({ envelopeId: 'msg-1' })
+  })
+
   it('connects the loopback relay from the tray after loading identity', async () => {
     const identity = {
       deviceId: 'device-a',
       publicKey: 'pub-a',
       encryptionPublicKey: 'enc-a',
       createHandshake: vi.fn(() => ({ protocolVersion: 1, id: 'hs-1', kind: 'handshake' })),
+      openSealed: vi.fn(),
     }
     const connection = {
       sessionId: 'sess-1',
@@ -1393,8 +1473,8 @@ describe('desktop outbound relay Host plugin', () => {
       deviceId: 'device-a',
       grantedCapabilities: ['session.prompt'],
       send: vi.fn(),
-      reclaim: vi.fn(),
-      receive: vi.fn(),
+      reclaim: vi.fn(async () => []),
+      receive: vi.fn(async () => []),
       acknowledge: vi.fn(),
       close: vi.fn(),
     }

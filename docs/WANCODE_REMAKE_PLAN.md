@@ -119,7 +119,8 @@ Status: active
   Code** tray commands. Connect Relay enrolls on loopback without OIDC and
   dials. Copy Pairing Code copies the minted display form and notifies without
   including the code. Public hosts fail closed. Missing runtime stays idle.
-  `openDesktopRelayLoopbackSession` performs that loopback enroll. `openDesktopRelaySession` enrolls the
+  `openDesktopRelayLoopbackMailbox` enrolls on loopback, dials, then applies
+  queued PWA mail. `openDesktopRelayLoopbackSession` performs that loopback enroll. `openDesktopRelaySession` enrolls the
   stored identity, mints a token, and dials. A missing nonce is minted with
   WebCrypto. `openDesktopRelayMailbox` then applies queued PWA mail.
   Mail processing repeats that lookup so a late

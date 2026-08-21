@@ -298,13 +298,23 @@ export function prepareDesktopRelay(
       if (connection === undefined) {
         throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
       }
+      const defaults = (host === undefined ? undefined : lookupDesktopRelayHostApplySinks(host)) ?? applySinks
       return processDesktopRelayMail({
         connection,
         identity: input.identity,
-        ...mergeDesktopRelayApplySinks(
-          input,
-          (host === undefined ? undefined : lookupDesktopRelayHostApplySinks(host)) ?? applySinks,
-        ),
+        async followUp(follow) {
+          const followUp = input.followUp ?? defaults?.followUp
+          if (followUp === undefined) {
+            throw new RelayAuthorizationError('malformed', 'desktop relay follow-up sink is required')
+          }
+          await followUp(follow)
+        },
+        ...(input.approval === undefined && defaults?.approval === undefined
+          ? {}
+          : { approval: input.approval ?? defaults?.approval }),
+        ...(input.cancel === undefined && defaults?.cancel === undefined
+          ? {}
+          : { cancel: input.cancel ?? defaults?.cancel }),
       })
     },
     async sendProgress(input) {
@@ -410,6 +420,23 @@ export async function openDesktopRelayLoopbackSession(input: {
       capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
     }),
   })
+}
+
+/**
+ * Enroll on loopback, dial, then apply queued PWA mail. Model credentials stay
+ * on the desktop. This still does not listen.
+ */
+export async function openDesktopRelayLoopbackMailbox(input: {
+  readonly handle: DesktopRelayHandle
+  readonly identity: Pick<DesktopRelayIdentity, 'deviceId' | 'publicKey' | 'encryptionPublicKey' | 'openSealed'> & {
+    createHandshake(input: DesktopRelayHandshakeInput): Record<string, unknown>
+  }
+  readonly nonce?: string
+  readonly now?: number
+  readonly enroll?: typeof enrollOutboundRelayLoopbackDevice
+}): Promise<{ readonly applied: number, readonly ignored: number }> {
+  await openDesktopRelayLoopbackSession(input)
+  return input.handle.processMail({ identity: input.identity })
 }
 
 /**
@@ -618,9 +645,11 @@ export async function processDesktopRelayMail(input: {
   readonly applied: number
   readonly ignored: number
 }> {
+  const collected = await collectDesktopRelayMail(input.connection)
+  if (collected.length === 0) return { applied: 0, ignored: 0 }
   let applied = 0
   let ignored = 0
-  for (const item of await collectDesktopRelayMail(input.connection)) {
+  for (const item of collected) {
     const payload = input.identity.openSealed(item.envelope)
     const result = await applyDesktopRelayPayloads({
       payloads: [payload],
@@ -933,23 +962,6 @@ function bindDesktopRelayHostApprovalRequest(request: DesktopRelayHostApprovalRe
   }
 }
 
-function mergeDesktopRelayApplySinks(
-  input: Partial<DesktopRelayApplySinks>,
-  defaults: Required<DesktopRelayApplySinks> | undefined,
-): DesktopRelayApplySinks {
-  const followUp = input.followUp ?? defaults?.followUp
-  if (followUp === undefined) {
-    throw new RelayAuthorizationError('malformed', 'desktop relay follow-up sink is required')
-  }
-  const approval = input.approval ?? defaults?.approval
-  const cancel = input.cancel ?? defaults?.cancel
-  return {
-    followUp,
-    ...(approval === undefined ? {} : { approval }),
-    ...(cancel === undefined ? {} : { cancel }),
-  }
-}
-
 function relayEnvelopeId(envelope: unknown): string {
   if (envelope !== null && typeof envelope === 'object' && !Array.isArray(envelope)) {
     const id = (envelope as { id?: unknown }).id
@@ -1172,7 +1184,7 @@ export function bindDesktopRelayConnectTray(
           if (identity === undefined) {
             throw new RelayAuthorizationError('malformed', 'desktop relay identity is required')
           }
-          await openDesktopRelayLoopbackSession({
+          await openDesktopRelayLoopbackMailbox({
             handle,
             identity,
             ...(options?.enroll === undefined ? {} : { enroll: options.enroll }),
