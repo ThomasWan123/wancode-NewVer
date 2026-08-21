@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, unpairPwaRelay, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
+import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, unpairPwaRelay, selectSolePwaDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -512,6 +512,49 @@ describe('PWA relay pairing', () => {
       encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
     })
     expect(items.get(PWA_RELAY_DESKTOP_STORAGE_KEY)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    controller.close()
+  })
+
+  it('selects the sole listed desktop and refuses zero or multiple candidates', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const other = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      identity: pwa,
+      now: NOW,
+    })
+    await expectRelayErrorAsync(() => selectSolePwaDesktop(controller), 'malformed')
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    expect(await selectSolePwaDesktop(controller)).toEqual({
+      deviceId: desktop.deviceId,
+      userId: 'user-a',
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    expect(controller.desktopDeviceId).toBe(desktop.deviceId)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: other.deviceId,
+      publicKey: other.keyPair.publicKey,
+      encryptionPublicKey: other.keyPair.encryptionPublicKey,
+    })
+    await expectRelayErrorAsync(() => selectSolePwaDesktop(controller), 'malformed')
+    expect(JSON.stringify(controller)).not.toMatch(/privateKey|encryptionPrivateKey/)
     controller.close()
   })
 

@@ -50,6 +50,7 @@ export {
   PWA_RELAY_DESKTOP_STORAGE_KEY,
   assertPwaDesktopSelection,
   isSelectablePwaDesktop,
+  selectSolePwaDesktop,
   type CreatePwaRelayControllerInput,
   type PwaRelayController,
   type PwaRelayDesktop,

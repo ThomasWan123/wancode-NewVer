@@ -27,7 +27,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   `forgetPwaSelectedDesktop` 清除该槽，不动 IndexedDB 身份。
   `unpairPwaRelay` 立即撤销 PWA 设备并忘掉所选桌面。
   公网 HTTP origin 会在注册前失败关闭。桌面可
-  稍后通过 `listDesktops` / `selectDesktop` 选择。选择本机 PWA、空桌面 id
+  稍后通过 `listDesktops` / `selectDesktop` 选择。`selectSolePwaDesktop` 在只
+  有一台列出桌面时选中它；0 台或多台失败关闭。选择本机 PWA、空桌面 id
   或非 X25519 加密公钥一律失败关闭。`listDesktops` 也会省略这些设备。已撤销桌面不会出现。follow-up、approval 和
   cancel 按该桌面加密公钥密封。presence 帧同样密封。presence 状态只能是 online 或
   offline。follow-up 正文必填且有上限，

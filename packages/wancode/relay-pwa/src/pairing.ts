@@ -159,6 +159,26 @@ export function isSelectablePwaDesktop(
 }
 
 /**
+ * Select the only listed desktop. Zero or multiple candidates fail closed so
+ * a poisoned account list cannot pick a peer.
+ */
+export async function selectSolePwaDesktop(controller: PwaRelayController): Promise<PwaRelayDesktop> {
+  const desktops = await controller.listDesktops()
+  if (desktops.length !== 1) {
+    throw new RelayAuthorizationError('malformed', 'pwa desktop selection is required')
+  }
+  const desktop = desktops[0]
+  if (typeof desktop.encryptionPublicKey !== 'string') {
+    throw new RelayAuthorizationError('malformed', 'pwa desktop encryption public key is required')
+  }
+  controller.selectDesktop({
+    deviceId: desktop.deviceId,
+    encryptionPublicKey: desktop.encryptionPublicKey,
+  })
+  return desktop
+}
+
+/**
  * Remember a public desktop selection in sessionStorage. Private keys and the
  * identity slot fail closed.
  */
