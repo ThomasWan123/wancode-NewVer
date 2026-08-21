@@ -135,10 +135,15 @@ describe('desktop outbound relay Host plugin', () => {
       publicKey: 'pub-b',
       encryptionPublicKey: 'enc-b',
     }])
+    const mintPairingGrant = vi.fn(async () => ({
+      pairingCode: 'ABCD-EFGH',
+      expiresAt: 1_700_000_300_000,
+      desktopDeviceId: 'device-a',
+    }))
     const handle = prepareDesktopRelay(idleConfig({
       enabled: true,
       url: 'wss://relay.example.invalid/v1',
-    }), connect, { register, issueToken, revoke, listDevices })
+    }), connect, { register, issueToken, revoke, listDevices, mintPairingGrant })
 
     await expect(handle?.register({
       assertion: { sub: 'user-a' },
@@ -166,6 +171,14 @@ describe('desktop outbound relay Host plugin', () => {
       publicKey: 'pub-b',
       encryptionPublicKey: 'enc-b',
     }])
+    await expect(handle?.mintPairingGrant({
+      assertion: { sub: 'user-a' },
+      deviceId: 'device-a',
+    })).resolves.toEqual({
+      pairingCode: 'ABCD-EFGH',
+      expiresAt: 1_700_000_300_000,
+      desktopDeviceId: 'device-a',
+    })
     await expect(handle?.revoke({
       assertion: { sub: 'user-a' },
       deviceId: 'device-a',
@@ -184,6 +197,29 @@ describe('desktop outbound relay Host plugin', () => {
       httpUrl: 'https://relay.example.invalid/',
       assertion: { sub: 'user-a' },
     })
+    expect(mintPairingGrant).toHaveBeenCalledWith({
+      httpUrl: 'https://relay.example.invalid/',
+      assertion: { sub: 'user-a' },
+      deviceId: 'device-a',
+    })
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('refuses to mint a pairing grant when the control client omits it', async () => {
+    const connect = vi.fn()
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), connect, {
+      register: vi.fn(),
+      issueToken: vi.fn(),
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+    })
+    await expect(handle?.mintPairingGrant({
+      assertion: { sub: 'user-a' },
+      deviceId: 'device-a',
+    })).rejects.toMatchObject({ code: 'malformed' })
     expect(connect).not.toHaveBeenCalled()
   })
 

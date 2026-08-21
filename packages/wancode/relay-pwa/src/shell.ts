@@ -19,7 +19,7 @@ export const PWA_SHELL_PATHS = [
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list or worker changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v10'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v11'
 
 /** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
 export type PwaCacheRetention = 'keep' | 'delete'
@@ -238,6 +238,16 @@ export function createPwaPairingScriptSource(): string {
     "  if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');",
     '  return parsed.origin;',
     '}',
+    'function allowedPairingCode(value) {',
+    "  if (typeof value !== 'string') throw new Error('pair');",
+    "  var trimmed = value.replace(/^\\s+|\\s+$/g, '');",
+    "  if (trimmed === '') return '';",
+    "  if (trimmed.indexOf('.') !== -1) throw new Error('pair');",
+    "  if (/token|secret|credential|password|authorization/i.test(trimmed)) throw new Error('pair');",
+    "  var normalized = trimmed.toUpperCase().replace(/[-\\s]/g, '');",
+    "  if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(normalized)) throw new Error('pair');",
+    "  return normalized.slice(0, 4) + '-' + normalized.slice(4);",
+    '}',
     'function identityRequest(request) {',
     '  return new Promise(function (resolve, reject) {',
     '    request.onsuccess = function () { resolve(request.result); };',
@@ -348,13 +358,18 @@ export function createPwaPairingScriptSource(): string {
     "  var status = document.getElementById('status');",
     '  try {',
     "    var origin = allowedOrigin(event.target.elements.origin.value);",
+    "    var pair = allowedPairingCode(event.target.elements.pair.value);",
     "    sessionStorage.setItem('wancode-relay-origin', origin);",
     '    enrollIdentity().then(function (deviceId) {',
-    '      status.textContent = pairingStatus(deviceId);',
+    "      status.textContent = pairingStatus(deviceId) + (pair ? ' Pairing code accepted.' : '');",
     '    }).catch(function () {',
     "      status.textContent = 'This browser cannot enroll a device identity.';",
     '    });',
     '  } catch (error) {',
+    "    if (error && error.message === 'pair') {",
+    "      status.textContent = 'Use a pairing code from the desktop. Do not paste tokens.';",
+    '      return;',
+    '    }',
     "    try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}",
     "    status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';",
     '  }',
@@ -363,6 +378,7 @@ export function createPwaPairingScriptSource(): string {
     "  try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}",
     "  try { sessionStorage.removeItem('wancode-relay-desktop'); } catch (ignored) {}",
     "  document.getElementById('pair').elements.origin.value = '';",
+    "  document.getElementById('pair').elements.pair.value = '';",
     "  document.getElementById('status').textContent = 'Forgot this origin. Device identity stays in this browser.';",
     '});',
     '',
@@ -395,6 +411,7 @@ export function createPwaIndexHtml(): string {
     '    <p>Pair a desktop. Model keys stay on that machine.</p>',
     '    <form id="pair" method="post" action="#">',
     '      <label>Relay origin <input name="origin" type="url" required></label>',
+    '      <label>Pairing code <input name="pair" autocomplete="off"></label>',
     '      <button type="submit">Pair desktop</button>',
     '      <button type="button" id="forget">Forget pairing</button>',
     '    </form>',

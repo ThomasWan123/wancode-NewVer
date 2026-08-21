@@ -64,7 +64,8 @@ Status: active
   blob in the origin `sessionStorage` key. `pair.js` shows a remembered public
   desktop id from `sessionStorage` and clears poisoned desktop slots.
   Forget pairing clears the origin and desktop slots without touching IndexedDB
-  and without calling revoke. `createPwaRelayController` may omit
+  and without calling revoke. The pairing form accepts an optional pairing
+  code that is not a JWT and is never stored. `createPwaRelayController` may omit
   the WebSocket URL and derive `/v1` from the pairing origin.
   `openPwaRelayFromOrigin` remembers that origin, loads IndexedDB identity,
   then registers and dials. `openPwaRelayFromPairingCode` redeems a one-time
@@ -99,8 +100,9 @@ Status: active
   follow-ups after connect without repeating them.
   `lookupDesktopRelayHostApplySinks` probes `ctx.get('sessions')` without
   adding a required inject. Host `prompt` / `respond` and Client `submit` /
-  `decide` shapes are both accepted. `bindDesktopRelay` returns that handle so connect
-  and processMail can run after apply. `openDesktopRelaySession` enrolls the
+  `decide` shapes are both accepted.   `bindDesktopRelay` returns that handle so connect
+  and processMail can run after apply. `mintPairingGrant` issues a one-time
+  pairing code over outbound HTTP without opening a socket. `openDesktopRelaySession` enrolls the
   stored identity, mints a token, and dials. A missing nonce is minted with
   WebCrypto. `openDesktopRelayMailbox` then applies queued PWA mail.
   Mail processing repeats that lookup so a late

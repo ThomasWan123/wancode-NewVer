@@ -10,6 +10,7 @@ import {
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
+  mintOutboundRelayPairingGrant,
   registerOutboundRelayDevice,
   RelayAuthorizationError,
   revokeOutboundRelayDevice,
@@ -139,6 +140,11 @@ export interface DesktopRelayHandle {
     readonly revokedAt: number
   }>
   listDevices(input: DesktopRelayListInput): Promise<readonly DesktopRelayPublicDevice[]>
+  mintPairingGrant(input: DesktopRelayDeviceInput): Promise<{
+    readonly pairingCode: string
+    readonly expiresAt: number
+    readonly desktopDeviceId: string
+  }>
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
   processMail(input: Pick<ProcessDesktopRelayMailInput, 'identity'> & Partial<DesktopRelayApplySinks>): Promise<{
     readonly applied: number
@@ -170,6 +176,7 @@ export interface DesktopRelayControl {
   issueToken: typeof issueOutboundRelayToken
   revoke: typeof revokeOutboundRelayDevice
   listDevices: typeof listOutboundRelayDevices
+  mintPairingGrant?: typeof mintOutboundRelayPairingGrant
 }
 
 const defaultControl: DesktopRelayControl = {
@@ -177,6 +184,7 @@ const defaultControl: DesktopRelayControl = {
   issueToken: issueOutboundRelayToken,
   revoke: revokeOutboundRelayDevice,
   listDevices: listOutboundRelayDevices,
+  mintPairingGrant: mintOutboundRelayPairingGrant,
 }
 
 /**
@@ -233,6 +241,17 @@ export function prepareDesktopRelay(
       return control.listDevices({
         httpUrl: httpUrl.href,
         assertion: input.assertion,
+      })
+    },
+    async mintPairingGrant(input) {
+      const mint = control.mintPairingGrant
+      if (mint === undefined) {
+        throw new RelayAuthorizationError('malformed', 'desktop relay pairing grant is required')
+      }
+      return mint({
+        httpUrl: httpUrl.href,
+        assertion: input.assertion,
+        deviceId: input.deviceId,
       })
     },
     async connect(input) {

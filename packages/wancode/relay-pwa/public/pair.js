@@ -13,6 +13,16 @@ function allowedOrigin(value) {
   if (parsed.protocol !== 'https:' && !(parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '[::1]'))) throw new Error('origin');
   return parsed.origin;
 }
+function allowedPairingCode(value) {
+  if (typeof value !== 'string') throw new Error('pair');
+  var trimmed = value.replace(/^\s+|\s+$/g, '');
+  if (trimmed === '') return '';
+  if (trimmed.indexOf('.') !== -1) throw new Error('pair');
+  if (/token|secret|credential|password|authorization/i.test(trimmed)) throw new Error('pair');
+  var normalized = trimmed.toUpperCase().replace(/[-\s]/g, '');
+  if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/.test(normalized)) throw new Error('pair');
+  return normalized.slice(0, 4) + '-' + normalized.slice(4);
+}
 function identityRequest(request) {
   return new Promise(function (resolve, reject) {
     request.onsuccess = function () { resolve(request.result); };
@@ -123,13 +133,18 @@ document.getElementById('pair').addEventListener('submit', function (event) {
   var status = document.getElementById('status');
   try {
     var origin = allowedOrigin(event.target.elements.origin.value);
+    var pair = allowedPairingCode(event.target.elements.pair.value);
     sessionStorage.setItem('wancode-relay-origin', origin);
     enrollIdentity().then(function (deviceId) {
-      status.textContent = pairingStatus(deviceId);
+      status.textContent = pairingStatus(deviceId) + (pair ? ' Pairing code accepted.' : '');
     }).catch(function () {
       status.textContent = 'This browser cannot enroll a device identity.';
     });
   } catch (error) {
+    if (error && error.message === 'pair') {
+      status.textContent = 'Use a pairing code from the desktop. Do not paste tokens.';
+      return;
+    }
     try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}
     status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';
   }
@@ -138,5 +153,6 @@ document.getElementById('forget').addEventListener('click', function () {
   try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}
   try { sessionStorage.removeItem('wancode-relay-desktop'); } catch (ignored) {}
   document.getElementById('pair').elements.origin.value = '';
+  document.getElementById('pair').elements.pair.value = '';
   document.getElementById('status').textContent = 'Forgot this origin. Device identity stays in this browser.';
 });

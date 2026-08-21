@@ -102,6 +102,22 @@ declare module '@wancode/relay-protocol' {
     input: ListOutboundRelayDevicesInput,
   ): Promise<readonly OutboundRelayDevice[]>
 
+  export interface MintOutboundRelayPairingGrantInput {
+    readonly httpUrl: string
+    readonly assertion: unknown
+    readonly deviceId: string
+  }
+
+  export interface OutboundRelayPairingGrant {
+    readonly pairingCode: string
+    readonly expiresAt: number
+    readonly desktopDeviceId: string
+  }
+
+  export function mintOutboundRelayPairingGrant(
+    input: MintOutboundRelayPairingGrantInput,
+  ): Promise<OutboundRelayPairingGrant>
+
   export interface DeviceKeyPair {
     readonly publicKey: string
     readonly privateKey: string

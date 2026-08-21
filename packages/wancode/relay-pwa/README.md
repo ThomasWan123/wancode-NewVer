@@ -86,7 +86,8 @@ directory links.
   fragments fail closed so `#access_token=` cannot be pasted in. The pairing
   script enrolls a WebCrypto identity into IndexedDB on submit and shows a
   remembered public desktop id from `sessionStorage`; poisoned desktop slots
-  are cleared. Forget pairing clears the origin and desktop slots without
+  are cleared. The optional pairing-code field is not a JWT and is never stored.
+  Forget pairing clears the origin and desktop slots without
   touching IndexedDB and without calling revoke. Apple and Android home-screen metas are present.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs, including hash fragments.   `@wancode/relay-pwa/host` may serve that shell on
