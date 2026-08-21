@@ -861,8 +861,9 @@ function relayEnvelopeId(envelope: unknown): string {
 }
 
 /**
- * Probe optional Host services for PWA mail sinks. Missing sessions return
- * undefined so the plugin stays idle without injecting Host services.
+ * Probe optional Host services for PWA mail sinks. Host `prompt` / `respond`
+ * and Client `submit` / `decide` shapes are both accepted. Missing sessions
+ * return undefined so the plugin stays idle without injecting Host services.
  */
 export function lookupDesktopRelayHostApplySinks(ctx: {
   readonly get: (name: string) => unknown
@@ -882,8 +883,22 @@ function hasGet(value: unknown): value is { get: (id: string) => unknown } {
 
 function asHostSession(value: unknown): DesktopRelayHostSession | undefined {
   if (value === null || typeof value !== 'object') return undefined
-  if (typeof (value as { prompt?: unknown }).prompt !== 'function') return undefined
-  return value as DesktopRelayHostSession
+  if (typeof (value as { prompt?: unknown }).prompt === 'function') {
+    return value as DesktopRelayHostSession
+  }
+  const submit = (value as { submit?: unknown }).submit
+  if (typeof submit !== 'function') return undefined
+  return {
+    async prompt(parts, mode) {
+      if (mode !== 'queue') {
+        throw new RelayAuthorizationError('malformed', 'desktop relay follow-up queue mode is required')
+      }
+      if (parts.length !== 1 || parts[0]?.type !== 'text' || typeof parts[0].text !== 'string') {
+        throw new RelayAuthorizationError('malformed', 'desktop relay follow-up text is required')
+      }
+      await (submit as (text: string) => Promise<unknown>).call(value, parts[0].text)
+    },
+  }
 }
 
 function asHostApprovalRequest(
@@ -898,9 +913,21 @@ function asHostApprovalRequest(
     readonly requestId: string
   }) => unknown).call(store, request)
   if (record === null || typeof record !== 'object') return undefined
-  if (typeof (record as { respond?: unknown }).respond !== 'function') return undefined
-  if (typeof (record as { cancel?: unknown }).cancel !== 'function') return undefined
-  return record as DesktopRelayHostApprovalRequest
+  const cancel = (record as { cancel?: unknown }).cancel
+  if (typeof cancel !== 'function') return undefined
+  if (typeof (record as { respond?: unknown }).respond === 'function') {
+    return record as DesktopRelayHostApprovalRequest
+  }
+  const decide = (record as { decide?: unknown }).decide
+  if (typeof decide !== 'function') return undefined
+  return {
+    async respond(outcome) {
+      await (decide as (approved: boolean) => Promise<unknown>).call(record, outcome === 'allowed-once')
+    },
+    async cancel() {
+      await (cancel as () => Promise<unknown>).call(record)
+    },
+  }
 }
 
 /**

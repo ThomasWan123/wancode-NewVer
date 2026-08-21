@@ -535,6 +535,42 @@ describe('desktop outbound relay Host plugin', () => {
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 
+  it('applies PWA mail through Client submit and decide sessions', async () => {
+    const submit = vi.fn(async () => undefined)
+    const decide = vi.fn(async () => undefined)
+    const cancel = vi.fn(async () => undefined)
+    const sinks = lookupDesktopRelayHostApplySinks({
+      get(name) {
+        if (name === 'sessions') {
+          return {
+            get: (sessionId: string) => sessionId === 'sess-1' ? { submit } : undefined,
+          }
+        }
+        if (name === 'approvals') {
+          return {
+            get: (request: { sessionId: string, requestId: string }) => (
+              request.sessionId === 'sess-1' && request.requestId === 'req-1'
+                ? { decide, cancel }
+                : undefined
+            ),
+          }
+        }
+        return undefined
+      },
+    })
+    expect(sinks).toBeDefined()
+    await sinks?.followUp({ sessionId: 'sess-1', text: 'review the login form' })
+    await sinks?.approval({ sessionId: 'sess-1', requestId: 'req-1', approved: false })
+    await sinks?.cancel?.({ sessionId: 'sess-1', requestId: 'req-1' })
+    expect(submit).toHaveBeenCalledWith('review the login form')
+    expect(decide).toHaveBeenCalledWith(false)
+    expect(cancel).toHaveBeenCalledOnce()
+    await expect(sinks?.followUp({
+      sessionId: 'sess-missing',
+      text: 'review the login form',
+    })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
   it('applies mail through Host sessions that appear after prepare', async () => {
     const queued = { id: 'msg-1', kind: 'prompt' }
     const connection = {

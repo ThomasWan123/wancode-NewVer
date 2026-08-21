@@ -92,7 +92,8 @@ Status: active
   `prepareDesktopRelay` may take those sinks so `processMail` can apply
   follow-ups after connect without repeating them.
   `lookupDesktopRelayHostApplySinks` probes `ctx.get('sessions')` without
-  adding a required inject. `bindDesktopRelay` returns that handle so connect
+  adding a required inject. Host `prompt` / `respond` and Client `submit` /
+  `decide` shapes are both accepted. `bindDesktopRelay` returns that handle so connect
   and processMail can run after apply. `openDesktopRelaySession` enrolls the
   stored identity, mints a token, and dials. A missing nonce is minted with
   WebCrypto. `openDesktopRelayMailbox` then applies queued PWA mail.
