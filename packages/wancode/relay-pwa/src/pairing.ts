@@ -111,6 +111,9 @@ interface PwaRelayDelivery {
 
 const MAX_PWA_FOLLOW_UP_CHARS = 8_192
 
+/** Public desktop selection slot. Identity never uses this key. */
+export const PWA_RELAY_DESKTOP_STORAGE_KEY = 'wancode-relay-desktop'
+
 /**
  * Refuse an empty desktop, a local-device target, or a key that is not X25519.
  * Follow-ups must seal to another device.
@@ -152,6 +155,64 @@ export function isSelectablePwaDesktop(
   } catch {
     return false
   }
+}
+
+/**
+ * Remember a public desktop selection in sessionStorage. Private keys and the
+ * identity slot fail closed.
+ */
+export function rememberPwaSelectedDesktop(
+  storage: PwaRelayKeyedStorage,
+  desktop: {
+    readonly deviceId: string
+    readonly encryptionPublicKey: string
+  },
+  selfDeviceId: string,
+): void {
+  assertPwaRelayRecord(desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
+  assertPwaDesktopSelection(desktop, selfDeviceId)
+  storage.setItem(PWA_RELAY_DESKTOP_STORAGE_KEY, JSON.stringify({
+    deviceId: desktop.deviceId,
+    encryptionPublicKey: desktop.encryptionPublicKey,
+  }))
+}
+
+/**
+ * Reload a public desktop selection. Missing rows return undefined. Private
+ * keys, the origin key, and the identity key fail closed.
+ */
+export function loadPwaSelectedDesktop(
+  storage: PwaRelayKeyedStorage,
+  selfDeviceId: string,
+): {
+  readonly deviceId: string
+  readonly encryptionPublicKey: string
+} | undefined {
+  const raw = storage.getItem(PWA_RELAY_DESKTOP_STORAGE_KEY)
+  if (raw === null || raw === '') return undefined
+  if (typeof raw !== 'string' || /[\0\r\n]/u.test(raw)) {
+    throw new RelayAuthorizationError('malformed', 'pwa relay desktop is required')
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'pwa relay desktop is not json')
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new RelayAuthorizationError('malformed', 'pwa relay desktop must be an object')
+  }
+  const record = parsed as Record<string, unknown>
+  assertPwaRelayRecord(record, 'pwa relay desktop')
+  if (typeof record.deviceId !== 'string' || typeof record.encryptionPublicKey !== 'string') {
+    throw new RelayAuthorizationError('malformed', 'pwa relay desktop is required')
+  }
+  const desktop = {
+    deviceId: record.deviceId,
+    encryptionPublicKey: record.encryptionPublicKey,
+  }
+  assertPwaDesktopSelection(desktop, selfDeviceId)
+  return desktop
 }
 
 /**
@@ -417,11 +478,12 @@ export async function openPwaRelayFromOrigin(input: {
     sessionStorage: input.sessionStorage,
     indexedDB: input.indexedDB,
   })
+  const desktop = input.desktop ?? loadPwaSelectedDesktop(input.sessionStorage, enrolled.deviceId)
   return createPwaRelayController({
     httpUrl: enrolled.origin,
     assertion: input.assertion,
     indexedDB: input.indexedDB,
-    ...(input.desktop === undefined ? {} : { desktop: input.desktop }),
+    ...(desktop === undefined ? {} : { desktop }),
     ...(input.now === undefined ? {} : { now: input.now }),
   })
 }

@@ -30,6 +30,7 @@ directory links.
   token, and dials the relay. If `url` is omitted, it is derived from `httpUrl`.
   Mismatched HTTP and WebSocket origins fail closed. `openPwaRelayFromOrigin`
   remembers the origin, loads IndexedDB identity, then enrolls and dials.
+  `rememberPwaSelectedDesktop` stores only the public desktop id and encryption key.
   Public HTTP origins fail closed before enroll. The desktop may be selected later via
   `listDesktops` / `selectDesktop`. Selecting the local PWA device, an empty
   desktop id, or a non-X25519 encryption key fails closed. `listDesktops`

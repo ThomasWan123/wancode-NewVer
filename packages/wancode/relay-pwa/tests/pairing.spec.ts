@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, openPwaRelayFromOrigin, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
+import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -746,6 +746,67 @@ describe('PWA relay pairing', () => {
       text: 'review the login form',
     })).toEqual({
       envelopeId: 'msg-origin',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+    controller.close()
+  })
+
+  it('remembers a public desktop selection and reloads it on pairing', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const items = new Map<string, string>()
+    const session = {
+      getItem(key: string) {
+        return items.get(key) ?? null
+      },
+      setItem(key: string, value: string) {
+        items.set(key, value)
+      },
+      removeItem(key: string) {
+        items.delete(key)
+      },
+    }
+    rememberPwaSelectedDesktop(session, {
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }, pwa.deviceId)
+    expect(items.has(PWA_RELAY_DESKTOP_STORAGE_KEY)).toBe(true)
+    expect(loadPwaSelectedDesktop(session, pwa.deviceId)).toEqual({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    expect(items.get(PWA_RELAY_DESKTOP_STORAGE_KEY)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await fetch(`${cloud.httpUrl}/v1/devices`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        assertion: assertion(),
+        deviceId: desktop.deviceId,
+        publicKey: desktop.keyPair.publicKey,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      }),
+    })
+    const controller = await openPwaRelayFromOrigin({
+      origin: cloud.httpUrl,
+      assertion: assertion(),
+      sessionStorage: session,
+      indexedDB: memoryIndexedDb(),
+      now: NOW,
+    })
+    expect(controller.desktopDeviceId).toBe(desktop.deviceId)
+    expect(await controller.sendFollowUp({
+      id: 'msg-remembered',
+      sessionId: 'sess-1',
+      text: 'review the login form',
+    })).toEqual({
+      envelopeId: 'msg-remembered',
       toDeviceId: desktop.deviceId,
       outcome: 'queued',
     })

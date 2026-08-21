@@ -43,6 +43,9 @@ export {
 export {
   createPwaRelayController,
   openPwaRelayFromOrigin,
+  rememberPwaSelectedDesktop,
+  loadPwaSelectedDesktop,
+  PWA_RELAY_DESKTOP_STORAGE_KEY,
   assertPwaDesktopSelection,
   isSelectablePwaDesktop,
   type CreatePwaRelayControllerInput,
