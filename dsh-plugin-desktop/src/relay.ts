@@ -30,6 +30,9 @@ export {
 /** Stable Cordis plugin name. */
 export const name = 'desktop-relay'
 
+/** Session id that starts a new Host conversation instead of targeting a live one. */
+export const DESKTOP_RELAY_QUEUE_SESSION_ID = 'queue'
+
 /** No Host services required; this plugin must stay inert without a relay URL. */
 export const inject = []
 
@@ -881,7 +884,8 @@ function relayEnvelopeId(envelope: unknown): string {
 
 /**
  * Probe optional Host services for PWA mail sinks. Host `prompt` / `respond`
- * and Client `submit` / `decide` shapes are both accepted. Missing sessions
+ * and Client `submit` / `decide` shapes are both accepted. Session id `queue`
+ * creates a new Host session when `sessions.create` exists. Missing sessions
  * return undefined so the plugin stays idle without injecting Host services.
  */
 export function lookupDesktopRelayHostApplySinks(ctx: {
@@ -891,9 +895,19 @@ export function lookupDesktopRelayHostApplySinks(ctx: {
   if (!hasGet(sessions)) return undefined
   const approvals = ctx.get('approvals')
   return createDesktopRelayHostApplySinks({
-    getSession: sessionId => asHostSession(sessions.get(sessionId)),
+    getSession: sessionId => asHostSession(
+      sessionId === DESKTOP_RELAY_QUEUE_SESSION_ID
+        ? createQueuedHostSession(sessions)
+        : sessions.get(sessionId),
+    ),
     getRequest: request => asHostApprovalRequest(approvals, request),
   })
+}
+
+function createQueuedHostSession(sessions: { get: (id: string) => unknown }): unknown {
+  const create = (sessions as { create?: unknown }).create
+  if (typeof create !== 'function') return undefined
+  return create.call(sessions)
 }
 
 function hasGet(value: unknown): value is { get: (id: string) => unknown } {

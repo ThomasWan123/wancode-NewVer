@@ -19,7 +19,7 @@ export const PWA_SHELL_PATHS = [
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list or worker changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v14'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v15'
 
 /** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
 export type PwaCacheRetention = 'keep' | 'delete'
@@ -423,7 +423,8 @@ export function createPwaPairingScriptSource(): string {
     'function allowedSession(value) {',
     "  if (typeof value !== 'string') throw new Error('follow');",
     "  var trimmed = value.replace(/^\\s+|\\s+$/g, '');",
-    "  if (trimmed === '' || /[\\r\\n]/.test(trimmed) || /token|secret|credential|password|authorization/i.test(trimmed)) throw new Error('follow');",
+    "  if (trimmed === '') return 'queue';",
+    "  if (/[\\r\\n]/.test(trimmed) || /token|secret|credential|password|authorization/i.test(trimmed)) throw new Error('follow');",
     '  return trimmed;',
     '}',
     'function allowedFollow(value) {',
@@ -651,7 +652,7 @@ export function createPwaIndexHtml(): string {
     '      <button type="button" id="forget">Forget pairing</button>',
     '    </form>',
     '    <form id="follow" method="post" action="#">',
-    '      <label>Session <input name="session" required></label>',
+    '      <label>Session <input name="session" autocomplete="off"></label>',
     '      <label>Follow-up <textarea name="follow" required></textarea></label>',
     '      <button type="submit">Send to desktop</button>',
     '    </form>',

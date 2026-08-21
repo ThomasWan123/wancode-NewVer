@@ -198,7 +198,8 @@ function dialRelay(origin, accessToken, envelope) {
 function allowedSession(value) {
   if (typeof value !== 'string') throw new Error('follow');
   var trimmed = value.replace(/^\s+|\s+$/g, '');
-  if (trimmed === '' || /[\r\n]/.test(trimmed) || /token|secret|credential|password|authorization/i.test(trimmed)) throw new Error('follow');
+  if (trimmed === '') return 'queue';
+  if (/[\r\n]/.test(trimmed) || /token|secret|credential|password|authorization/i.test(trimmed)) throw new Error('follow');
   return trimmed;
 }
 function allowedFollow(value) {

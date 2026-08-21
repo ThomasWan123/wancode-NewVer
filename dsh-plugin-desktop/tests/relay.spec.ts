@@ -571,6 +571,36 @@ describe('desktop outbound relay Host plugin', () => {
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 
+  it('queues a new Host session for the reserved queue session id', async () => {
+    const prompt = vi.fn(async () => undefined)
+    const create = vi.fn(() => ({ prompt }))
+    const sinks = lookupDesktopRelayHostApplySinks({
+      get(name) {
+        if (name === 'sessions') {
+          return {
+            get: () => undefined,
+            create,
+          }
+        }
+        return undefined
+      },
+    })
+    await sinks?.followUp({ sessionId: 'queue', text: 'review the login form' })
+    expect(create).toHaveBeenCalledOnce()
+    expect(prompt).toHaveBeenCalledWith(
+      [{ type: 'text', text: 'review the login form' }],
+      'queue',
+    )
+    await expect(lookupDesktopRelayHostApplySinks({
+      get(name) {
+        if (name === 'sessions') return { get: () => undefined }
+        return undefined
+      },
+    })?.followUp({ sessionId: 'queue', text: 'review the login form' })).rejects.toMatchObject({
+      code: 'malformed',
+    })
+  })
+
   it('applies PWA mail through Client submit and decide sessions', async () => {
     const submit = vi.fn(async () => undefined)
     const decide = vi.fn(async () => undefined)

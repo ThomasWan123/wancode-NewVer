@@ -72,6 +72,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   可选的配对码字段不是 JWT，也从不写入存储。合法配对码会 POST `/v1/pairing/redeem`
   兑换；只记住公开桌面 id 与加密公钥，返回的访问令牌只用于拨出站 `/v1`，不落盘。
   握手之后配对页可向正在进行的桌面 session id 发送密封 follow-up。
+  会话栏留空则发送 `queue`，桌面可因此新建 Host 会话。
   Forget pairing 只清除 origin 与桌面槽，不动 IndexedDB，也不调用 revoke。
   首页包含 Apple 与 Android 主屏安装 meta。
   `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL（含 hash

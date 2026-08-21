@@ -106,7 +106,8 @@ Status: active
   follow-ups after connect without repeating them.
   `lookupDesktopRelayHostApplySinks` probes `ctx.get('sessions')` without
   adding a required inject. Host `prompt` / `respond` and Client `submit` /
-  `decide` shapes are both accepted.   `bindDesktopRelay` returns that handle so connect
+  `decide` shapes are both accepted. Session id `queue` creates a new Host
+  session when `sessions.create` exists; missing `create` still fails closed.   `bindDesktopRelay` returns that handle so connect
   and processMail can run after apply. `mintPairingGrant` issues a one-time
   pairing code over outbound HTTP without opening a socket. `openDesktopRelaySession` enrolls the
   stored identity, mints a token, and dials. A missing nonce is minted with
