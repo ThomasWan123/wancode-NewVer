@@ -25,7 +25,10 @@ Status: active
   The local device identity is generated once, stored in Windows Credential
   Manager, and used to enroll and sign handshakes without exposing private keys.
   Same-account device list is available over POST `/v1/devices/list` without
-  private keys or query-string tokens.
+  private keys or query-string tokens. A registered desktop can mint a one-time
+  pairing grant over POST `/v1/pairing/grants`; the typed code is hashed at rest,
+  expires in five minutes, and is not a JWT. POST `/v1/pairing/redeem` registers
+  the PWA and returns a device-bound token plus the minting desktop.
 - M3 started: `@wancode/relay-pwa` projects session events without prompt text
   or model credentials, lists same-account desktops, and can enroll as a PWA
   device then send sealed follow-ups, approvals, and cancels over outbound

@@ -204,4 +204,55 @@ describe('relay cloud control plane', () => {
     expect(foreign.status).toBe(403)
     expect((foreign.json.error as { code: string }).code).toBe('cross-account')
   })
+
+  it('mints a pairing grant and redeems it without an OIDC assertion', async () => {
+    const desktop = generateDeviceKeyPair()
+    const pwa = generateDeviceKeyPair()
+    const identity = createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE })
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity,
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await postJson(`${cloud.httpUrl}/v1/devices`, {
+      assertion: assertion(),
+      deviceId: 'desktop-a',
+      publicKey: desktop.publicKey,
+      encryptionPublicKey: desktop.encryptionPublicKey,
+    })
+    const minted = await postJson(`${cloud.httpUrl}/v1/pairing/grants`, {
+      assertion: assertion(),
+      deviceId: 'desktop-a',
+    })
+    expect(minted.status).toBe(201)
+    const pairingCode = (minted.json as { pairingCode: string }).pairingCode
+    expect(pairingCode).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/u)
+    expect(JSON.stringify(minted.json)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    const jwt = await postJson(`${cloud.httpUrl}/v1/pairing/redeem`, {
+      pairingCode: 'aaa.bbb.ccc',
+      deviceId: 'pwa-a',
+      publicKey: pwa.publicKey,
+      encryptionPublicKey: pwa.encryptionPublicKey,
+    })
+    expect(jwt.status).toBe(400)
+    const redeemed = await postJson(`${cloud.httpUrl}/v1/pairing/redeem`, {
+      pairingCode,
+      deviceId: 'pwa-a',
+      publicKey: pwa.publicKey,
+      encryptionPublicKey: pwa.encryptionPublicKey,
+    })
+    expect(redeemed.status).toBe(201)
+    expect((redeemed.json.device as { deviceId: string }).deviceId).toBe('pwa-a')
+    expect((redeemed.json.desktop as { deviceId: string }).deviceId).toBe('desktop-a')
+    expect(typeof redeemed.json.accessToken).toBe('string')
+    const replay = await postJson(`${cloud.httpUrl}/v1/pairing/redeem`, {
+      pairingCode,
+      deviceId: 'pwa-b',
+      publicKey: generateDeviceKeyPair().publicKey,
+      encryptionPublicKey: generateDeviceKeyPair().encryptionPublicKey,
+    })
+    expect(replay.status).toBe(403)
+    expect((replay.json.error as { code: string }).code).toBe('replay')
+  })
 })

@@ -46,8 +46,30 @@ export function registerRelayDevice(input: RegisterRelayDeviceInput): RelayDevic
   if (input.identity.expiresAt <= input.now) {
     throw new RelayAuthorizationError('expired-token', 'relay identity assertion is expired')
   }
+  return registerRelayAccountDevice({
+    userId: input.identity.userId,
+    deviceId: input.deviceId,
+    publicKey: input.publicKey,
+    encryptionPublicKey: input.encryptionPublicKey,
+    now: input.now,
+    store: input.store,
+  })
+}
+
+/**
+ * Bind one device to an account without an OIDC assertion. Pairing-grant
+ * redeem uses this after the grant has already proven the account.
+ */
+export function registerRelayAccountDevice(input: {
+  readonly userId: string
+  readonly deviceId: string
+  readonly publicKey: string
+  readonly encryptionPublicKey: string
+  readonly now: number
+  readonly store: RelayDeviceStore
+}): RelayDevice {
   const deviceId = requiredId(input.deviceId, 'deviceId')
-  const userId = requiredId(input.identity.userId, 'userId')
+  const userId = requiredId(input.userId, 'userId')
   assertDevicePublicKey(input.publicKey)
   assertDeviceEncryptionPublicKey(input.encryptionPublicKey)
   const existing = input.store.getDevice(deviceId)

@@ -8,7 +8,9 @@ import {
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
+  mintOutboundRelayPairingGrant,
   outboundRelayUrlFromHttpUrl,
+  redeemOutboundRelayPairingGrant,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
 } from '../src/index.ts'
@@ -273,5 +275,49 @@ describe('outbound relay control client', () => {
     }), 'cleartext-transport')
     expect(seen).toHaveLength(1)
     expect(seen[0]?.url).toBe('https://relay.wancode.example/v1/devices')
+  })
+
+  it('mints and redeems a pairing grant over loopback HTTP', async () => {
+    const desktop = generateDeviceKeyPair()
+    const pwa = generateDeviceKeyPair()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: 'desktop-a',
+      publicKey: desktop.publicKey,
+      encryptionPublicKey: desktop.encryptionPublicKey,
+    })
+    const minted = await mintOutboundRelayPairingGrant({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: 'desktop-a',
+    })
+    expect(minted.pairingCode).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/u)
+    expect(minted.desktopDeviceId).toBe('desktop-a')
+    const redeemed = await redeemOutboundRelayPairingGrant({
+      httpUrl: cloud.httpUrl,
+      pairingCode: minted.pairingCode,
+      deviceId: 'pwa-a',
+      publicKey: pwa.publicKey,
+      encryptionPublicKey: pwa.encryptionPublicKey,
+    })
+    expect(redeemed.device.deviceId).toBe('pwa-a')
+    expect(redeemed.device.userId).toBe('user-a')
+    expect(redeemed.desktop.deviceId).toBe('desktop-a')
+    expect(redeemed.accessToken.length).toBeGreaterThan(0)
+    expect(JSON.stringify(redeemed)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    await expectRelayErrorAsync(() => redeemOutboundRelayPairingGrant({
+      httpUrl: cloud.httpUrl,
+      pairingCode: minted.pairingCode,
+      deviceId: 'pwa-b',
+      publicKey: generateDeviceKeyPair().publicKey,
+      encryptionPublicKey: generateDeviceKeyPair().encryptionPublicKey,
+    }), 'replay')
   })
 })

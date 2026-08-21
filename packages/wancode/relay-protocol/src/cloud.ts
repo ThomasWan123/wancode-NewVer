@@ -11,6 +11,12 @@ import { registerRelayDevice, revokeRelayDevice, listRelayAccountDevices, type R
 import { assertNoPlaintextRelayFields, type RelayAccessToken, type RelayDevice } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
 import type { RelayIdentityProvider } from './identity.ts'
+import {
+  createMemoryRelayPairingGrantStore,
+  mintRelayPairingGrant,
+  redeemRelayPairingGrant,
+  type RelayPairingGrantStore,
+} from './pairing-grant.ts'
 import type { RelayRouteStore } from './route.ts'
 import { createMemoryRelayTokenIssuer, type RelayTokenIssuer } from './tokens.ts'
 import { attachRelaySocket, createRelayLiveSink } from './acceptor.ts'
@@ -31,6 +37,7 @@ export interface StartRelayCloudInput {
   readonly tokens?: RelayTokenIssuer
   readonly mailbox?: RelayMailbox
   readonly presence?: RelayPresence
+  readonly pairingGrants?: RelayPairingGrantStore
   readonly now?: number
   readonly bindAddress?: string
   readonly port?: number
@@ -71,8 +78,15 @@ export async function startRelayCloud(input: StartRelayCloudInput): Promise<Rela
   const mailbox = input.mailbox ?? createMemoryRelayMailbox()
   const presence = input.presence ?? createMemoryRelayPresence()
   const tokens = input.tokens ?? createMemoryRelayTokenIssuer(input.store)
+  const pairingGrants = input.pairingGrants ?? createMemoryRelayPairingGrantStore()
   const httpServer = createServer((request, response) => {
-    void handleCloudHttp(request, response, { identity: input.identity, store: input.store, tokens, now })
+    void handleCloudHttp(request, response, {
+      identity: input.identity,
+      store: input.store,
+      tokens,
+      pairingGrants,
+      now,
+    })
   })
   const sockets = new Set<RelayWebSocket>()
   const liveSockets = new Map<string, RelayWebSocket>()
@@ -120,6 +134,7 @@ interface CloudHttpContext {
   readonly identity: RelayIdentityProvider
   readonly store: RelayCloudStore
   readonly tokens: RelayTokenIssuer
+  readonly pairingGrants: RelayPairingGrantStore
   readonly now: number
 }
 
@@ -160,6 +175,40 @@ async function handleCloudHttp(
     if (path === '/v1/devices/revoke') {
       const device = revokeCloudDevice(body, context)
       writeJson(response, 200, { deviceId: device.deviceId, revokedAt: device.revokedAt })
+      return
+    }
+    if (path === '/v1/pairing/grants') {
+      const minted = mintRelayPairingGrant({
+        identity: context.identity.verify(body.assertion, context.now),
+        desktopDeviceId: requiredText(body.deviceId, 'deviceId'),
+        now: context.now,
+        devices: context.store,
+        grants: context.pairingGrants,
+      })
+      writeJson(response, 201, {
+        pairingCode: minted.pairingCode,
+        expiresAt: minted.expiresAt,
+        desktopDeviceId: minted.desktopDeviceId,
+      })
+      return
+    }
+    if (path === '/v1/pairing/redeem') {
+      const redeemed = redeemRelayPairingGrant({
+        pairingCode: body.pairingCode,
+        deviceId: requiredText(body.deviceId, 'deviceId'),
+        publicKey: requiredText(body.publicKey, 'publicKey'),
+        encryptionPublicKey: requiredText(body.encryptionPublicKey, 'encryptionPublicKey'),
+        now: context.now,
+        devices: context.store,
+        grants: context.pairingGrants,
+        tokens: context.tokens,
+      })
+      writeJson(response, 201, {
+        device: publicDevice(redeemed.device),
+        desktop: publicDevice(redeemed.desktop),
+        accessToken: redeemed.accessToken,
+        expiresAt: redeemed.expiresAt,
+      })
       return
     }
     throw new RelayAuthorizationError('malformed', 'relay cloud path is not supported')

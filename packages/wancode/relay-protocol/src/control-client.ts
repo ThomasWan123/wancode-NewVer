@@ -207,6 +207,99 @@ export async function listOutboundRelayDevices(
   })
 }
 
+/** Inputs used to mint a one-time pairing grant from an enrolled desktop. */
+export interface MintOutboundRelayPairingGrantInput {
+  readonly httpUrl: string
+  readonly assertion: unknown
+  readonly deviceId: string
+  readonly fetchImpl?: RelayControlFetch
+}
+
+/** Pairing code shown once after an outbound mint. */
+export interface OutboundRelayPairingGrant {
+  readonly pairingCode: string
+  readonly expiresAt: number
+  readonly desktopDeviceId: string
+}
+
+/**
+ * POST `/v1/pairing/grants` over HTTPS (or loopback HTTP). The desktop must
+ * already be registered. The typed code is returned once and is not a JWT.
+ */
+export async function mintOutboundRelayPairingGrant(
+  input: MintOutboundRelayPairingGrantInput,
+): Promise<OutboundRelayPairingGrant> {
+  const json = await postRelayControl(input, '/v1/pairing/grants', {
+    assertion: input.assertion,
+    deviceId: input.deviceId,
+  })
+  if (typeof json.pairingCode !== 'string' || json.pairingCode.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control pairing code is required')
+  }
+  if (typeof json.expiresAt !== 'number' || !Number.isFinite(json.expiresAt)) {
+    throw new RelayAuthorizationError('malformed', 'relay control pairing expiry is required')
+  }
+  if (typeof json.desktopDeviceId !== 'string' || json.desktopDeviceId.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control pairing desktop is required')
+  }
+  return {
+    pairingCode: json.pairingCode,
+    expiresAt: json.expiresAt,
+    desktopDeviceId: json.desktopDeviceId,
+  }
+}
+
+/** Inputs used to redeem a pairing code into a registered PWA device. */
+export interface RedeemOutboundRelayPairingGrantInput {
+  readonly httpUrl: string
+  readonly pairingCode: string
+  readonly deviceId: string
+  readonly publicKey: string
+  readonly encryptionPublicKey: string
+  readonly fetchImpl?: RelayControlFetch
+}
+
+/** Redeemed pairing grant: PWA device, minting desktop, and a short-lived token. */
+export interface OutboundRelayPairingRedemption {
+  readonly device: OutboundRelayDevice
+  readonly desktop: OutboundRelayDevice
+  readonly accessToken: string
+  readonly expiresAt: number
+}
+
+/**
+ * POST `/v1/pairing/redeem` over HTTPS (or loopback HTTP). No OIDC assertion
+ * is sent. The pairing code is spent and a device-bound token is returned.
+ */
+export async function redeemOutboundRelayPairingGrant(
+  input: RedeemOutboundRelayPairingGrantInput,
+): Promise<OutboundRelayPairingRedemption> {
+  const json = await postRelayControl(input, '/v1/pairing/redeem', {
+    pairingCode: input.pairingCode,
+    deviceId: input.deviceId,
+    publicKey: input.publicKey,
+    encryptionPublicKey: input.encryptionPublicKey,
+  })
+  if (json.device === null || typeof json.device !== 'object' || Array.isArray(json.device)) {
+    throw new RelayAuthorizationError('malformed', 'relay control device is required')
+  }
+  if (json.desktop === null || typeof json.desktop !== 'object' || Array.isArray(json.desktop)) {
+    throw new RelayAuthorizationError('malformed', 'relay control pairing desktop is required')
+  }
+  if (typeof json.accessToken !== 'string' || json.accessToken.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay control access token is required')
+  }
+  if (typeof json.expiresAt !== 'number' || !Number.isFinite(json.expiresAt)) {
+    throw new RelayAuthorizationError('malformed', 'relay control token expiry is required')
+  }
+  return {
+    device: parsePublicDevice(json.device as Record<string, unknown>),
+    desktop: parsePublicDevice(json.desktop as Record<string, unknown>),
+    accessToken: json.accessToken,
+    expiresAt: json.expiresAt,
+  }
+}
+
 async function postRelayControl(
   input: { readonly httpUrl: string, readonly fetchImpl?: RelayControlFetch },
   path: string,
