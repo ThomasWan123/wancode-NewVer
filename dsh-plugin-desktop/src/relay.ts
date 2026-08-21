@@ -187,6 +187,7 @@ export function prepareDesktopRelay(
   connect: DesktopRelayConnect = connectOutboundRelay,
   control: DesktopRelayControl = defaultControl,
   applySinks?: Required<DesktopRelayApplySinks>,
+  host?: { readonly get: (name: string) => unknown },
 ): DesktopRelayHandle | undefined {
   if (!config.enabled || config.url.length === 0) return undefined
   const url = assertOutboundRelayUrl(config.url)
@@ -246,7 +247,10 @@ export function prepareDesktopRelay(
       return processDesktopRelayMail({
         connection,
         identity: input.identity,
-        ...mergeDesktopRelayApplySinks(input, applySinks),
+        ...mergeDesktopRelayApplySinks(
+          input,
+          (host === undefined ? undefined : lookupDesktopRelayHostApplySinks(host)) ?? applySinks,
+        ),
       })
     },
     async sendProgress(input) {
@@ -846,10 +850,9 @@ function asHostApprovalRequest(
  * @param config - validated opt-in relay policy.
  */
 export function apply(ctx: Context, config: Config): void {
-  const applySinks = typeof ctx.get === 'function' ? lookupDesktopRelayHostApplySinks(ctx) : undefined
-  const handle = applySinks === undefined
-    ? prepareDesktopRelay(config)
-    : prepareDesktopRelay(config, connectOutboundRelay, defaultControl, applySinks)
+  const handle = typeof ctx.get === 'function'
+    ? prepareDesktopRelay(config, connectOutboundRelay, defaultControl, undefined, ctx)
+    : prepareDesktopRelay(config)
   if (handle === undefined) return
   ctx.effect(
     () => () => { handle.dispose() },

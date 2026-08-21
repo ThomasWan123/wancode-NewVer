@@ -513,6 +513,66 @@ describe('desktop outbound relay Host plugin', () => {
     })).rejects.toMatchObject({ code: 'malformed' })
   })
 
+  it('applies mail through Host sessions that appear after prepare', async () => {
+    const queued = { id: 'msg-1', kind: 'prompt' }
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(async () => [queued]),
+      receive: vi.fn(async () => []),
+      acknowledge: vi.fn(async () => ({
+        envelopeId: 'msg-1',
+        toDeviceId: 'device-a',
+        outcome: 'delivered' as const,
+      })),
+      close: vi.fn(),
+    }
+    const prompt = vi.fn(async () => undefined)
+    let session: { prompt: typeof prompt } | undefined
+    const handle = prepareDesktopRelay(
+      idleConfig({
+        enabled: true,
+        url: 'wss://relay.example.invalid/v1',
+      }),
+      vi.fn(async () => connection),
+      {
+        register: vi.fn(),
+        issueToken: vi.fn(),
+        revoke: vi.fn(),
+        listDevices: vi.fn(),
+      },
+      undefined,
+      {
+        get(name) {
+          return name === 'sessions'
+            ? { get: (sessionId: string) => sessionId === 'sess-1' ? session : undefined }
+            : undefined
+        },
+      },
+    )
+    await handle?.connect({
+      accessToken: 'tok-live',
+      envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
+    })
+    session = { prompt }
+    await expect(handle?.processMail({
+      identity: {
+        openSealed: vi.fn(() => ({
+          kind: 'prompt' as const,
+          sessionId: 'sess-1',
+          text: 'review the login form',
+        })),
+      },
+    })).resolves.toEqual({ applied: 1, ignored: 0 })
+    expect(prompt).toHaveBeenCalledWith(
+      [{ type: 'text', text: 'review the login form' }],
+      'queue',
+    )
+  })
+
   it('submits follow-ups only to the matching live desktop session', async () => {
     const submit = vi.fn(async () => undefined)
     const other = vi.fn(async () => undefined)
