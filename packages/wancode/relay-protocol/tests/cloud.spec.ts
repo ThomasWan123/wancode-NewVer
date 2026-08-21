@@ -269,6 +269,46 @@ describe('relay cloud control plane', () => {
     expect((replay.json.error as { code: string }).code).toBe('replay')
   })
 
+  it('mints a pairing grant from a desktop access token', async () => {
+    const desktop = generateDeviceKeyPair()
+    const identity = createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE })
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity,
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await postJson(`${cloud.httpUrl}/v1/devices`, {
+      assertion: assertion(),
+      deviceId: 'desktop-a',
+      publicKey: desktop.publicKey,
+      encryptionPublicKey: desktop.encryptionPublicKey,
+    })
+    const token = await postJson(`${cloud.httpUrl}/v1/tokens`, {
+      assertion: assertion(),
+      deviceId: 'desktop-a',
+    })
+    expect(token.status).toBe(200)
+    const minted = await postJson(`${cloud.httpUrl}/v1/pairing/grants`, {
+      accessToken: token.json.accessToken,
+      deviceId: 'desktop-a',
+    })
+    expect(minted.status).toBe(201)
+    expect((minted.json as { pairingCode: string }).pairingCode).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/u)
+    const both = await postJson(`${cloud.httpUrl}/v1/pairing/grants`, {
+      assertion: assertion(),
+      accessToken: token.json.accessToken,
+      deviceId: 'desktop-a',
+    })
+    expect(both.status).toBe(400)
+    const foreign = await postJson(`${cloud.httpUrl}/v1/pairing/grants`, {
+      accessToken: token.json.accessToken,
+      deviceId: 'desktop-b',
+    })
+    expect(foreign.status).toBe(403)
+    expect((foreign.json.error as { code: string }).code).toBe('cross-account')
+  })
+
   it('allows loopback PWA CORS preflight and refuses a public origin', async () => {
     const identity = createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE })
     const cloud = await startRelayCloud({

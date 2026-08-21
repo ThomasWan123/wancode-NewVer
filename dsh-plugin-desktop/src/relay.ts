@@ -71,6 +71,13 @@ export interface DesktopRelayDeviceInput {
   readonly deviceId: string
 }
 
+/** Inputs for minting a one-time pairing grant. After connect, the session token may replace the assertion. */
+export interface DesktopRelayPairingGrantInput {
+  readonly deviceId: string
+  readonly assertion?: unknown
+  readonly accessToken?: string
+}
+
 /** Inputs for listing same-account devices over outbound HTTPS. */
 export interface DesktopRelayListInput {
   readonly assertion: unknown
@@ -143,7 +150,7 @@ export interface DesktopRelayHandle {
     readonly revokedAt: number
   }>
   listDevices(input: DesktopRelayListInput): Promise<readonly DesktopRelayPublicDevice[]>
-  mintPairingGrant(input: DesktopRelayDeviceInput): Promise<{
+  mintPairingGrant(input: DesktopRelayPairingGrantInput): Promise<{
     readonly pairingCode: string
     readonly expiresAt: number
     readonly desktopDeviceId: string
@@ -205,6 +212,7 @@ export function prepareDesktopRelay(
   const url = assertOutboundRelayUrl(config.url)
   const httpUrl = httpUrlFromOutboundRelayUrl(config.url)
   let connection: DesktopRelayConnection | undefined
+  let sessionToken: string | undefined
   return {
     url,
     httpUrl,
@@ -251,9 +259,26 @@ export function prepareDesktopRelay(
       if (mint === undefined) {
         throw new RelayAuthorizationError('malformed', 'desktop relay pairing grant is required')
       }
+      const assertion = input.assertion
+      const accessToken = typeof input.accessToken === 'string' && input.accessToken.length > 0
+        ? input.accessToken
+        : assertion === undefined ? sessionToken : undefined
+      if (assertion !== undefined && typeof accessToken === 'string') {
+        throw new RelayAuthorizationError('malformed', 'desktop relay pairing grant requires an assertion or access token')
+      }
+      if (assertion === undefined) {
+        if (typeof accessToken !== 'string' || accessToken.length === 0) {
+          throw new RelayAuthorizationError('malformed', 'desktop relay pairing grant requires an assertion or access token')
+        }
+        return mint({
+          httpUrl: httpUrl.href,
+          deviceId: input.deviceId,
+          accessToken,
+        })
+      }
       return mint({
         httpUrl: httpUrl.href,
-        assertion: input.assertion,
+        assertion,
         deviceId: input.deviceId,
       })
     },
@@ -261,6 +286,7 @@ export function prepareDesktopRelay(
       const next = await connect({ ...input, url: url.href })
       connection?.close()
       connection = next
+      sessionToken = input.accessToken
       return next
     },
     async processMail(input) {
@@ -291,6 +317,7 @@ export function prepareDesktopRelay(
     dispose() {
       connection?.close()
       connection = undefined
+      sessionToken = undefined
     },
   }
 }

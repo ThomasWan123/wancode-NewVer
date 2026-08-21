@@ -26,7 +26,8 @@ Status: active
   Manager, and used to enroll and sign handshakes without exposing private keys.
   Same-account device list is available over POST `/v1/devices/list` without
   private keys or query-string tokens. A registered desktop can mint a one-time
-  pairing grant over POST `/v1/pairing/grants`; the typed code is hashed at rest,
+  pairing grant over POST `/v1/pairing/grants` with exactly one of an OIDC
+  assertion or that desktop's access token; the typed code is hashed at rest,
   expires in five minutes, and is not a JWT. POST `/v1/pairing/redeem` registers
   the PWA and returns a device-bound token plus the minting desktop.
   Loopback cloud HTTP echoes a loopback browser `Origin` for CORS so the pairing
@@ -109,7 +110,8 @@ Status: active
   `decide` shapes are both accepted. Session id `queue` creates a new Host
   session when `sessions.create` exists; missing `create` still fails closed.   `bindDesktopRelay` returns that handle so connect
   and processMail can run after apply. `mintPairingGrant` issues a one-time
-  pairing code over outbound HTTP without opening a socket. `openDesktopRelaySession` enrolls the
+  pairing code over outbound HTTP without opening a socket. After `connect`,
+  the session token may replace the OIDC assertion. `openDesktopRelaySession` enrolls the
   stored identity, mints a token, and dials. A missing nonce is minted with
   WebCrypto. `openDesktopRelayMailbox` then applies queued PWA mail.
   Mail processing repeats that lookup so a late

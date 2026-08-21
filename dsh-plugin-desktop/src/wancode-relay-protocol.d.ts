@@ -104,7 +104,8 @@ declare module '@wancode/relay-protocol' {
 
   export interface MintOutboundRelayPairingGrantInput {
     readonly httpUrl: string
-    readonly assertion: unknown
+    readonly assertion?: unknown
+    readonly accessToken?: string
     readonly deviceId: string
   }
 

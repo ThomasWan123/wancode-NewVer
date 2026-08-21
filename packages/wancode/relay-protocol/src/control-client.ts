@@ -210,7 +210,8 @@ export async function listOutboundRelayDevices(
 /** Inputs used to mint a one-time pairing grant from an enrolled desktop. */
 export interface MintOutboundRelayPairingGrantInput {
   readonly httpUrl: string
-  readonly assertion: unknown
+  readonly assertion?: unknown
+  readonly accessToken?: string
   readonly deviceId: string
   readonly fetchImpl?: RelayControlFetch
 }
@@ -224,15 +225,13 @@ export interface OutboundRelayPairingGrant {
 
 /**
  * POST `/v1/pairing/grants` over HTTPS (or loopback HTTP). The desktop must
- * already be registered. The typed code is returned once and is not a JWT.
+ * already be registered. Present exactly one of an OIDC assertion or a
+ * device-bound access token. The typed code is returned once and is not a JWT.
  */
 export async function mintOutboundRelayPairingGrant(
   input: MintOutboundRelayPairingGrantInput,
 ): Promise<OutboundRelayPairingGrant> {
-  const json = await postRelayControl(input, '/v1/pairing/grants', {
-    assertion: input.assertion,
-    deviceId: input.deviceId,
-  })
+  const json = await postRelayControl(input, '/v1/pairing/grants', pairingGrantBody(input))
   if (typeof json.pairingCode !== 'string' || json.pairingCode.length === 0) {
     throw new RelayAuthorizationError('malformed', 'relay control pairing code is required')
   }
@@ -298,6 +297,17 @@ export async function redeemOutboundRelayPairingGrant(
     accessToken: json.accessToken,
     expiresAt: json.expiresAt,
   }
+}
+
+function pairingGrantBody(input: MintOutboundRelayPairingGrantInput): Record<string, unknown> {
+  const hasAssertion = input.assertion !== undefined
+  const hasToken = typeof input.accessToken === 'string' && input.accessToken.length > 0
+  if (hasAssertion === hasToken) {
+    throw new RelayAuthorizationError('malformed', 'relay pairing grant requires an assertion or access token')
+  }
+  return hasToken
+    ? { accessToken: input.accessToken, deviceId: input.deviceId }
+    : { assertion: input.assertion, deviceId: input.deviceId }
 }
 
 async function postRelayControl(

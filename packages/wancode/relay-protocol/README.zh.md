@@ -60,7 +60,7 @@ workspace 链接。启用后，插件从 WebSocket URL 推导 HTTPS 控制面源
 HTTP 注册、签发令牌、列出同一账号设备或撤销，再在 `connect` 时打开 socket。
 `httpUrlFromOutboundRelayUrl` 做该映射；`outboundRelayUrlFromHttpUrl` 从配对
 origin 推导 `/v1` WebSocket URL。已注册桌面可通过 POST `/v1/pairing/grants`
-签发一次性配对码；明文只展示一次，存储只保留哈希，五分钟过期，且不是 JWT。
+签发一次性配对码，且必须只出示 OIDC assertion 或该桌面的访问令牌其中之一；明文只展示一次，存储只保留哈希，五分钟过期，且不是 JWT。
 POST `/v1/pairing/redeem` 注册 PWA 并返回设备绑定令牌和签发该码的桌面；重复兑换失败关闭。
 `createStoredDeviceIdentity` 把 Ed25519 与 X25519 密钥对编码进安全存储。
 `createWebCryptoDeviceIdentity` 用 WebCrypto 生成同一份 blob，因此 PWA 不必导入

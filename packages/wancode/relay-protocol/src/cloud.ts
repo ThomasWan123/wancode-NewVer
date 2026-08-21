@@ -10,7 +10,7 @@ import {
 import { registerRelayDevice, revokeRelayDevice, listRelayAccountDevices, type RelayDeviceStore } from './devices.ts'
 import { assertNoPlaintextRelayFields, type RelayAccessToken, type RelayDevice } from './envelope.ts'
 import { RelayAuthorizationError } from './errors.ts'
-import type { RelayIdentityProvider } from './identity.ts'
+import type { RelayIdentityClaims, RelayIdentityProvider } from './identity.ts'
 import {
   createMemoryRelayPairingGrantStore,
   mintRelayPairingGrant,
@@ -216,7 +216,7 @@ async function handleCloudHttp(
     }
     if (path === '/v1/pairing/grants') {
       const minted = mintRelayPairingGrant({
-        identity: context.identity.verify(body.assertion, context.now),
+        identity: resolvePairingGrantIdentity(body, context),
         desktopDeviceId: requiredText(body.deviceId, 'deviceId'),
         now: context.now,
         devices: context.store,
@@ -291,6 +291,36 @@ function issueCloudToken(
     now: context.now,
   })
   return { accessToken: issued.accessToken, expiresAt: issued.record.expiresAt }
+}
+
+function resolvePairingGrantIdentity(
+  body: Record<string, unknown>,
+  context: CloudHttpContext,
+): RelayIdentityClaims {
+  const hasAssertion = body.assertion !== undefined
+  const accessToken = body.accessToken
+  const hasToken = typeof accessToken === 'string' && accessToken.length > 0
+  if (hasAssertion && hasToken) {
+    throw new RelayAuthorizationError('malformed', 'relay pairing grant requires an assertion or access token')
+  }
+  if (hasAssertion) return context.identity.verify(body.assertion, context.now)
+  if (typeof accessToken !== 'string' || accessToken.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'relay pairing grant requires an assertion or access token')
+  }
+  const token = context.store.getAccessToken(accessToken)
+  if (token === undefined || token.expiresAt <= context.now) {
+    throw new RelayAuthorizationError('expired-token', 'relay access token is unknown or expired')
+  }
+  const deviceId = requiredText(body.deviceId, 'deviceId')
+  if (token.deviceId !== deviceId) {
+    throw new RelayAuthorizationError('cross-account', 'relay pairing desktop does not match the presented token')
+  }
+  return {
+    issuer: 'relay-session',
+    audience: 'wancode-relay',
+    userId: token.userId,
+    expiresAt: token.expiresAt,
+  }
 }
 
 function revokeCloudDevice(body: Record<string, unknown>, context: CloudHttpContext): RelayDevice {

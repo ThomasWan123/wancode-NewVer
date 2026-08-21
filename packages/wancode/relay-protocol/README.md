@@ -81,7 +81,8 @@ mints a token, lists same-account devices, or revokes over outbound HTTP before
 `connect` opens a socket. `httpUrlFromOutboundRelayUrl` performs that mapping;
 `outboundRelayUrlFromHttpUrl` derives `/v1` WebSocket URLs from a pairing origin.
 A registered desktop can mint a one-time pairing grant over POST `/v1/pairing/grants`.
-The typed code is shown once, stored only as a hash, expires in five minutes, and
+Present exactly one of an OIDC assertion or a device-bound access token; a token
+must belong to that desktop. The typed code is shown once, stored only as a hash, expires in five minutes, and
 is not a JWT. POST `/v1/pairing/redeem` registers the PWA and returns a
 device-bound token plus the minting desktop; reuse fails closed.
 `createStoredDeviceIdentity` encodes the Ed25519 and X25519 pair for a secure

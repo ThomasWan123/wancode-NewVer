@@ -312,6 +312,23 @@ describe('outbound relay control client', () => {
     expect(redeemed.desktop.deviceId).toBe('desktop-a')
     expect(redeemed.accessToken.length).toBeGreaterThan(0)
     expect(JSON.stringify(redeemed)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    const token = await issueOutboundRelayToken({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: 'desktop-a',
+    })
+    const mintedFromToken = await mintOutboundRelayPairingGrant({
+      httpUrl: cloud.httpUrl,
+      accessToken: token.accessToken,
+      deviceId: 'desktop-a',
+    })
+    expect(mintedFromToken.pairingCode).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/u)
+    await expectRelayErrorAsync(() => mintOutboundRelayPairingGrant({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      accessToken: token.accessToken,
+      deviceId: 'desktop-a',
+    }), 'malformed')
     await expectRelayErrorAsync(() => redeemOutboundRelayPairingGrant({
       httpUrl: cloud.httpUrl,
       pairingCode: minted.pairingCode,

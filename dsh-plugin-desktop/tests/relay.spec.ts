@@ -223,6 +223,54 @@ describe('desktop outbound relay Host plugin', () => {
     expect(connect).not.toHaveBeenCalled()
   })
 
+  it('mints a pairing grant from the connected session token', async () => {
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const mintPairingGrant = vi.fn(async () => ({
+      pairingCode: 'ABCD-EFGH',
+      expiresAt: 1_700_000_300_000,
+      desktopDeviceId: 'device-a',
+    }))
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn(async () => connection), {
+      register: vi.fn(),
+      issueToken: vi.fn(),
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+      mintPairingGrant,
+    })
+    await expect(handle?.mintPairingGrant({
+      deviceId: 'device-a',
+    })).rejects.toMatchObject({ code: 'malformed' })
+    await handle?.connect({
+      accessToken: 'tok-live',
+      envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
+    })
+    await expect(handle?.mintPairingGrant({
+      deviceId: 'device-a',
+    })).resolves.toEqual({
+      pairingCode: 'ABCD-EFGH',
+      expiresAt: 1_700_000_300_000,
+      desktopDeviceId: 'device-a',
+    })
+    expect(mintPairingGrant).toHaveBeenCalledWith({
+      httpUrl: 'https://relay.example.invalid/',
+      accessToken: 'tok-live',
+      deviceId: 'device-a',
+    })
+  })
+
   it('drains queued sealed mail, opens it, and acks only queued ids', async () => {
     const queued = { id: 'msg-1', kind: 'prompt' }
     const live = { id: 'msg-2', kind: 'presence' }
