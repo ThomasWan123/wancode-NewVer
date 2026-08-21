@@ -177,6 +177,11 @@ export function rememberPwaSelectedDesktop(
   }))
 }
 
+/** Drop a remembered public desktop selection. Identity storage is untouched. */
+export function forgetPwaSelectedDesktop(storage: PwaRelayKeyedStorage): void {
+  storage.removeItem(PWA_RELAY_DESKTOP_STORAGE_KEY)
+}
+
 /**
  * Reload a public desktop selection. Missing rows return undefined. Private
  * keys, the origin key, and the identity key fail closed.

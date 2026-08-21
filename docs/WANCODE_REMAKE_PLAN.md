@@ -62,7 +62,8 @@ Status: active
   the WebSocket URL and derive `/v1` from the pairing origin.
   `openPwaRelayFromOrigin` remembers that origin, loads IndexedDB identity,
   then registers and dials. `rememberPwaSelectedDesktop` stores only public
-  desktop fields. Mismatched HTTP and WebSocket origins fail closed.
+  desktop fields. `forgetPwaSelectedDesktop` clears that slot.
+  Mismatched HTTP and WebSocket origins fail closed.
   `PWA_SHELL_CSP` forbids `unsafe-inline`, frames, and plugins.   The PWA can also send sealed presence and revoke itself
   immediately. Presence state must be online or offline. Follow-up text is required and capped. Checked-in `public/`
   shell files, including PNG icons, match the generators. Desktop identity can

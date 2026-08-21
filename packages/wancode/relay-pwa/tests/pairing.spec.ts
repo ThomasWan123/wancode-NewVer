@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
+import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -777,6 +777,20 @@ describe('PWA relay pairing', () => {
       encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
     })
     expect(items.get(PWA_RELAY_DESKTOP_STORAGE_KEY)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    expectRelayError(
+      () => rememberPwaSelectedDesktop(session, {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+        privateKey: desktop.keyPair.privateKey,
+      } as never, pwa.deviceId),
+      'plaintext',
+    )
+    forgetPwaSelectedDesktop(session)
+    expect(loadPwaSelectedDesktop(session, pwa.deviceId)).toBeUndefined()
+    rememberPwaSelectedDesktop(session, {
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }, pwa.deviceId)
     const cloud = await startRelayCloud({
       store: createMemoryRelayStore(),
       identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
