@@ -3,6 +3,7 @@
 import {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   Menu,
   nativeImage,
@@ -195,6 +196,14 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   /** @inheritdoc */
   openDiagnosticsFolder(): void {
     void this.revealDiagnosticsFolder()
+  }
+
+  /** @inheritdoc */
+  copyText(text: string): void {
+    if (typeof text !== 'string' || text.length === 0 || /[\0]/u.test(text)) {
+      throw new Error('dsh-plugin-desktop: clipboard text is required')
+    }
+    clipboard.writeText(text)
   }
 
   /** @inheritdoc */

@@ -15,6 +15,9 @@ import {
   MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS,
   MAX_DESKTOP_RELAY_PROGRESS_DETAIL_CHARS,
   prepareDesktopRelay,
+  presentDesktopRelayPairingGrant,
+  copyDesktopRelayPairingGrant,
+  bindDesktopRelayPairingTray,
   processDesktopRelayMail,
   sealDesktopRelaySessionEvent,
   sendDesktopRelaySessionEvent,
@@ -269,6 +272,7 @@ describe('desktop outbound relay Host plugin', () => {
       accessToken: 'tok-live',
       deviceId: 'device-a',
     })
+    expect(handle?.connectedDeviceId).toBe('device-a')
   })
 
   it('drains queued sealed mail, opens it, and acks only queued ids', async () => {
@@ -1138,5 +1142,157 @@ describe('desktop outbound relay Host plugin', () => {
       recipientEncryptionPublicKey: 'enc-pwa',
       state: 'online',
     })).rejects.toMatchObject({ code: 'malformed' })
+  })
+
+  it('copies a minted pairing code and never notifies the code itself', () => {
+    const copyText = vi.fn()
+    const notify = vi.fn()
+    expect(presentDesktopRelayPairingGrant({
+      pairingCode: 'abcd-efgh',
+      copyText,
+      notify,
+    })).toEqual({ pairingCode: 'ABCD-EFGH' })
+    expect(copyText).toHaveBeenCalledWith('ABCD-EFGH')
+    expect(notify).toHaveBeenCalledWith({
+      title: 'Wan Code',
+      body: 'Pairing code copied. It expires in five minutes.',
+    })
+    expect(JSON.stringify(notify.mock.calls)).not.toMatch(/ABCD-EFGH/i)
+  })
+
+  it('refuses JWT-shaped pairing codes before copying', () => {
+    const copyText = vi.fn()
+    expectRelayError(
+      () => presentDesktopRelayPairingGrant({
+        pairingCode: 'eyJhbGciOiJIUzI1NiJ9.e30.sig',
+        copyText,
+      }),
+      'malformed',
+    )
+    expect(copyText).not.toHaveBeenCalled()
+  })
+
+  it('copies a pairing grant from the connected session and stays idle before connect', async () => {
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const mintPairingGrant = vi.fn(async () => ({
+      pairingCode: 'ABCD-EFGH',
+      expiresAt: 1_700_000_300_000,
+      desktopDeviceId: 'device-a',
+    }))
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn(async () => connection), {
+      register: vi.fn(),
+      issueToken: vi.fn(),
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+      mintPairingGrant,
+    })
+    const copyText = vi.fn()
+    const notify = vi.fn()
+    expect(handle?.connectedDeviceId).toBeUndefined()
+    await expect(copyDesktopRelayPairingGrant(handle!, {
+      copyText,
+      notify,
+    })).rejects.toMatchObject({ code: 'malformed' })
+    expect(copyText).not.toHaveBeenCalled()
+    await handle?.connect({
+      accessToken: 'tok-live',
+      envelope: { protocolVersion: 1, id: 'hs-1', kind: 'handshake' },
+    })
+    await expect(copyDesktopRelayPairingGrant(handle!, {
+      copyText,
+      notify,
+    })).resolves.toEqual({ pairingCode: 'ABCD-EFGH' })
+    expect(mintPairingGrant).toHaveBeenCalledWith({
+      httpUrl: 'https://relay.example.invalid/',
+      accessToken: 'tok-live',
+      deviceId: 'device-a',
+    })
+    expect(copyText).toHaveBeenCalledWith('ABCD-EFGH')
+  })
+
+  it('registers a pairing-code tray command without injecting desktopRuntime', () => {
+    const items: Array<{ label(): string, enabled?(): boolean }> = []
+    const copyText = vi.fn()
+    const notify = vi.fn()
+    const runtime = {
+      registerTrayItem(item: { label(): string, enabled?(): boolean }) {
+        items.push(item)
+        return { refresh() {}, dispose() {} }
+      },
+      copyText,
+      updates: { notify },
+    }
+    const effect = vi.fn((callback: () => () => void) => { callback() })
+    apply({
+      effect,
+      get: (name: string) => name === 'desktopRuntime' ? runtime : undefined,
+    } as unknown as Context, idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }))
+    expect(inject).toEqual([])
+    expect(items).toHaveLength(1)
+    expect(items[0]?.label()).toBe('Copy Pairing Code')
+    expect(items[0]?.enabled?.()).toBe(false)
+  })
+
+  it('notifies from the tray when the desktop relay is not connected', async () => {
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: 'device-a',
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn(async () => connection), {
+      register: vi.fn(),
+      issueToken: vi.fn(),
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+      mintPairingGrant: vi.fn(),
+    })
+    const copyText = vi.fn()
+    const notify = vi.fn()
+    let invoke: (() => void | Promise<void>) | undefined
+    bindDesktopRelayPairingTray({
+      effect: callback => { callback() },
+      get: name => name === 'desktopRuntime'
+        ? {
+          registerTrayItem(item: { invoke(): void | Promise<void> }) {
+            invoke = item.invoke
+            return { refresh() {}, dispose() {} }
+          },
+          copyText,
+          updates: { notify },
+        }
+        : undefined,
+    }, handle!)
+    await invoke?.()
+    expect(copyText).not.toHaveBeenCalled()
+    expect(notify).toHaveBeenCalledWith({
+      title: 'Wan Code',
+      body: 'Connect the desktop relay before copying a pairing code.',
+    })
+    expect(JSON.stringify(notify.mock.calls)).not.toMatch(/tok-|accessToken|pairingCode/i)
   })
 })

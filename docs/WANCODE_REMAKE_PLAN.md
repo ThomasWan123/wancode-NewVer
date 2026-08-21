@@ -111,7 +111,10 @@ Status: active
   session when `sessions.create` exists; missing `create` still fails closed.   `bindDesktopRelay` returns that handle so connect
   and processMail can run after apply. `mintPairingGrant` issues a one-time
   pairing code over outbound HTTP without opening a socket. After `connect`,
-  the session token may replace the OIDC assertion. `openDesktopRelaySession` enrolls the
+  the session token may replace the OIDC assertion. When `desktopRuntime` is
+  present, apply registers an effect-scoped **Copy Pairing Code** tray command
+  that copies the minted display form and notifies without including the code.
+  Missing runtime stays idle. `openDesktopRelaySession` enrolls the
   stored identity, mints a token, and dials. A missing nonce is minted with
   WebCrypto. `openDesktopRelayMailbox` then applies queued PWA mail.
   Mail processing repeats that lookup so a late

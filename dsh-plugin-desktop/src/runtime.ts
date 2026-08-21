@@ -182,6 +182,9 @@ export interface DesktopRuntime {
   /** Open a native terminal containing packaged DSH command shims. */
   openTerminal(): void
 
+  /** Copy text to the native clipboard. Empty or NUL strings fail closed. */
+  copyText(text: string): void
+
   /** Reveal the local diagnostics directory containing the desktop log file. */
   openDiagnosticsFolder(): void
 

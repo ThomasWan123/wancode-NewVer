@@ -166,6 +166,9 @@ const electron = vi.hoisted(() => {
       openExternal: vi.fn(async () => {}),
       openPath: vi.fn(async () => ''),
     },
+    clipboard: {
+      writeText: vi.fn(),
+    },
     templateIcon,
     Tray,
     trays,
@@ -176,6 +179,7 @@ const electron = vi.hoisted(() => {
 vi.mock('electron', () => ({
   app: electron.app,
   BrowserWindow: electron.BrowserWindow,
+  clipboard: electron.clipboard,
   dialog: electron.dialog,
   Menu: electron.Menu,
   nativeImage: electron.nativeImage,
@@ -592,6 +596,15 @@ describe('Electron compatibility runtime', () => {
 
     expect(handler).toHaveBeenCalledOnce()
     expect(handler).toHaveBeenCalledWith('healthy')
+  })
+
+  it('copies native clipboard text and refuses empty strings', async () => {
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+    runtime.copyText('ABCD-EFGH')
+    expect(electron.clipboard.writeText).toHaveBeenCalledWith('ABCD-EFGH')
+    expect(() => { runtime.copyText('') }).toThrow(/clipboard text is required/)
+    expect(() => { runtime.copyText('\0secret') }).toThrow(/clipboard text is required/)
   })
 
   it('opens the active profile terminal from plugin recovery', async () => {

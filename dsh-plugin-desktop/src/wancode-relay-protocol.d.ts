@@ -119,6 +119,8 @@ declare module '@wancode/relay-protocol' {
     input: MintOutboundRelayPairingGrantInput,
   ): Promise<OutboundRelayPairingGrant>
 
+  export function assertRelayPairingCode(value: unknown): string
+
   export interface DeviceKeyPair {
     readonly publicKey: string
     readonly privateKey: string

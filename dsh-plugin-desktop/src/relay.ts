@@ -5,6 +5,7 @@ import z from '@deepseek-ai/schemastery'
 import {
   assertNoPlaintextRelayFields,
   assertOutboundRelayUrl,
+  assertRelayPairingCode,
   connectOutboundRelay,
   createRelayHandshakeNonce,
   httpUrlFromOutboundRelayUrl,
@@ -17,6 +18,7 @@ import {
   type RelayApplicationPayload,
 } from '@wancode/relay-protocol'
 import type { DesktopRelayHandshakeInput, DesktopRelayIdentity } from './relay-identity.ts'
+import type { DesktopTrayItem, DesktopTrayItemRegistration } from './runtime.ts'
 
 export {
   RELAY_DEVICE_CREDENTIAL_REF,
@@ -155,6 +157,7 @@ export interface DesktopRelayHandle {
     readonly expiresAt: number
     readonly desktopDeviceId: string
   }>
+  readonly connectedDeviceId?: string
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
   processMail(input: Pick<ProcessDesktopRelayMailInput, 'identity'> & Partial<DesktopRelayApplySinks>): Promise<{
     readonly applied: number
@@ -313,6 +316,9 @@ export function prepareDesktopRelay(
         throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
       }
       return sendDesktopRelayPresence({ connection, ...input })
+    },
+    get connectedDeviceId() {
+      return connection?.deviceId
     },
     dispose() {
       connection?.close()
@@ -1014,11 +1020,118 @@ export function bindDesktopRelay(
 }
 
 /**
+ * Copy a minted pairing code to the clipboard. JWT-shaped codes and credential
+ * words fail closed. The notification never includes the code.
+ */
+export function presentDesktopRelayPairingGrant(input: {
+  readonly pairingCode: unknown
+  readonly copyText: (text: string) => void
+  readonly notify?: (notification: { readonly title: string, readonly body: string }) => void
+}): { readonly pairingCode: string } {
+  const normalized = assertRelayPairingCode(input.pairingCode)
+  const pairingCode = `${normalized.slice(0, 4)}-${normalized.slice(4)}`
+  input.copyText(pairingCode)
+  input.notify?.({
+    title: 'Wan Code',
+    body: 'Pairing code copied. It expires in five minutes.',
+  })
+  return { pairingCode }
+}
+
+/**
+ * Mint from the connected desktop session and copy the code. Missing sockets
+ * fail closed so an idle plugin cannot mint.
+ */
+export async function copyDesktopRelayPairingGrant(
+  handle: DesktopRelayHandle,
+  presentation: {
+    readonly copyText: (text: string) => void
+    readonly notify?: (notification: { readonly title: string, readonly body: string }) => void
+  },
+): Promise<{ readonly pairingCode: string }> {
+  const deviceId = handle.connectedDeviceId
+  if (typeof deviceId !== 'string' || deviceId.length === 0) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay is not connected')
+  }
+  const minted = await handle.mintPairingGrant({ deviceId })
+  return presentDesktopRelayPairingGrant({
+    pairingCode: minted.pairingCode,
+    copyText: presentation.copyText,
+    notify: presentation.notify,
+  })
+}
+
+/**
+ * Register a tray command that copies a pairing code. Missing desktopRuntime
+ * stays idle without adding a required inject.
+ */
+export function bindDesktopRelayPairingTray(
+  ctx: {
+    readonly get?: (name: string) => unknown
+    effect(callback: () => () => void, label: string): void
+  },
+  handle: DesktopRelayHandle,
+): void {
+  const runtime = typeof ctx.get === 'function'
+    ? asRelayPairingPresentation(ctx.get('desktopRuntime'))
+    : undefined
+  if (runtime === undefined) return
+  ctx.effect(() => {
+    const registration = runtime.registerTrayItem({
+      group: 'tools',
+      order: 20,
+      label: () => 'Copy Pairing Code',
+      enabled: () => handle.connectedDeviceId !== undefined,
+      async invoke() {
+        try {
+          await copyDesktopRelayPairingGrant(handle, runtime)
+        } catch {
+          runtime.notify?.({
+            title: 'Wan Code',
+            body: 'Connect the desktop relay before copying a pairing code.',
+          })
+        }
+      },
+    })
+    return () => { registration.dispose() }
+  }, 'dsh-plugin-desktop: outbound relay pairing code')
+}
+
+function asRelayPairingPresentation(value: unknown): {
+  readonly registerTrayItem: (item: DesktopTrayItem) => DesktopTrayItemRegistration
+  readonly copyText: (text: string) => void
+  readonly notify?: (notification: { readonly title: string, readonly body: string }) => void
+} | undefined {
+  if (value === null || typeof value !== 'object') return undefined
+  const record = value as {
+    registerTrayItem?: unknown
+    copyText?: unknown
+    updates?: { notify?: unknown }
+  }
+  if (typeof record.registerTrayItem !== 'function' || typeof record.copyText !== 'function') {
+    return undefined
+  }
+  const notify = record.updates !== undefined && typeof record.updates.notify === 'function'
+    ? record.updates.notify.bind(record.updates) as (notification: {
+      readonly title: string
+      readonly body: string
+    }) => void
+    : undefined
+  return {
+    registerTrayItem: record.registerTrayItem.bind(value),
+    copyText: record.copyText.bind(value),
+    notify,
+  }
+}
+
+/**
  * Register an effect-scoped outbound relay handle. No listener is created.
  * Optional Host sessions are probed without adding a required inject.
  * @param ctx - Host context used for effect disposal and optional lookups.
  * @param config - validated opt-in relay policy.
  */
 export function apply(ctx: Context, config: Config): void {
-  bindDesktopRelay(ctx, config)
+  const handle = bindDesktopRelay(ctx, config)
+  if (handle === undefined) return
+  bindDesktopRelayPairingTray(ctx, handle)
 }
