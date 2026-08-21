@@ -14,6 +14,8 @@ import {
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
   assertOutboundRelayUrl,
+  httpUrlFromOutboundRelayUrl,
+  outboundRelayUrlFromHttpUrl,
   type OutboundRelayDevice,
   type RelayApplicationKind,
   type RelayApplicationPayload,
@@ -33,14 +35,16 @@ import {
 import { createPwaSessionBoard, type PwaSessionSnapshot } from './session-board.ts'
 import {
   resolvePwaRelayIdentity,
+  enrollPwaPairingShell,
   type PwaRelayIdentityStorage,
   type PwaRelayIndexedDbFactory,
+  type PwaRelayKeyedStorage,
 } from './identity.ts'
 
 /** Inputs used to enroll a PWA device and open an outbound session. */
 export interface CreatePwaRelayControllerInput {
   readonly httpUrl: string
-  readonly url: string
+  readonly url?: string
   readonly assertion: unknown
   readonly identity?: StoredDeviceIdentity
   readonly identityStorage?: PwaRelayIdentityStorage
@@ -153,13 +157,13 @@ export function isSelectablePwaDesktop(
 /**
  * Register the PWA device, mint a token, and dial the relay outbound.
  * Model credentials are refused. The desktop keeps those keys locally.
+ * When `url` is omitted, the WebSocket URL is derived from `httpUrl`.
  */
 export async function createPwaRelayController(
   input: CreatePwaRelayControllerInput,
 ): Promise<PwaRelayController> {
   assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa relay pairing')
-  assertPwaShellOrigin(input.httpUrl)
-  assertOutboundRelayUrl(input.url)
+  const urls = resolvePwaRelayUrls(input)
   if (input.assertion !== null && typeof input.assertion === 'object' && !Array.isArray(input.assertion)) {
     assertPwaRelayRecord(input.assertion as Record<string, unknown>, 'pwa relay assertion')
   }
@@ -172,14 +176,14 @@ export async function createPwaRelayController(
   }
   const now = input.now ?? Date.now()
   await registerOutboundRelayDevice({
-    httpUrl: input.httpUrl,
+    httpUrl: urls.httpUrl,
     assertion: input.assertion,
     deviceId: published.deviceId,
     publicKey: published.publicKey,
     encryptionPublicKey: published.encryptionPublicKey,
   })
   let selected = input.desktop
-  let connection = await openSession(input, identity, published, userId, now)
+  let connection = await openSession({ ...input, ...urls }, identity, published, userId, now)
   const board = createPwaSessionBoard()
   let closed = false
 
@@ -224,7 +228,7 @@ export async function createPwaRelayController(
     async listDesktops() {
       // Outbound HTTPS; this still works after close() because it does not use the socket.
       const devices = await listOutboundRelayDevices({
-        httpUrl: input.httpUrl,
+        httpUrl: urls.httpUrl,
         assertion: input.assertion,
       })
       return devices.filter(device => isSelectablePwaDesktop(device, published.deviceId))
@@ -326,14 +330,14 @@ export async function createPwaRelayController(
     },
     async reconnect() {
       connection.close()
-      connection = await openSession(input, identity, published, userId, now)
+      connection = await openSession({ ...input, ...urls }, identity, published, userId, now)
       closed = false
     },
     async revoke() {
       closed = true
       connection.close()
       return revokeOutboundRelayDevice({
-        httpUrl: input.httpUrl,
+        httpUrl: urls.httpUrl,
         assertion: input.assertion,
         deviceId: published.deviceId,
       })
@@ -347,7 +351,7 @@ export async function createPwaRelayController(
 }
 
 async function openSession(
-  input: Pick<CreatePwaRelayControllerInput, 'httpUrl' | 'url' | 'assertion'>,
+  input: { readonly httpUrl: string, readonly url: string, readonly assertion: unknown },
   identity: StoredDeviceIdentity,
   published: { readonly deviceId: string },
   userId: string,
@@ -370,6 +374,55 @@ async function openSession(
       nonce,
       capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
     }),
+  })
+}
+
+/**
+ * Derive the outbound WebSocket URL from a pairing origin. Mismatched HTTP and
+ * WebSocket origins fail closed before enroll.
+ */
+function resolvePwaRelayUrls(input: {
+  readonly httpUrl: string
+  readonly url?: string
+}): { readonly httpUrl: string, readonly url: string } {
+  const http = assertPwaShellOrigin(input.httpUrl)
+  if (input.url === undefined) {
+    return {
+      httpUrl: http.href,
+      url: outboundRelayUrlFromHttpUrl(http.href).href,
+    }
+  }
+  const websocket = assertOutboundRelayUrl(input.url)
+  if (httpUrlFromOutboundRelayUrl(websocket.href).origin !== http.origin) {
+    throw new RelayAuthorizationError('malformed', 'pwa relay http origin must match the websocket url')
+  }
+  return { httpUrl: http.href, url: websocket.href }
+}
+
+/**
+ * Remember the pairing origin, load IndexedDB identity, register, and dial.
+ * Private keys stay in IndexedDB. Model credentials are refused.
+ */
+export async function openPwaRelayFromOrigin(input: {
+  readonly origin: string
+  readonly assertion: unknown
+  readonly sessionStorage: PwaRelayKeyedStorage
+  readonly indexedDB: PwaRelayIndexedDbFactory
+  readonly desktop?: CreatePwaRelayControllerInput['desktop']
+  readonly now?: number
+}): Promise<PwaRelayController> {
+  assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa relay pairing')
+  const enrolled = await enrollPwaPairingShell({
+    origin: input.origin,
+    sessionStorage: input.sessionStorage,
+    indexedDB: input.indexedDB,
+  })
+  return createPwaRelayController({
+    httpUrl: enrolled.origin,
+    assertion: input.assertion,
+    indexedDB: input.indexedDB,
+    ...(input.desktop === undefined ? {} : { desktop: input.desktop }),
+    ...(input.now === undefined ? {} : { now: input.now }),
   })
 }
 

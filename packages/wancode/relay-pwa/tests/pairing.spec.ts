@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage } from '../src/index.ts'
+import { createPwaRelayController, openPwaRelayFromOrigin, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -655,4 +655,187 @@ describe('PWA relay pairing', () => {
     expect(second.deviceId).toBe(first.deviceId)
     second.close()
   })
+
+  it('derives the websocket URL from the pairing origin', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await fetch(`${cloud.httpUrl}/v1/devices`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        assertion: assertion(),
+        deviceId: desktop.deviceId,
+        publicKey: desktop.keyPair.publicKey,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      }),
+    })
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+      now: NOW,
+    })
+    expect(await controller.sendFollowUp({
+      id: 'msg-derived',
+      sessionId: 'sess-1',
+      text: 'review the login form',
+    })).toEqual({
+      envelopeId: 'msg-derived',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+    controller.close()
+  })
+
+  it('opens a relay session from a pairing origin and IndexedDB identity', async () => {
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await fetch(`${cloud.httpUrl}/v1/devices`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        assertion: assertion(),
+        deviceId: desktop.deviceId,
+        publicKey: desktop.keyPair.publicKey,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      }),
+    })
+    const items = new Map<string, string>()
+    const session = {
+      getItem(key: string) {
+        return items.get(key) ?? null
+      },
+      setItem(key: string, value: string) {
+        items.set(key, value)
+      },
+      removeItem(key: string) {
+        items.delete(key)
+      },
+    }
+    const controller = await openPwaRelayFromOrigin({
+      origin: cloud.httpUrl,
+      assertion: assertion(),
+      sessionStorage: session,
+      indexedDB: memoryIndexedDb(),
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+      now: NOW,
+    })
+    expect(JSON.stringify(controller)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    expect(items.get('wancode-relay-origin')).toBe(new URL(cloud.httpUrl).origin)
+    expect(await controller.sendFollowUp({
+      id: 'msg-origin',
+      sessionId: 'sess-1',
+      text: 'review the login form',
+    })).toEqual({
+      envelopeId: 'msg-origin',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+    controller.close()
+  })
+
+  it('refuses a websocket URL that does not match the pairing origin', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    await expectRelayErrorAsync(() => createPwaRelayController({
+      httpUrl: 'https://pwa.wancode.example/',
+      url: 'wss://relay.other.example/v1',
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+    }), 'malformed')
+  })
 })
+
+function memoryIndexedDb(): PwaRelayIndexedDbFactory {
+  const values = new Map<string, string>()
+  const stores = new Set<string>()
+  const db = {
+    objectStoreNames: {
+      contains(name: string) {
+        return stores.has(name)
+      },
+    },
+    createObjectStore(name: string) {
+      stores.add(name)
+      return undefined
+    },
+    transaction() {
+      return {
+        objectStore() {
+          return {
+            get(key: string) {
+              return idbRequest(() => values.get(key))
+            },
+            put(value: string, key: string) {
+              return idbRequest(() => {
+                values.set(key, value)
+                return undefined
+              })
+            },
+            delete(key: string) {
+              return idbRequest(() => {
+                values.delete(key)
+                return undefined
+              })
+            },
+          }
+        },
+      }
+    },
+  }
+  return {
+    open(name: string, version: number) {
+      if (name.length === 0 || version < 1) throw new Error('indexeddb')
+      const request = {
+        result: db,
+        onupgradeneeded: null as (() => void) | null,
+        onsuccess: null as (() => void) | null,
+        onerror: null as (() => void) | null,
+      }
+      queueMicrotask(() => {
+        request.onupgradeneeded?.()
+        request.onsuccess?.()
+      })
+      return request
+    },
+  }
+}
+
+function idbRequest<T>(run: () => T): {
+  result: T
+  onsuccess: (() => void) | null
+  onerror: (() => void) | null
+} {
+  const request = {
+    result: undefined as T,
+    onsuccess: null as (() => void) | null,
+    onerror: null as (() => void) | null,
+  }
+  queueMicrotask(() => {
+    request.result = run()
+    request.onsuccess?.()
+  })
+  return request
+}

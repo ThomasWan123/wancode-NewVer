@@ -27,7 +27,10 @@ directory links.
   plaintext envelope fields) fail closed before pairing or send. Device
   private keys on PWA JSON also fail closed.
 -   `createPwaRelayController` registers the PWA device, mints a short-lived
-  token, and dials the relay. Public HTTP origins fail closed before enroll. The desktop may be selected later via
+  token, and dials the relay. If `url` is omitted, it is derived from `httpUrl`.
+  Mismatched HTTP and WebSocket origins fail closed. `openPwaRelayFromOrigin`
+  remembers the origin, loads IndexedDB identity, then enrolls and dials.
+  Public HTTP origins fail closed before enroll. The desktop may be selected later via
   `listDesktops` / `selectDesktop`. Selecting the local PWA device, an empty
   desktop id, or a non-X25519 encryption key fails closed. `listDesktops`
   omits those same devices. Revoked desktops are omitted. Follow-ups, approvals, and cancels are

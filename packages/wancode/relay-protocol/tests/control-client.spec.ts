@@ -8,6 +8,7 @@ import {
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
+  outboundRelayUrlFromHttpUrl,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
 } from '../src/index.ts'
@@ -61,6 +62,13 @@ describe('outbound relay HTTP url policy', () => {
       .toBe('https://relay.wancode.example/')
     expect(httpUrlFromOutboundRelayUrl('ws://127.0.0.1:4173/v1').href)
       .toBe('http://127.0.0.1:4173/')
+    expect(outboundRelayUrlFromHttpUrl('https://relay.wancode.example').href)
+      .toBe('wss://relay.wancode.example/v1')
+    expect(outboundRelayUrlFromHttpUrl('http://127.0.0.1:4173/').href)
+      .toBe('ws://127.0.0.1:4173/v1')
+    expect(outboundRelayUrlFromHttpUrl('https://relay.wancode.example/v1').href)
+      .toBe('wss://relay.wancode.example/v1')
+    expectRelayError(() => outboundRelayUrlFromHttpUrl('http://relay.example.invalid/v1'), 'cleartext-transport')
     expectRelayError(() => assertOutboundRelayHttpUrl('http://relay.example.invalid/v1'), 'cleartext-transport')
     expectRelayError(() => assertOutboundRelayHttpUrl('https://user:secret@relay.example.invalid'), 'plaintext')
     expectRelayError(() => assertOutboundRelayHttpUrl('https://relay.example.invalid/?access_token=tok'), 'plaintext')

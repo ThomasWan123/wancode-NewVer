@@ -103,6 +103,7 @@ export {
 export {
   assertOutboundRelayHttpUrl,
   httpUrlFromOutboundRelayUrl,
+  outboundRelayUrlFromHttpUrl,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
   registerOutboundRelayDevice,

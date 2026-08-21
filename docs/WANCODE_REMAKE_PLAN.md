@@ -58,7 +58,10 @@ Status: active
   A valid relay origin may be remembered in `sessionStorage` only; hash
   fragments fail closed so `#access_token=` cannot be pasted in.
   Submit enrolls a WebCrypto identity into IndexedDB and never stores that
-  blob in the origin `sessionStorage` key.
+  blob in the origin `sessionStorage` key. `createPwaRelayController` may omit
+  the WebSocket URL and derive `/v1` from the pairing origin.
+  `openPwaRelayFromOrigin` remembers that origin, loads IndexedDB identity,
+  then registers and dials. Mismatched HTTP and WebSocket origins fail closed.
   `PWA_SHELL_CSP` forbids `unsafe-inline`, frames, and plugins.   The PWA can also send sealed presence and revoke itself
   immediately. Presence state must be online or offline. Follow-up text is required and capped. Checked-in `public/`
   shell files, including PNG icons, match the generators. Desktop identity can

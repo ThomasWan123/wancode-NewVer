@@ -77,7 +77,8 @@ The desktop Host loads `dsh-plugin-desktop/relay` disabled by default and
 bundles this dialer without declaring a Yarn workspace link. When enabled, the
 plugin derives an HTTPS control origin from the WebSocket URL, then registers,
 mints a token, lists same-account devices, or revokes over outbound HTTP before
-`connect` opens a socket.
+`connect` opens a socket. `httpUrlFromOutboundRelayUrl` performs that mapping;
+`outboundRelayUrlFromHttpUrl` derives `/v1` WebSocket URLs from a pairing origin.
 `createStoredDeviceIdentity` encodes the Ed25519 and X25519 pair for a secure
 store. `createWebCryptoDeviceIdentity` mints the same blob through WebCrypto
 so a PWA does not import `node:crypto`; missing WebCrypto fails closed.

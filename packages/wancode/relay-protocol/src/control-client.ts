@@ -51,6 +51,17 @@ export function httpUrlFromOutboundRelayUrl(url: string): URL {
   return assertOutboundRelayHttpUrl(`${protocol}//${websocket.host}`)
 }
 
+/**
+ * Derive the outbound WebSocket URL from a fail-closed HTTP control origin.
+ * `https:` maps to `wss:`. Loopback `http:` maps to `ws:`. A bare origin uses `/v1`.
+ */
+export function outboundRelayUrlFromHttpUrl(url: string): URL {
+  const http = assertOutboundRelayHttpUrl(url)
+  const protocol = http.protocol === 'https:' ? 'wss:' : 'ws:'
+  const path = http.pathname === '/' || http.pathname === '' ? '/v1' : http.pathname
+  return assertOutboundRelayUrl(`${protocol}//${http.host}${path}`)
+}
+
 /** Minimal POST used by the outbound control client. Tests inject a fake transport. */
 export interface RelayControlFetch {
   (
