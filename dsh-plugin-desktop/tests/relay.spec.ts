@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import {
   apply,
+  bindDesktopRelay,
   applyDesktopRelayPayloads,
   createDesktopRelayApprovalSink,
   createDesktopRelayCancelSink,
@@ -42,6 +43,7 @@ describe('desktop outbound relay Host plugin', () => {
     const effect = vi.fn()
     apply({ effect } as unknown as Context, idleConfig())
     expect(effect).not.toHaveBeenCalled()
+    expect(bindDesktopRelay({ effect } as never, idleConfig())).toBeUndefined()
     expect(inject).toEqual([])
   })
 
@@ -89,6 +91,26 @@ describe('desktop outbound relay Host plugin', () => {
     })
     handle?.dispose()
     expect(connection.close).toHaveBeenCalledOnce()
+  })
+
+  it('returns a bound handle and disposes it with the Host effect', () => {
+    let teardown: (() => void) | undefined
+    const effect = vi.fn((factory: () => () => void) => {
+      teardown = factory()
+    })
+    const handle = bindDesktopRelay({
+      effect,
+      get() {
+        return undefined
+      },
+    } as never, idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }))
+    expect(handle?.url.href).toBe('wss://relay.example.invalid/v1')
+    expect(handle?.httpUrl.href).toBe('https://relay.example.invalid/')
+    expect(effect).toHaveBeenCalledOnce()
+    teardown?.()
   })
 
   it('registers, mints a token, lists devices, and revokes over HTTP without opening a socket', async () => {

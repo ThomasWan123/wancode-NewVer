@@ -846,16 +846,32 @@ function asHostApprovalRequest(
 /**
  * Register an effect-scoped outbound relay handle. No listener is created.
  * Optional Host sessions are probed without adding a required inject.
- * @param ctx - Host context used for effect disposal and optional lookups.
- * @param config - validated opt-in relay policy.
+ * Returns the handle so connect and processMail can run after apply.
  */
-export function apply(ctx: Context, config: Config): void {
+export function bindDesktopRelay(
+  ctx: {
+    readonly get?: (name: string) => unknown
+    effect(callback: () => () => void, label: string): void
+  },
+  config: Config,
+): DesktopRelayHandle | undefined {
   const handle = typeof ctx.get === 'function'
-    ? prepareDesktopRelay(config, connectOutboundRelay, defaultControl, undefined, ctx)
+    ? prepareDesktopRelay(config, connectOutboundRelay, defaultControl, undefined, { get: ctx.get })
     : prepareDesktopRelay(config)
-  if (handle === undefined) return
+  if (handle === undefined) return undefined
   ctx.effect(
     () => () => { handle.dispose() },
     'dsh-plugin-desktop: outbound relay',
   )
+  return handle
+}
+
+/**
+ * Register an effect-scoped outbound relay handle. No listener is created.
+ * Optional Host sessions are probed without adding a required inject.
+ * @param ctx - Host context used for effect disposal and optional lookups.
+ * @param config - validated opt-in relay policy.
+ */
+export function apply(ctx: Context, config: Config): void {
+  bindDesktopRelay(ctx, config)
 }

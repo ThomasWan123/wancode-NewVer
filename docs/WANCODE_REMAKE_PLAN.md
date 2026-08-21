@@ -85,7 +85,8 @@ Status: active
   `prepareDesktopRelay` may take those sinks so `processMail` can apply
   follow-ups after connect without repeating them.
   `lookupDesktopRelayHostApplySinks` probes `ctx.get('sessions')` without
-  adding a required inject. Mail processing repeats that lookup so a late
+  adding a required inject. `bindDesktopRelay` returns that handle so connect
+  and processMail can run after apply. Mail processing repeats that lookup so a late
   Host session still applies follow-ups.
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail
