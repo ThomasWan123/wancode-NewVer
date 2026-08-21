@@ -69,7 +69,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   合法 origin 只可写入 `sessionStorage`；hash fragment 失败关闭，避免粘贴
   `#access_token=`。提交时 pairing 脚本把 WebCrypto 身份写入 IndexedDB，并显示
   `sessionStorage` 里记住的公开桌面 id；被投毒的桌面槽会被清掉。
-  可选的配对码字段不是 JWT，也从不写入存储。
+  可选的配对码字段不是 JWT，也从不写入存储。合法配对码会 POST `/v1/pairing/redeem`
+  兑换；只记住公开桌面 id 与加密公钥，返回的访问令牌不落盘。
   Forget pairing 只清除 origin 与桌面槽，不动 IndexedDB，也不调用 revoke。
   首页包含 Apple 与 Android 主屏安装 meta。
   `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL（含 hash

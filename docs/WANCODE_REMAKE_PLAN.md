@@ -29,6 +29,8 @@ Status: active
   pairing grant over POST `/v1/pairing/grants`; the typed code is hashed at rest,
   expires in five minutes, and is not a JWT. POST `/v1/pairing/redeem` registers
   the PWA and returns a device-bound token plus the minting desktop.
+  Loopback cloud HTTP echoes a loopback browser `Origin` for CORS so the pairing
+  page can redeem; public HTTPS origins fail closed.
 - M3 started: `@wancode/relay-pwa` projects session events without prompt text
   or model credentials, lists same-account desktops, and can enroll as a PWA
   device then send sealed follow-ups, approvals, and cancels over outbound
@@ -65,7 +67,9 @@ Status: active
   desktop id from `sessionStorage` and clears poisoned desktop slots.
   Forget pairing clears the origin and desktop slots without touching IndexedDB
   and without calling revoke. The pairing form accepts an optional pairing
-  code that is not a JWT and is never stored. `createPwaRelayController` may omit
+  code that is not a JWT and is never stored. A valid code is redeemed over
+  POST `/v1/pairing/redeem`; only the public desktop id and encryption key are
+  remembered. The returned access token is not stored. `createPwaRelayController` may omit
   the WebSocket URL and derive `/v1` from the pairing origin.
   `openPwaRelayFromOrigin` remembers that origin, loads IndexedDB identity,
   then registers and dials. `openPwaRelayFromPairingCode` redeems a one-time

@@ -53,7 +53,8 @@ HTTPS（或回环 HTTP）调用 `registerOutboundRelayDevice`、
 再次按同一 URL 策略检查，请求从不携带凭据，私钥一律拒绝。本包不是入站 Host surface。
 `@wancode/relay-protocol/loopback` 只用于 `127.0.0.1` 测试接收端。
 `@wancode/relay-protocol/cloud` 在回环地址上提供设备注册、令牌签发和同一套
-出站 WebSocket 接收端；非回环绑定一律失败关闭，且不在默认导出中。桌面 Host
+出站 WebSocket 接收端；非回环绑定一律失败关闭，且不在默认导出中。回环 HTTP
+会回显回环浏览器 `Origin` 以允许配对页 POST redeem；公网 HTTPS origin 失败关闭。桌面 Host
 默认关闭 `dsh-plugin-desktop/relay`，并把该拨号器打包进桌面包，不使用 Yarn
 workspace 链接。启用后，插件从 WebSocket URL 推导 HTTPS 控制面源，先通过出站
 HTTP 注册、签发令牌、列出同一账号设备或撤销，再在 `connect` 时打开 socket。

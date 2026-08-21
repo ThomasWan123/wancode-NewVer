@@ -55,6 +55,34 @@ export interface RelayCloud {
 }
 
 /**
+ * Accept a browser Origin only when it is loopback HTTP. Missing Origin stays
+ * allowed so outbound control clients can POST without CORS. Public HTTPS
+ * origins fail closed on this loopback process.
+ */
+export function assertRelayCloudBrowserOrigin(origin: string | undefined): string | undefined {
+  if (origin === undefined || origin === '') return undefined
+  if (/[\0\r\n]/u.test(origin)) {
+    throw new RelayAuthorizationError('malformed', 'relay cloud origin is required')
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(origin)
+  } catch {
+    throw new RelayAuthorizationError('malformed', 'relay cloud origin is required')
+  }
+  if (parsed.protocol !== 'http:' || !LOOPBACK_HOSTS.has(parsed.hostname)) {
+    throw new RelayAuthorizationError('inbound-forbidden', 'relay cloud origin must be loopback')
+  }
+  if (parsed.username !== '' || parsed.password !== '' || parsed.search !== '' || parsed.hash !== '') {
+    throw new RelayAuthorizationError('plaintext', 'relay cloud origin must not carry credentials')
+  }
+  if (parsed.pathname !== '/' && parsed.pathname !== '') {
+    throw new RelayAuthorizationError('malformed', 'relay cloud origin is required')
+  }
+  return parsed.origin
+}
+
+/**
  * Accept only loopback bind addresses. Public interfaces fail closed here;
  * a later dedicated cloud process owns non-loopback listeners.
  */
@@ -143,10 +171,19 @@ async function handleCloudHttp(
   response: ServerResponse,
   context: CloudHttpContext,
 ): Promise<void> {
+  let corsOrigin: string | undefined
   try {
+    corsOrigin = assertRelayCloudBrowserOrigin(singleHeader(request.headers.origin))
     const [path = '/'] = (request.url ?? '/').split('?')
+    if (request.method === 'OPTIONS') {
+      if (corsOrigin === undefined) {
+        throw new RelayAuthorizationError('malformed', 'relay cloud origin is required')
+      }
+      writeCorsPreflight(response, corsOrigin)
+      return
+    }
     if (request.method === 'GET' && path === '/health') {
-      writeJson(response, 200, { ok: true })
+      writeJson(response, 200, { ok: true }, corsOrigin)
       return
     }
     if (request.method !== 'POST') {
@@ -161,20 +198,20 @@ async function handleCloudHttp(
           now: context.now,
           store: context.store,
         }).map(publicDevice),
-      })
+      }, corsOrigin)
       return
     }
     if (path === '/v1/devices') {
-      writeJson(response, 201, { device: publicDevice(registerCloudDevice(body, context)) })
+      writeJson(response, 201, { device: publicDevice(registerCloudDevice(body, context)) }, corsOrigin)
       return
     }
     if (path === '/v1/tokens') {
-      writeJson(response, 200, issueCloudToken(body, context))
+      writeJson(response, 200, issueCloudToken(body, context), corsOrigin)
       return
     }
     if (path === '/v1/devices/revoke') {
       const device = revokeCloudDevice(body, context)
-      writeJson(response, 200, { deviceId: device.deviceId, revokedAt: device.revokedAt })
+      writeJson(response, 200, { deviceId: device.deviceId, revokedAt: device.revokedAt }, corsOrigin)
       return
     }
     if (path === '/v1/pairing/grants') {
@@ -189,7 +226,7 @@ async function handleCloudHttp(
         pairingCode: minted.pairingCode,
         expiresAt: minted.expiresAt,
         desktopDeviceId: minted.desktopDeviceId,
-      })
+      }, corsOrigin)
       return
     }
     if (path === '/v1/pairing/redeem') {
@@ -208,7 +245,7 @@ async function handleCloudHttp(
         desktop: publicDevice(redeemed.desktop),
         accessToken: redeemed.accessToken,
         expiresAt: redeemed.expiresAt,
-      })
+      }, corsOrigin)
       return
     }
     throw new RelayAuthorizationError('malformed', 'relay cloud path is not supported')
@@ -216,7 +253,7 @@ async function handleCloudHttp(
     const code = cause instanceof RelayAuthorizationError ? cause.code : 'malformed'
     const message = cause instanceof Error ? cause.message : 'relay cloud request failed'
     const status = cause instanceof RelayAuthorizationError && cause.code === 'malformed' ? 400 : 403
-    writeJson(response, status, { error: { code, message } })
+    writeJson(response, status, { error: { code, message } }, corsOrigin)
   }
 }
 
@@ -314,12 +351,47 @@ async function readJsonBody(request: IncomingMessage): Promise<Record<string, un
   return record
 }
 
-function writeJson(response: ServerResponse, status: number, body: Record<string, unknown>): void {
+function singleHeader(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    const [header] = value
+    if (value.length !== 1 || header === undefined) {
+      throw new RelayAuthorizationError('malformed', 'relay cloud origin is required')
+    }
+    return header
+  }
+  return value
+}
+
+function corsHeaders(origin: string | undefined): Record<string, string> {
+  if (origin === undefined) return {}
+  return {
+    'access-control-allow-origin': origin,
+    vary: 'Origin',
+  }
+}
+
+function writeCorsPreflight(response: ServerResponse, origin: string): void {
+  response.writeHead(204, {
+    ...corsHeaders(origin),
+    'access-control-allow-methods': 'POST',
+    'access-control-allow-headers': 'accept, content-type',
+    'access-control-max-age': '600',
+  })
+  response.end()
+}
+
+function writeJson(
+  response: ServerResponse,
+  status: number,
+  body: Record<string, unknown>,
+  origin?: string,
+): void {
   assertNoPlaintextRelayFields(body, 'relay cloud response')
   const payload = JSON.stringify(body)
   response.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'content-length': Buffer.byteLength(payload),
+    ...corsHeaders(origin),
   })
   response.end(payload)
 }

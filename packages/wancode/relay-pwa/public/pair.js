@@ -80,17 +80,44 @@ function mintIdentity() {
 function enrollIdentity() {
   return openIdentityDb().then(function (db) {
     return identityRequest(identityStore(db, 'readonly').get('wancode-relay-identity')).then(function (existing) {
-      if (typeof existing === 'string' && existing.length > 0) {
-        var parsed = JSON.parse(existing);
-        if (parsed && typeof parsed.deviceId === 'string' && /^[0-9a-f]{32}$/.test(parsed.deviceId)) return parsed.deviceId;
-        throw new Error('identity');
+      function publicIdentity(parsed) {
+        if (!parsed || typeof parsed.deviceId !== 'string' || !/^[0-9a-f]{32}$/.test(parsed.deviceId)) throw new Error('identity');
+        if (typeof parsed.publicKey !== 'string' || typeof parsed.encryptionPublicKey !== 'string') throw new Error('identity');
+        return { deviceId: parsed.deviceId, publicKey: parsed.publicKey, encryptionPublicKey: parsed.encryptionPublicKey };
       }
+      if (typeof existing === 'string' && existing.length > 0) return publicIdentity(JSON.parse(existing));
       return mintIdentity().then(function (blob) {
         var minted = JSON.parse(blob);
         return identityRequest(identityStore(db, 'readwrite').put(blob, 'wancode-relay-identity')).then(function () {
-          return minted.deviceId;
+          return publicIdentity(minted);
         });
       });
+    });
+  });
+}
+function rememberPublicDesktop(desktop, selfDeviceId) {
+  if (!desktop || typeof desktop !== 'object' || Array.isArray(desktop)) throw new Error('desktop');
+  if ('privateKey' in desktop || 'encryptionPrivateKey' in desktop) throw new Error('desktop');
+  if (typeof desktop.deviceId !== 'string' || desktop.deviceId.length === 0 || desktop.deviceId === selfDeviceId) throw new Error('desktop');
+  if (typeof desktop.encryptionPublicKey !== 'string' || desktop.encryptionPublicKey.length === 0) throw new Error('desktop');
+  sessionStorage.setItem('wancode-relay-desktop', JSON.stringify({ deviceId: desktop.deviceId, encryptionPublicKey: desktop.encryptionPublicKey }));
+}
+function redeemPairing(origin, pairingCode, identity) {
+  return fetch(origin + '/v1/pairing/redeem', {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      pairingCode: pairingCode,
+      deviceId: identity.deviceId,
+      publicKey: identity.publicKey,
+      encryptionPublicKey: identity.encryptionPublicKey,
+    }),
+  }).then(function (response) {
+    return response.json().then(function (json) {
+      if (!response.ok) throw new Error('pair');
+      if (!json || typeof json !== 'object') throw new Error('pair');
+      if ('privateKey' in json || (json.desktop && ('privateKey' in json.desktop || 'encryptionPrivateKey' in json.desktop))) throw new Error('pair');
+      return json.desktop;
     });
   });
 }
@@ -135,9 +162,20 @@ document.getElementById('pair').addEventListener('submit', function (event) {
     var origin = allowedOrigin(event.target.elements.origin.value);
     var pair = allowedPairingCode(event.target.elements.pair.value);
     sessionStorage.setItem('wancode-relay-origin', origin);
-    enrollIdentity().then(function (deviceId) {
-      status.textContent = pairingStatus(deviceId) + (pair ? ' Pairing code accepted.' : '');
-    }).catch(function () {
+    enrollIdentity().then(function (identity) {
+      if (!pair) {
+        status.textContent = pairingStatus(identity.deviceId);
+        return;
+      }
+      return redeemPairing(origin, pair, identity).then(function (desktop) {
+        rememberPublicDesktop(desktop, identity.deviceId);
+        status.textContent = pairingStatus(identity.deviceId);
+      });
+    }).catch(function (error) {
+      if (error && (error.message === 'pair' || error.message === 'desktop')) {
+        status.textContent = 'Use a pairing code from the desktop. Do not paste tokens.';
+        return;
+      }
       status.textContent = 'This browser cannot enroll a device identity.';
     });
   } catch (error) {

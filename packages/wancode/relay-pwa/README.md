@@ -87,7 +87,9 @@ directory links.
   script enrolls a WebCrypto identity into IndexedDB on submit and shows a
   remembered public desktop id from `sessionStorage`; poisoned desktop slots
   are cleared. The optional pairing-code field is not a JWT and is never stored.
-  Forget pairing clears the origin and desktop slots without
+  A valid code is redeemed over POST `/v1/pairing/redeem`; only the public
+  desktop id and encryption key are remembered. The returned access token is
+  not stored. Forget pairing clears the origin and desktop slots without
   touching IndexedDB and without calling revoke. Apple and Android home-screen metas are present.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs, including hash fragments.   `@wancode/relay-pwa/host` may serve that shell on

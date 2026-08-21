@@ -11,6 +11,7 @@ import {
 } from '../src/index.ts'
 import {
   assertRelayCloudBindAddress,
+  assertRelayCloudBrowserOrigin,
   startRelayCloud,
   type RelayCloud,
 } from '../src/cloud.ts'
@@ -56,6 +57,18 @@ describe('relay cloud bind policy', () => {
     expect(assertRelayCloudBindAddress('localhost')).toBe('127.0.0.1')
     expectRelayError(() => assertRelayCloudBindAddress('0.0.0.0'), 'inbound-forbidden')
     expectRelayError(() => assertRelayCloudBindAddress('192.168.1.9'), 'inbound-forbidden')
+  })
+
+  it('echoes loopback browser origins and refuses a public CORS origin', () => {
+    expect(assertRelayCloudBrowserOrigin(undefined)).toBeUndefined()
+    expect(assertRelayCloudBrowserOrigin('http://127.0.0.1:4173')).toBe('http://127.0.0.1:4173')
+    expect(assertRelayCloudBrowserOrigin('http://localhost:4173')).toBe('http://localhost:4173')
+    expectRelayError(() => assertRelayCloudBrowserOrigin('https://pwa.wancode.example'), 'inbound-forbidden')
+    expectRelayError(() => assertRelayCloudBrowserOrigin('http://192.168.1.9:4173'), 'inbound-forbidden')
+    expectRelayError(
+      () => assertRelayCloudBrowserOrigin('http://127.0.0.1:4173/?access_token=tok-live'),
+      'plaintext',
+    )
   })
 })
 
@@ -254,5 +267,34 @@ describe('relay cloud control plane', () => {
     })
     expect(replay.status).toBe(403)
     expect((replay.json.error as { code: string }).code).toBe('replay')
+  })
+
+  it('allows loopback PWA CORS preflight and refuses a public origin', async () => {
+    const identity = createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE })
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity,
+      now: NOW,
+    })
+    clouds.push(cloud)
+    const origin = 'http://127.0.0.1:4173'
+    const preflight = await fetch(`${cloud.httpUrl}/v1/pairing/redeem`, {
+      method: 'OPTIONS',
+      headers: {
+        origin,
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    })
+    expect(preflight.status).toBe(204)
+    expect(preflight.headers.get('access-control-allow-origin')).toBe(origin)
+    expect(preflight.headers.get('access-control-allow-methods')).toContain('POST')
+    const health = await fetch(`${cloud.httpUrl}/health`, { headers: { origin } })
+    expect(health.status).toBe(200)
+    expect(health.headers.get('access-control-allow-origin')).toBe(origin)
+    const denied = await fetch(`${cloud.httpUrl}/health`, {
+      headers: { origin: 'https://pwa.wancode.example' },
+    })
+    expect(denied.status).toBe(403)
   })
 })
