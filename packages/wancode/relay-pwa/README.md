@@ -89,7 +89,7 @@ directory links.
   are cleared. The optional pairing-code field is not a JWT and is never stored.
   A valid code is redeemed over POST `/v1/pairing/redeem`; only the public
   desktop id and encryption key are remembered. The returned access token is
-  not stored. Forget pairing clears the origin and desktop slots without
+  used to dial outbound `/v1` and is not stored. Forget pairing clears the origin and desktop slots without
   touching IndexedDB and without calling revoke. Apple and Android home-screen metas are present.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs, including hash fragments.   `@wancode/relay-pwa/host` may serve that shell on

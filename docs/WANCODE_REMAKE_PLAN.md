@@ -69,7 +69,8 @@ Status: active
   and without calling revoke. The pairing form accepts an optional pairing
   code that is not a JWT and is never stored. A valid code is redeemed over
   POST `/v1/pairing/redeem`; only the public desktop id and encryption key are
-  remembered. The returned access token is not stored. `createPwaRelayController` may omit
+  remembered. The returned access token is used to dial outbound `/v1` and is
+  not stored. `createPwaRelayController` may omit
   the WebSocket URL and derive `/v1` from the pairing origin.
   `openPwaRelayFromOrigin` remembers that origin, loads IndexedDB identity,
   then registers and dials. `openPwaRelayFromPairingCode` redeems a one-time

@@ -39,7 +39,7 @@ describe('PWA installable shell', () => {
     expect(manifest.scope).toBe('./')
     expect(manifest.name).toBe('Wan Code')
     expect(JSON.stringify(manifest)).not.toMatch(/token|secret|credential|password|authorization/i)
-    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v12')
+    expect(PWA_SHELL_CACHE).toBe('wancode-pwa-shell-v13')
     expect(PWA_SHELL_CSP).toContain("script-src 'self'")
     expect(PWA_SHELL_CSP).toContain("object-src 'none'")
     expect(PWA_SHELL_CSP).toContain("frame-ancestors 'none'")
@@ -109,6 +109,7 @@ describe('PWA installable shell', () => {
     expect(decidePwaCacheRetention('wancode-pwa-shell-v9')).toBe('delete')
     expect(decidePwaCacheRetention('wancode-pwa-shell-v10')).toBe('delete')
     expect(decidePwaCacheRetention('wancode-pwa-shell-v11')).toBe('delete')
+    expect(decidePwaCacheRetention('wancode-pwa-shell-v12')).toBe('delete')
     expectRelayError(() => decidePwaCacheRetention(''), 'malformed')
     expectRelayError(() => decidePwaCacheRetention('token-cache'), 'plaintext')
   })
@@ -167,6 +168,9 @@ describe('PWA installable shell', () => {
     expect(files['pair.js']).toContain('allowedPairingCode')
     expect(files['pair.js']).toContain('/v1/pairing/redeem')
     expect(files['pair.js']).toContain("sessionStorage.setItem('wancode-relay-desktop'")
+    expect(files['pair.js']).toContain('WebSocket')
+    expect(files['pair.js']).toContain('v1:hs:')
+    expect(files['pair.js']).toContain('handshake-ack')
     expect(files['pair.js']).not.toContain("sessionStorage.setItem('pair'")
     expect(files['index.html']).toContain('id="forget"')
     expect(files['pair.js']).toContain("sessionStorage.removeItem('wancode-relay-origin'")
@@ -187,7 +191,8 @@ describe('PWA installable shell', () => {
     expect(files['index.html'] + files['manifest.webmanifest'] + files['sw.js']).not.toMatch(
       /access_token|DEEPSEEK_API_KEY|privateKey/,
     )
-    expect(files['pair.js']).not.toMatch(/access_token|accessToken|DEEPSEEK_API_KEY/)
+    expect(files['pair.js']).not.toMatch(/access_token|DEEPSEEK_API_KEY/)
+    expect(files['pair.js']).not.toMatch(/sessionStorage\.setItem\([^)]*accessToken/)
     expect(JSON.stringify(files)).not.toContain('listen(')
     for (const name of ['index.html', 'manifest.webmanifest', 'sw.js', 'pair.js'] as const) {
       expect(readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8')).toBe(files[name])
