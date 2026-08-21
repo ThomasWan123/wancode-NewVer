@@ -15,6 +15,7 @@ import {
   loadPwaRelayIdentity,
   peekPwaRelayPublicIdentity,
   resolvePwaRelayIdentity,
+  enrollPwaPairingShell,
   type PwaRelayIdentityStorage,
   type PwaRelayIndexedDbFactory,
 } from '../src/index.ts'
@@ -204,6 +205,48 @@ describe('PWA device identity store', () => {
     expect((await peekPwaRelayPublicIdentity(storage))?.deviceId).toBe(first.deviceId)
     expect(PWA_RELAY_IDENTITY_DB).toBe('wancode-relay-identity')
     expect(PWA_RELAY_IDENTITY_STORE).toBe('device')
+  })
+
+  it('enrolls a pairing origin into sessionStorage and identity into IndexedDB', async () => {
+    const items = new Map<string, string>()
+    const session = {
+      getItem(key: string) {
+        return items.get(key) ?? null
+      },
+      setItem(key: string, value: string) {
+        items.set(key, value)
+      },
+      removeItem(key: string) {
+        items.delete(key)
+      },
+    }
+    const indexedDB = memoryIndexedDb()
+    const first = await enrollPwaPairingShell({
+      origin: 'https://pwa.wancode.example/',
+      sessionStorage: session,
+      indexedDB,
+    })
+    expect(first.origin).toBe('https://pwa.wancode.example')
+    expect(first.deviceId).toMatch(/^[0-9a-f]{32}$/u)
+    expect(items.get(PWA_RELAY_ORIGIN_STORAGE_KEY)).toBe(first.origin)
+    expect(items.has(PWA_RELAY_IDENTITY_STORAGE_KEY)).toBe(false)
+    expect(JSON.stringify(first)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    const second = await enrollPwaPairingShell({
+      origin: 'https://pwa.wancode.example/',
+      sessionStorage: session,
+      indexedDB,
+    })
+    expect(second.deviceId).toBe(first.deviceId)
+    expect(second.publicKey).toBe(first.publicKey)
+    await expectRelayErrorAsync(
+      () => enrollPwaPairingShell({
+        origin: 'https://pwa.wancode.example/#access_token=tok-live',
+        sessionStorage: session,
+        indexedDB,
+      }),
+      'plaintext',
+    )
+    expect(items.has(PWA_RELAY_ORIGIN_STORAGE_KEY)).toBe(false)
   })
 })
 

@@ -43,7 +43,9 @@ directory links.
   `bindPwaRelayIdentityStorage` refuses `sessionStorage`, the origin key, and
   credential-like keys. `bindPwaRelayAsyncIdentityStorage` binds IndexedDB-style
   async stores. `openPwaRelayIdentityIndexedDb` opens that store; missing
-  IndexedDB fails closed. Handshake
+  IndexedDB fails closed. `enrollPwaPairingShell` remembers a valid origin in
+  `sessionStorage` and mints or reloads that IndexedDB identity; private keys
+  never share the origin key. Handshake
   signatures use `createWebCryptoSignedHandshakeEnvelope`. Follow-ups are
   sealed with `createWebCryptoSealedRelayEnvelope`. Drain opens those boxes
   with `openWebCryptoSealedRelayPayload`. Closed sessions refuse send and drain until `reconnect`.
@@ -69,8 +71,9 @@ directory links.
   adds the PNG icons so a static HTTPS origin can host the installable shell
   without this package listening. The index form
   accepts a relay origin and never names token fields. A valid origin may be
-  remembered in `sessionStorage` only; hash fragments fail closed so
-  `#access_token=` cannot be pasted in. Apple and Android home-screen metas are present.
+  remembered in `sessionStorage` only; hash
+  fragments fail closed so `#access_token=` cannot be pasted in. The pairing
+  script enrolls a WebCrypto identity into IndexedDB on submit. Apple and Android home-screen metas are present.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs, including hash fragments.   `@wancode/relay-pwa/host` may serve that shell on
   127.0.0.1 only; public binds and non-loopback Host, Origin, or Referer

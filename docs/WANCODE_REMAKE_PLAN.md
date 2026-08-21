@@ -48,13 +48,17 @@ Status: active
   itself is refused.   `openPwaRelayIdentityIndexedDb` opens that database.
   Pairing can enroll from that IndexedDB factory when no identity blob is
   supplied. `createPwaRelayController` can enroll from that store without taking private
-  keys on the pairing input. The installable Web App
+  keys on the pairing input. `enrollPwaPairingShell` remembers a valid origin in
+  `sessionStorage` and mints or reloads that IndexedDB identity from the pairing
+  page; private keys never share the origin key. The installable Web App
   Manifest and fail-closed cache policy exist; the install `id` stays relative.
   `createPwaServiceWorkerSource`
-  emits the matching worker and deletes stale caches on activate. `createPwaShellFiles` returns the static index,
+  emits the matching worker and deletes stale caches on activate.   `createPwaShellFiles` returns the static index,
   manifest, worker, and `pair.js`.   The index has no inline script. Apple and Android home-screen metas are present.
   A valid relay origin may be remembered in `sessionStorage` only; hash
   fragments fail closed so `#access_token=` cannot be pasted in.
+  Submit enrolls a WebCrypto identity into IndexedDB and never stores that
+  blob in the origin `sessionStorage` key.
   `PWA_SHELL_CSP` forbids `unsafe-inline`, frames, and plugins.   The PWA can also send sealed presence and revoke itself
   immediately. Presence state must be online or offline. Follow-up text is required and capped. Checked-in `public/`
   shell files, including PNG icons, match the generators. Desktop identity can

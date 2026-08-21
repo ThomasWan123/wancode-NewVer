@@ -33,6 +33,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   `bindPwaRelayIdentityStorage` 拒绝 `sessionStorage`、origin 键和凭据风格
   键名。`bindPwaRelayAsyncIdentityStorage` 绑定 IndexedDB 风格的异步存储。
   `openPwaRelayIdentityIndexedDb` 打开该存储；缺少 IndexedDB 失败关闭。
+  `enrollPwaPairingShell` 把合法 origin 记入 `sessionStorage`，并在 IndexedDB
+  中生成或回读身份；私钥从不占用 origin 键。
   握手签名走 `createWebCryptoSignedHandshakeEnvelope`。follow-up 密封走 `createWebCryptoSealedRelayEnvelope`。drain 用 `openWebCryptoSealedRelayPayload` 打开密文盒。关闭后的会话在 `reconnect` 之前拒绝 send 和 drain。
   `listDesktops` 走仅出站 HTTPS，关闭后仍可用。`drain` 领取排队邮件和在线推送，只 ack 排队
   id。`reconnect` 使用新 nonce，避免握手被当成重放。`revoke` 关闭 socket 并立即
@@ -53,9 +55,9 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   回环响应还发送 `X-Content-Type-Options: nosniff`。
   `createPwaShellIcons` 返回 192 与 512 PNG。检入的副本在 `public/`，必须与
   生成器一致。`createPwaDeployFiles` 附带 PNG 图标，静态 HTTPS 源可托管可安装
-  shell，而本包自己不监听。首页表单只收集 Relay origin，从不命名 token 字段。
+  shell，而本包自己不监听。  首页表单只收集 Relay origin，从不命名 token 字段。
   合法 origin 只可写入 `sessionStorage`；hash fragment 失败关闭，避免粘贴
-  `#access_token=`。
+  `#access_token=`。提交时 pairing 脚本把 WebCrypto 身份写入 IndexedDB。
   首页包含 Apple 与 Android 主屏安装 meta。
   `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL（含 hash
   fragment）失败关闭。

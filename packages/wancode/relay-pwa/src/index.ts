@@ -59,8 +59,10 @@ export {
   loadPwaRelayIdentity,
   peekPwaRelayPublicIdentity,
   resolvePwaRelayIdentity,
+  enrollPwaPairingShell,
   type PwaRelayAsyncKv,
   type PwaRelayIdentityStorage,
   type PwaRelayIndexedDbFactory,
   type PwaRelayKeyedStorage,
+  type PwaPairingEnrollment,
 } from './identity.ts'

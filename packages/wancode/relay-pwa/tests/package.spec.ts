@@ -43,6 +43,7 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('loadPwaRelayIdentity')
     expect(pwa).toHaveProperty('peekPwaRelayPublicIdentity')
     expect(pwa).toHaveProperty('resolvePwaRelayIdentity')
+    expect(pwa).toHaveProperty('enrollPwaPairingShell')
     expect(pwa).toHaveProperty('bindPwaRelayIdentityStorage')
     expect(pwa).toHaveProperty('bindPwaRelayAsyncIdentityStorage')
     expect(pwa).toHaveProperty('openPwaRelayIdentityIndexedDb')

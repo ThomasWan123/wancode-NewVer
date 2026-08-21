@@ -10,6 +10,7 @@ import {
   type StoredDeviceIdentity,
 } from '../../relay-protocol/src/index.ts'
 import { assertPwaModelCredentials } from './credentials.ts'
+import { assertPwaShellOrigin } from './shell.ts'
 
 /** Pairing page origin slot. Identity must never share this key. */
 export const PWA_RELAY_ORIGIN_STORAGE_KEY = 'wancode-relay-origin'
@@ -200,6 +201,46 @@ export async function resolvePwaRelayIdentity(input: {
     return loadPwaRelayIdentity(await openPwaRelayIdentityIndexedDb(factory))
   }
   throw new RelayAuthorizationError('malformed', 'pwa relay identity is required')
+}
+
+/** Public pairing result. Private keys stay in IndexedDB. */
+export interface PwaPairingEnrollment {
+  readonly origin: string
+  readonly deviceId: string
+  readonly publicKey: string
+  readonly encryptionPublicKey: string
+}
+
+/**
+ * Remember a fail-closed relay origin in sessionStorage and mint or reload
+ * the PWA identity from IndexedDB. Identity never uses the origin key.
+ */
+export async function enrollPwaPairingShell(input: {
+  readonly origin: string
+  readonly sessionStorage: PwaRelayKeyedStorage
+  readonly indexedDB: PwaRelayIndexedDbFactory
+}): Promise<PwaPairingEnrollment> {
+  let origin: string
+  try {
+    origin = assertPwaShellOrigin(input.origin).origin
+  } catch (cause) {
+    try {
+      input.sessionStorage.removeItem(PWA_RELAY_ORIGIN_STORAGE_KEY)
+    } catch {
+      // Origin slot is best-effort on failure.
+    }
+    throw cause
+  }
+  input.sessionStorage.setItem(PWA_RELAY_ORIGIN_STORAGE_KEY, origin)
+  const published = publicDeviceIdentity(
+    await loadPwaRelayIdentity(await openPwaRelayIdentityIndexedDb(input.indexedDB)),
+  )
+  return {
+    origin,
+    deviceId: published.deviceId,
+    publicKey: published.publicKey,
+    encryptionPublicKey: published.encryptionPublicKey,
+  }
 }
 
 async function readStoredIdentity(storage: PwaRelayIdentityStorage): Promise<string | undefined> {
