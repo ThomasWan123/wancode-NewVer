@@ -894,6 +894,69 @@ describe('PWA relay pairing', () => {
     controller.close()
   })
 
+  it('opens from origin onto the sole listed desktop when none is remembered', async () => {
+    const desktop = createStoredDeviceIdentity()
+    const other = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    const items = new Map<string, string>()
+    const session = {
+      getItem(key: string) {
+        return items.get(key) ?? null
+      },
+      setItem(key: string, value: string) {
+        items.set(key, value)
+      },
+      removeItem(key: string) {
+        items.delete(key)
+      },
+    }
+    const indexedDB = memoryIndexedDb()
+    const controller = await openPwaRelayFromOrigin({
+      origin: cloud.httpUrl,
+      assertion: assertion(),
+      sessionStorage: session,
+      indexedDB,
+      now: NOW,
+    })
+    expect(controller.desktopDeviceId).toBe(desktop.deviceId)
+    expect(loadPwaSelectedDesktop(session, controller.deviceId)).toEqual({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    expect(items.get(PWA_RELAY_DESKTOP_STORAGE_KEY)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    controller.close()
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: other.deviceId,
+      publicKey: other.keyPair.publicKey,
+      encryptionPublicKey: other.keyPair.encryptionPublicKey,
+    })
+    forgetPwaSelectedDesktop(session)
+    const ambiguous = await openPwaRelayFromOrigin({
+      origin: cloud.httpUrl,
+      assertion: assertion(),
+      sessionStorage: session,
+      indexedDB,
+      now: NOW,
+    })
+    expect(ambiguous.desktopDeviceId).toBeUndefined()
+    expect(loadPwaSelectedDesktop(session, ambiguous.deviceId)).toBeUndefined()
+    ambiguous.close()
+  })
+
   it('remembers a public desktop selection and reloads it on pairing', async () => {
     const pwa = createStoredDeviceIdentity()
     const desktop = createStoredDeviceIdentity()

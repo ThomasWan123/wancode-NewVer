@@ -35,8 +35,9 @@ directory links.
   `forgetPwaSelectedDesktop` clears that slot without touching IndexedDB identity.
   `unpairPwaRelay` revokes the PWA device immediately and forgets the desktop.
   Public HTTP origins fail closed before enroll. The desktop may be selected later via
-  `listDesktops` / `selectDesktop`. `selectSolePwaDesktop` picks the only listed
-  desktop; zero or multiple candidates fail closed. Selecting the local PWA device, an empty
+  `listDesktops` / `selectDesktop`. `openPwaRelayFromOrigin` selects the only
+  listed desktop when none was supplied or remembered. `selectSolePwaDesktop`
+  picks the only listed desktop; zero or multiple candidates fail closed. Selecting the local PWA device, an empty
   desktop id, or a non-X25519 encryption key fails closed. `listDesktops`
   omits those same devices. Revoked desktops are omitted. Follow-ups, approvals, and cancels are
   sealed to that desktop encryption public key. Presence frames are sealed the

@@ -158,23 +158,27 @@ export function isSelectablePwaDesktop(
   }
 }
 
+async function trySelectSolePwaDesktop(controller: PwaRelayController): Promise<PwaRelayDesktop | undefined> {
+  const desktops = await controller.listDesktops()
+  if (desktops.length !== 1) return undefined
+  const desktop = desktops[0]
+  if (typeof desktop.encryptionPublicKey !== 'string') return undefined
+  controller.selectDesktop({
+    deviceId: desktop.deviceId,
+    encryptionPublicKey: desktop.encryptionPublicKey,
+  })
+  return desktop
+}
+
 /**
  * Select the only listed desktop. Zero or multiple candidates fail closed so
  * a poisoned account list cannot pick a peer.
  */
 export async function selectSolePwaDesktop(controller: PwaRelayController): Promise<PwaRelayDesktop> {
-  const desktops = await controller.listDesktops()
-  if (desktops.length !== 1) {
+  const desktop = await trySelectSolePwaDesktop(controller)
+  if (desktop === undefined) {
     throw new RelayAuthorizationError('malformed', 'pwa desktop selection is required')
   }
-  const desktop = desktops[0]
-  if (typeof desktop.encryptionPublicKey !== 'string') {
-    throw new RelayAuthorizationError('malformed', 'pwa desktop encryption public key is required')
-  }
-  controller.selectDesktop({
-    deviceId: desktop.deviceId,
-    encryptionPublicKey: desktop.encryptionPublicKey,
-  })
   return desktop
 }
 
@@ -524,7 +528,7 @@ export async function openPwaRelayFromOrigin(input: {
     indexedDB: input.indexedDB,
   })
   const desktop = input.desktop ?? loadPwaSelectedDesktop(input.sessionStorage, enrolled.deviceId)
-  return createPwaRelayController({
+  const controller = await createPwaRelayController({
     httpUrl: enrolled.origin,
     assertion: input.assertion,
     indexedDB: input.indexedDB,
@@ -532,6 +536,10 @@ export async function openPwaRelayFromOrigin(input: {
     ...(desktop === undefined ? {} : { desktop }),
     ...(input.now === undefined ? {} : { now: input.now }),
   })
+  if (controller.desktopDeviceId === undefined) {
+    await trySelectSolePwaDesktop(controller)
+  }
+  return controller
 }
 
 function persistPwaSelectedDesktop(
