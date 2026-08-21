@@ -157,6 +157,20 @@ function signHandshake(identity, userId, now) {
 }
 var pairedSocket;
 var pairedSession;
+function dropPairedDevice(origin, session) {
+  if (!session || typeof session.accessToken !== 'string' || session.accessToken.length === 0) return Promise.resolve();
+  if (!session.identity || typeof session.identity.deviceId !== 'string' || session.identity.deviceId.length === 0) return Promise.resolve();
+  return fetch(origin + '/v1/devices/revoke', {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      accessToken: session.accessToken,
+      deviceId: session.identity.deviceId,
+    }),
+  }).then(function (response) {
+    if (!response.ok) throw new Error('pair');
+  });
+}
 function dialRelay(origin, accessToken, envelope) {
   if (typeof WebSocket !== 'function') return Promise.reject(new Error('pair'));
   return new Promise(function (resolve, reject) {
@@ -379,6 +393,14 @@ document.getElementById('follow').addEventListener('submit', function (event) {
   }
 });
 document.getElementById('forget').addEventListener('click', function () {
+  var status = document.getElementById('status');
+  var session = pairedSession;
+  var origin;
+  try {
+    origin = allowedOrigin(document.getElementById('pair').elements.origin.value || sessionStorage.getItem('wancode-relay-origin') || '');
+  } catch (error) {
+    origin = undefined;
+  }
   if (pairedSocket) {
     try { pairedSocket.close(); } catch (ignored) {}
   }
@@ -390,5 +412,12 @@ document.getElementById('forget').addEventListener('click', function () {
   document.getElementById('pair').elements.pair.value = '';
   document.getElementById('follow').elements.session.value = '';
   document.getElementById('follow').elements.follow.value = '';
-  document.getElementById('status').textContent = 'Forgot this origin. Device identity stays in this browser.';
+  function finish() {
+    status.textContent = 'Forgot this origin. Device identity stays in this browser.';
+  }
+  if (!origin || !session) {
+    finish();
+    return;
+  }
+  dropPairedDevice(origin, session).then(finish).catch(finish);
 });

@@ -93,8 +93,9 @@ directory links.
   desktop id and encryption key are remembered. The returned access token is
   used to dial outbound `/v1` and is not stored. After handshake the pairing
   page can send a sealed follow-up to a live desktop session id. An empty
-  session field sends `queue` so the desktop can start a new Host session. Forget pairing clears the origin and desktop slots without
-  touching IndexedDB and without calling revoke. Apple and Android home-screen metas are present.
+  session field sends `queue` so the desktop can start a new Host session. Forget pairing
+  posts `/v1/devices/revoke` with the page-local access token, then clears the origin and
+  desktop slots without touching IndexedDB. The token is never stored. Apple and Android home-screen metas are present.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs, including hash fragments.   `@wancode/relay-pwa/host` may serve that shell on
   127.0.0.1 only; public binds and non-loopback Host, Origin, or Referer

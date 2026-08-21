@@ -74,7 +74,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   兑换；只记住公开桌面 id 与加密公钥，返回的访问令牌只用于拨出站 `/v1`，不落盘。
   握手之后配对页可向正在进行的桌面 session id 发送密封 follow-up。
   会话栏留空则发送 `queue`，桌面可因此新建 Host 会话。
-  Forget pairing 只清除 origin 与桌面槽，不动 IndexedDB，也不调用 revoke。
+  Forget pairing 用页内访问令牌 POST `/v1/devices/revoke`，再清除 origin 与桌面槽，
+  不动 IndexedDB，令牌不落盘。
   首页包含 Apple 与 Android 主屏安装 meta。
   `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL（含 hash
   fragment）失败关闭。

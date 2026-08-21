@@ -66,8 +66,9 @@ Status: active
   Submit enrolls a WebCrypto identity into IndexedDB and never stores that
   blob in the origin `sessionStorage` key. `pair.js` shows a remembered public
   desktop id from `sessionStorage` and clears poisoned desktop slots.
-  Forget pairing clears the origin and desktop slots without touching IndexedDB
-  and without calling revoke. The pairing form accepts an optional pairing
+  Forget pairing posts `/v1/devices/revoke` with the page-local access token,
+  then clears the origin and desktop slots without touching IndexedDB. The token
+  is never stored. The pairing form accepts an optional pairing
   code that is not a JWT and is never stored. A valid code is redeemed over
   POST `/v1/pairing/redeem`; only the public desktop id and encryption key are
   remembered. The returned access token is used to dial outbound `/v1` and is
