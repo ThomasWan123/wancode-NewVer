@@ -322,6 +322,79 @@ describe('desktop relay device identity', () => {
     handle?.dispose()
   })
 
+  it('does not ack PWA mail when the Host session is missing', async () => {
+    const store = new MemoryStore()
+    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const pwa = createStoredDeviceIdentity()
+    const envelope = createSealedRelayEnvelope({
+      id: 'msg-missing',
+      sentAt: 1_700_000_000_000,
+      actor: { userId: 'user-a', deviceId: pwa.deviceId },
+      kind: 'prompt',
+      sender: pwa.keyPair,
+      recipientEncryptionPublicKey: identity.encryptionPublicKey,
+      payload: {
+        kind: 'prompt',
+        sessionId: 'sess-missing',
+        text: 'review the login form',
+      },
+    })
+    const acknowledge = vi.fn()
+    const handle = prepareDesktopRelay(
+      idleConfig({
+        enabled: true,
+        url: 'wss://relay.example.invalid/v1',
+      }),
+      vi.fn(async () => ({
+        sessionId: 'sess-1',
+        userId: 'user-a',
+        deviceId: identity.deviceId,
+        grantedCapabilities: ['session.prompt'],
+        send: vi.fn(),
+        reclaim: vi.fn(async () => [envelope]),
+        receive: vi.fn(async () => []),
+        acknowledge,
+        close: vi.fn(),
+      })),
+      {
+        register: vi.fn(async () => ({
+          deviceId: identity.deviceId,
+          userId: 'user-a',
+          publicKey: identity.publicKey,
+          encryptionPublicKey: identity.encryptionPublicKey,
+        })),
+        issueToken: vi.fn(async () => ({
+          accessToken: 'tok-live',
+          expiresAt: 1_700_000_900_000,
+        })),
+        revoke: vi.fn(),
+        listDevices: vi.fn(),
+      },
+      undefined,
+      {
+        get() {
+          return undefined
+        },
+      },
+    )
+    try {
+      await openDesktopRelayMailbox({
+        handle: handle!,
+        identity,
+        assertion: { sub: 'user-a' },
+        userId: 'user-a',
+        nonce: 'nonce-missing',
+        now: 1_700_000_000_000,
+      })
+      expect.unreachable('expected a relay authorization error')
+    } catch (cause) {
+      expect(cause).toBeInstanceOf(RelayAuthorizationError)
+      expect((cause as RelayAuthorizationError).code).toBe('malformed')
+    }
+    expect(acknowledge).not.toHaveBeenCalled()
+    handle?.dispose()
+  })
+
   it('refuses to open a desktop session without a handshake nonce', async () => {
     const store = new MemoryStore()
     const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
