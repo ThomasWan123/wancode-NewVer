@@ -6,6 +6,7 @@ import {
   assertNoPlaintextRelayFields,
   assertOutboundRelayUrl,
   connectOutboundRelay,
+  createRelayHandshakeNonce,
   httpUrlFromOutboundRelayUrl,
   issueOutboundRelayToken,
   listOutboundRelayDevices,
@@ -283,13 +284,14 @@ export async function openDesktopRelaySession(input: {
   }
   readonly assertion: unknown
   readonly userId: string
-  readonly nonce: string
+  readonly nonce?: string
   readonly now?: number
 }): Promise<DesktopRelayConnection> {
   if (typeof input.userId !== 'string' || input.userId.length === 0 || /[\0\r\n]/u.test(input.userId)) {
     throw new RelayAuthorizationError('malformed', 'desktop relay user id is required')
   }
-  if (typeof input.nonce !== 'string' || input.nonce.length === 0 || /[\0\r\n]/u.test(input.nonce)) {
+  const nonce = input.nonce ?? createRelayHandshakeNonce()
+  if (typeof nonce !== 'string' || nonce.length === 0 || /[\0\r\n]/u.test(nonce)) {
     throw new RelayAuthorizationError('malformed', 'desktop relay handshake nonce is required')
   }
   await input.handle.enroll({
@@ -303,10 +305,10 @@ export async function openDesktopRelaySession(input: {
   return input.handle.connect({
     accessToken: token.accessToken,
     envelope: input.identity.createHandshake({
-      id: `hs:${input.identity.deviceId}:${input.nonce}`,
+      id: `hs:${input.identity.deviceId}:${nonce}`,
       sentAt: input.now ?? Date.now(),
       userId: input.userId,
-      nonce: input.nonce,
+      nonce,
       capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
     }),
   })

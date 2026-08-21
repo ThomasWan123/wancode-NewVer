@@ -53,6 +53,7 @@ declare module '@wancode/relay-protocol' {
 
   export function assertOutboundRelayHttpUrl(url: string): URL
   export function httpUrlFromOutboundRelayUrl(url: string): URL
+  export function createRelayHandshakeNonce(): string
 
   export interface OutboundRelayControlInput {
     readonly httpUrl: string

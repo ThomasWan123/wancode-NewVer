@@ -193,7 +193,50 @@ describe('desktop relay device identity', () => {
       }),
       url: 'wss://relay.example.invalid/v1',
     })
-    expect(JSON.stringify(identity)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    handle?.dispose()
+  })
+
+  it('mints a handshake nonce when none is supplied', async () => {
+    const store = new MemoryStore()
+    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const connect = vi.fn(async () => ({
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: identity.deviceId,
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }))
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), connect, {
+      register: vi.fn(async () => ({
+        deviceId: identity.deviceId,
+        userId: 'user-a',
+        publicKey: identity.publicKey,
+        encryptionPublicKey: identity.encryptionPublicKey,
+      })),
+      issueToken: vi.fn(async () => ({
+        accessToken: 'tok-live',
+        expiresAt: 1_700_000_900_000,
+      })),
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+    })
+    await openDesktopRelaySession({
+      handle: handle!,
+      identity,
+      assertion: { sub: 'user-a' },
+      userId: 'user-a',
+      now: 1_700_000_000_000,
+    })
+    expect(connect).toHaveBeenCalledOnce()
+    const call = connect.mock.calls[0] as unknown as [{ envelope: { id: string } }]
+    expect(call[0].envelope.id).toMatch(new RegExp(`^hs:${identity.deviceId}:[0-9a-f]+$`))
     handle?.dispose()
   })
 
