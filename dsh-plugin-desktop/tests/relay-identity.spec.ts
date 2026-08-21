@@ -11,7 +11,7 @@ import {
   RELAY_DEVICE_CREDENTIAL_REF,
   loadDesktopRelayIdentity,
 } from '../src/relay-identity.ts'
-import { prepareDesktopRelay, type Config as RelayConfig } from '../src/relay.ts'
+import { prepareDesktopRelay, openDesktopRelaySession, type Config as RelayConfig } from '../src/relay.ts'
 
 class MemoryStore implements CredentialStore {
   readonly values = new Map<string, string>()
@@ -130,6 +130,125 @@ describe('desktop relay device identity', () => {
       encryptionPublicKey: identity.encryptionPublicKey,
     })
     expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('enrolls, mints a token, and dials without exposing private keys', async () => {
+    const store = new MemoryStore()
+    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const connection = {
+      sessionId: 'sess-1',
+      userId: 'user-a',
+      deviceId: identity.deviceId,
+      grantedCapabilities: ['session.prompt'],
+      send: vi.fn(),
+      reclaim: vi.fn(),
+      receive: vi.fn(),
+      acknowledge: vi.fn(),
+      close: vi.fn(),
+    }
+    const connect = vi.fn(async () => connection)
+    const register = vi.fn(async () => ({
+      deviceId: identity.deviceId,
+      userId: 'user-a',
+      publicKey: identity.publicKey,
+      encryptionPublicKey: identity.encryptionPublicKey,
+    }))
+    const issueToken = vi.fn(async () => ({
+      accessToken: 'tok-live',
+      expiresAt: 1_700_000_900_000,
+    }))
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), connect, {
+      register,
+      issueToken,
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+    })
+    expect(handle).toBeDefined()
+    const opened = await openDesktopRelaySession({
+      handle: handle!,
+      identity,
+      assertion: { sub: 'user-a' },
+      userId: 'user-a',
+      nonce: 'nonce-1',
+      now: 1_700_000_000_000,
+    })
+    expect(opened).toBe(connection)
+    expect(register).toHaveBeenCalledOnce()
+    expect(issueToken).toHaveBeenCalledWith({
+      httpUrl: 'https://relay.example.invalid/',
+      assertion: { sub: 'user-a' },
+      deviceId: identity.deviceId,
+    })
+    expect(connect).toHaveBeenCalledWith({
+      accessToken: 'tok-live',
+      envelope: identity.createHandshake({
+        id: `hs:${identity.deviceId}:nonce-1`,
+        sentAt: 1_700_000_000_000,
+        userId: 'user-a',
+        nonce: 'nonce-1',
+        capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
+      }),
+      url: 'wss://relay.example.invalid/v1',
+    })
+    expect(JSON.stringify(identity)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    handle?.dispose()
+  })
+
+  it('refuses to open a desktop session without a handshake nonce', async () => {
+    const store = new MemoryStore()
+    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn(), {
+      register: vi.fn(),
+      issueToken: vi.fn(),
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+    })
+    try {
+      await openDesktopRelaySession({
+        handle: handle!,
+        identity,
+        assertion: { sub: 'user-a' },
+        userId: 'user-a',
+        nonce: '',
+      })
+      expect.unreachable('expected a relay authorization error')
+    } catch (cause) {
+      expect(cause).toBeInstanceOf(RelayAuthorizationError)
+      expect((cause as RelayAuthorizationError).code).toBe('malformed')
+    }
+  })
+
+  it('refuses to open a desktop session without a handshake nonce', async () => {
+    const store = new MemoryStore()
+    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const handle = prepareDesktopRelay(idleConfig({
+      enabled: true,
+      url: 'wss://relay.example.invalid/v1',
+    }), vi.fn(), {
+      register: vi.fn(),
+      issueToken: vi.fn(),
+      revoke: vi.fn(),
+      listDevices: vi.fn(),
+    })
+    try {
+      await openDesktopRelaySession({
+        handle: handle!,
+        identity,
+        assertion: { sub: 'user-a' },
+        userId: 'user-a',
+        nonce: '',
+      })
+      expect.unreachable('expected a relay authorization error')
+    } catch (cause) {
+      expect(cause).toBeInstanceOf(RelayAuthorizationError)
+      expect((cause as RelayAuthorizationError).code).toBe('malformed')
+    }
   })
 
   it('opens a sealed PWA follow-up without exposing private keys', () => {

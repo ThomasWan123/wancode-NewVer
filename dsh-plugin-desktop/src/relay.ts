@@ -14,7 +14,7 @@ import {
   revokeOutboundRelayDevice,
   type RelayApplicationPayload,
 } from '@wancode/relay-protocol'
-import type { DesktopRelayIdentity } from './relay-identity.ts'
+import type { DesktopRelayHandshakeInput, DesktopRelayIdentity } from './relay-identity.ts'
 
 export {
   RELAY_DEVICE_CREDENTIAL_REF,
@@ -270,6 +270,46 @@ export function prepareDesktopRelay(
       connection = undefined
     },
   }
+}
+
+/**
+ * Enroll the stored desktop identity, mint a token, and dial. Private keys
+ * stay inside `createHandshake`. This still does not listen.
+ */
+export async function openDesktopRelaySession(input: {
+  readonly handle: DesktopRelayHandle
+  readonly identity: Pick<DesktopRelayIdentity, 'deviceId' | 'publicKey' | 'encryptionPublicKey'> & {
+    createHandshake(input: DesktopRelayHandshakeInput): Record<string, unknown>
+  }
+  readonly assertion: unknown
+  readonly userId: string
+  readonly nonce: string
+  readonly now?: number
+}): Promise<DesktopRelayConnection> {
+  if (typeof input.userId !== 'string' || input.userId.length === 0 || /[\0\r\n]/u.test(input.userId)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay user id is required')
+  }
+  if (typeof input.nonce !== 'string' || input.nonce.length === 0 || /[\0\r\n]/u.test(input.nonce)) {
+    throw new RelayAuthorizationError('malformed', 'desktop relay handshake nonce is required')
+  }
+  await input.handle.enroll({
+    assertion: input.assertion,
+    identity: input.identity,
+  })
+  const token = await input.handle.issueToken({
+    assertion: input.assertion,
+    deviceId: input.identity.deviceId,
+  })
+  return input.handle.connect({
+    accessToken: token.accessToken,
+    envelope: input.identity.createHandshake({
+      id: `hs:${input.identity.deviceId}:${input.nonce}`,
+      sentAt: input.now ?? Date.now(),
+      userId: input.userId,
+      nonce: input.nonce,
+      capabilities: ['session.observe', 'session.prompt', 'session.approve', 'session.cancel'],
+    }),
+  })
 }
 
 /** Same 8192-character follow-up cap as the PWA sender. */
