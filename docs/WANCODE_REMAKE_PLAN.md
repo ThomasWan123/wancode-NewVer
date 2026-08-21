@@ -59,7 +59,9 @@ Status: active
   fragments fail closed so `#access_token=` cannot be pasted in.
   Submit enrolls a WebCrypto identity into IndexedDB and never stores that
   blob in the origin `sessionStorage` key. `pair.js` shows a remembered public
-  desktop id from `sessionStorage` and clears poisoned desktop slots. `createPwaRelayController` may omit
+  desktop id from `sessionStorage` and clears poisoned desktop slots.
+  Forget pairing clears the origin and desktop slots without touching IndexedDB
+  and without calling revoke. `createPwaRelayController` may omit
   the WebSocket URL and derive `/v1` from the pairing origin.
   `openPwaRelayFromOrigin` remembers that origin, loads IndexedDB identity,
   then registers and dials. `rememberPwaSelectedDesktop` stores only public

@@ -134,3 +134,9 @@ document.getElementById('pair').addEventListener('submit', function (event) {
     status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';
   }
 });
+document.getElementById('forget').addEventListener('click', function () {
+  try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}
+  try { sessionStorage.removeItem('wancode-relay-desktop'); } catch (ignored) {}
+  document.getElementById('pair').elements.origin.value = '';
+  document.getElementById('status').textContent = 'Forgot this origin. Device identity stays in this browser.';
+});

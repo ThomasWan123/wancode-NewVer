@@ -19,7 +19,7 @@ export const PWA_SHELL_PATHS = [
 ] as const
 
 /** Cache name for the installable shell. Bump when the asset list or worker changes. */
-export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v9'
+export const PWA_SHELL_CACHE = 'wancode-pwa-shell-v10'
 
 /** Whether activate may keep a Cache Storage name. Unknown names are deleted. */
 export type PwaCacheRetention = 'keep' | 'delete'
@@ -359,6 +359,12 @@ export function createPwaPairingScriptSource(): string {
     "    status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';",
     '  }',
     '});',
+    "document.getElementById('forget').addEventListener('click', function () {",
+    "  try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}",
+    "  try { sessionStorage.removeItem('wancode-relay-desktop'); } catch (ignored) {}",
+    "  document.getElementById('pair').elements.origin.value = '';",
+    "  document.getElementById('status').textContent = 'Forgot this origin. Device identity stays in this browser.';",
+    '});',
     '',
   ].join('\n')
 }
@@ -390,6 +396,7 @@ export function createPwaIndexHtml(): string {
     '    <form id="pair" method="post" action="#">',
     '      <label>Relay origin <input name="origin" type="url" required></label>',
     '      <button type="submit">Pair desktop</button>',
+    '      <button type="button" id="forget">Forget pairing</button>',
     '    </form>',
     '    <p id="status">Do not paste API keys or tokens.</p>',
     '  </main>',
