@@ -183,6 +183,23 @@ export function forgetPwaSelectedDesktop(storage: PwaRelayKeyedStorage): void {
 }
 
 /**
+ * Revoke the PWA device immediately and forget the public desktop selection.
+ * IndexedDB identity is left in place so a later enroll can mint a new registration.
+ */
+export async function unpairPwaRelay(input: {
+  readonly controller: PwaRelayController
+  readonly sessionStorage: PwaRelayKeyedStorage
+}): Promise<{
+  readonly deviceId: string
+  readonly revokedAt: number
+}> {
+  assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa relay pairing')
+  const revoked = await input.controller.revoke()
+  forgetPwaSelectedDesktop(input.sessionStorage)
+  return revoked
+}
+
+/**
  * Reload a public desktop selection. Missing rows return undefined. Private
  * keys, the origin key, and the identity key fail closed.
  */

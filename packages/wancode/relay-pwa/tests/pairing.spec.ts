@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
+import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, unpairPwaRelay, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -413,6 +413,57 @@ describe('PWA relay pairing', () => {
       publicKey: desktop.keyPair.publicKey,
       encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
     }])
+    await expectRelayErrorAsync(() => controller.reconnect(), 'revoked-device')
+  })
+
+  it('unpairs by revoking the PWA and forgetting the selected desktop', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    const items = new Map<string, string>()
+    const session = {
+      getItem(key: string) {
+        return items.get(key) ?? null
+      },
+      setItem(key: string, value: string) {
+        items.set(key, value)
+      },
+      removeItem(key: string) {
+        items.delete(key)
+      },
+    }
+    rememberPwaSelectedDesktop(session, {
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }, pwa.deviceId)
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      url: cloud.url,
+      assertion: assertion(),
+      identity: pwa,
+      desktop: {
+        deviceId: desktop.deviceId,
+        encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+      },
+      now: NOW,
+    })
+    await expect(unpairPwaRelay({ controller, sessionStorage: session })).resolves.toEqual({
+      deviceId: pwa.deviceId,
+      revokedAt: NOW,
+    })
+    expect(loadPwaSelectedDesktop(session, pwa.deviceId)).toBeUndefined()
     await expectRelayErrorAsync(() => controller.reconnect(), 'revoked-device')
   })
 

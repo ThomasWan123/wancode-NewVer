@@ -44,6 +44,7 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('rememberPwaSelectedDesktop')
     expect(pwa).toHaveProperty('loadPwaSelectedDesktop')
     expect(pwa).toHaveProperty('forgetPwaSelectedDesktop')
+    expect(pwa).toHaveProperty('unpairPwaRelay')
     expect(pwa).toHaveProperty('loadPwaRelayIdentity')
     expect(pwa).toHaveProperty('peekPwaRelayPublicIdentity')
     expect(pwa).toHaveProperty('resolvePwaRelayIdentity')

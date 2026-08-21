@@ -46,6 +46,7 @@ export {
   rememberPwaSelectedDesktop,
   loadPwaSelectedDesktop,
   forgetPwaSelectedDesktop,
+  unpairPwaRelay,
   PWA_RELAY_DESKTOP_STORAGE_KEY,
   assertPwaDesktopSelection,
   isSelectablePwaDesktop,
