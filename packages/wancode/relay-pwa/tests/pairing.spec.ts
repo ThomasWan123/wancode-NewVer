@@ -467,6 +467,54 @@ describe('PWA relay pairing', () => {
     await expectRelayErrorAsync(() => controller.reconnect(), 'revoked-device')
   })
 
+  it('remembers the selected desktop when pairing supplies sessionStorage', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    const items = new Map<string, string>()
+    const session = {
+      getItem(key: string) {
+        return items.get(key) ?? null
+      },
+      setItem(key: string, value: string) {
+        items.set(key, value)
+      },
+      removeItem(key: string) {
+        items.delete(key)
+      },
+    }
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      identity: pwa,
+      sessionStorage: session,
+      now: NOW,
+    })
+    expect(loadPwaSelectedDesktop(session, pwa.deviceId)).toBeUndefined()
+    controller.selectDesktop({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    expect(loadPwaSelectedDesktop(session, pwa.deviceId)).toEqual({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    expect(items.get(PWA_RELAY_DESKTOP_STORAGE_KEY)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    controller.close()
+  })
+
   it('refuses empty and oversized follow-up text', async () => {
     const pwa = createStoredDeviceIdentity()
     const desktop = createStoredDeviceIdentity()

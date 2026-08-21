@@ -53,6 +53,7 @@ export interface CreatePwaRelayControllerInput {
     readonly deviceId: string
     readonly encryptionPublicKey: string
   }
+  readonly sessionStorage?: PwaRelayKeyedStorage
   readonly now?: number
 }
 
@@ -256,6 +257,7 @@ export async function createPwaRelayController(
   if (input.desktop !== undefined) {
     assertPwaRelayRecord(input.desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
     assertPwaDesktopSelection(input.desktop, published.deviceId)
+    persistPwaSelectedDesktop(input.sessionStorage, input.desktop, published.deviceId)
   }
   const now = input.now ?? Date.now()
   await registerOutboundRelayDevice({
@@ -319,6 +321,7 @@ export async function createPwaRelayController(
     selectDesktop(desktop) {
       assertPwaRelayRecord(desktop as unknown as Record<string, unknown>, 'pwa relay desktop')
       assertPwaDesktopSelection(desktop, published.deviceId)
+      persistPwaSelectedDesktop(input.sessionStorage, desktop, published.deviceId)
       selected = desktop
     },
     async sendFollowUp(followUp) {
@@ -505,9 +508,22 @@ export async function openPwaRelayFromOrigin(input: {
     httpUrl: enrolled.origin,
     assertion: input.assertion,
     indexedDB: input.indexedDB,
+    sessionStorage: input.sessionStorage,
     ...(desktop === undefined ? {} : { desktop }),
     ...(input.now === undefined ? {} : { now: input.now }),
   })
+}
+
+function persistPwaSelectedDesktop(
+  storage: PwaRelayKeyedStorage | undefined,
+  desktop: {
+    readonly deviceId: string
+    readonly encryptionPublicKey: string
+  },
+  selfDeviceId: string,
+): void {
+  if (storage === undefined) return
+  rememberPwaSelectedDesktop(storage, desktop, selfDeviceId)
 }
 
 function assertionUserId(assertion: unknown): string {
