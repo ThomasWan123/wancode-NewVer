@@ -88,8 +88,8 @@ function enrollIdentity() {
     return identityRequest(identityStore(db, 'readonly').get('wancode-relay-identity')).then(function (existing) {
       function publicIdentity(parsed) {
         if (!parsed || typeof parsed.deviceId !== 'string' || !/^[0-9a-f]{32}$/.test(parsed.deviceId)) throw new Error('identity');
-        if (typeof parsed.publicKey !== 'string' || typeof parsed.encryptionPublicKey !== 'string' || typeof parsed.privateKey !== 'string') throw new Error('identity');
-        return { deviceId: parsed.deviceId, publicKey: parsed.publicKey, encryptionPublicKey: parsed.encryptionPublicKey, privateKey: parsed.privateKey };
+        if (typeof parsed.publicKey !== 'string' || typeof parsed.encryptionPublicKey !== 'string' || typeof parsed.privateKey !== 'string' || typeof parsed.encryptionPrivateKey !== 'string') throw new Error('identity');
+        return { deviceId: parsed.deviceId, publicKey: parsed.publicKey, encryptionPublicKey: parsed.encryptionPublicKey, privateKey: parsed.privateKey, encryptionPrivateKey: parsed.encryptionPrivateKey };
       }
       if (typeof existing === 'string' && existing.length > 0) return publicIdentity(JSON.parse(existing));
       return mintIdentity().then(function (blob) {
@@ -156,6 +156,7 @@ function signHandshake(identity, userId, now) {
   });
 }
 var pairedSocket;
+var pairedSession;
 function dialRelay(origin, accessToken, envelope) {
   if (typeof WebSocket !== 'function') return Promise.reject(new Error('pair'));
   return new Promise(function (resolve, reject) {
@@ -192,6 +193,97 @@ function dialRelay(origin, accessToken, envelope) {
       clearTimeout(timer);
       reject(new Error('pair'));
     });
+  });
+}
+function allowedSession(value) {
+  if (typeof value !== 'string') throw new Error('follow');
+  var trimmed = value.replace(/^\s+|\s+$/g, '');
+  if (trimmed === '' || /[\r\n]/.test(trimmed) || /token|secret|credential|password|authorization/i.test(trimmed)) throw new Error('follow');
+  return trimmed;
+}
+function allowedFollow(value) {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 8192 || /\0/.test(value)) throw new Error('follow');
+  return value;
+}
+function sealBox(senderPrivateKey, senderPublicKey, recipientPublicKey, envelopeId, aad, plaintext) {
+  var subtle = crypto.subtle;
+  return Promise.all([
+    subtle.importKey('pkcs8', base64ToBytes(senderPrivateKey), { name: 'X25519' }, false, ['deriveBits']),
+    subtle.importKey('spki', base64ToBytes(recipientPublicKey), { name: 'X25519' }, false, []),
+  ]).then(function (keys) {
+    return subtle.deriveBits({ name: 'X25519', public: keys[1] }, keys[0], 256);
+  }).then(function (shared) {
+    return subtle.importKey('raw', shared, 'HKDF', false, ['deriveBits']).then(function (hkdfKey) {
+      return subtle.deriveBits({
+        name: 'HKDF',
+        hash: 'SHA-256',
+        salt: new TextEncoder().encode(envelopeId),
+        info: new TextEncoder().encode('wancode-relay-v1'),
+      }, hkdfKey, 256);
+    });
+  }).then(function (keyBytes) {
+    return subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt']).then(function (aesKey) {
+      var iv = crypto.getRandomValues(new Uint8Array(12));
+      return subtle.encrypt({ name: 'AES-GCM', iv: iv, additionalData: aad, tagLength: 128 }, aesKey, plaintext).then(function (sealedBuf) {
+        var sealed = new Uint8Array(sealedBuf);
+        if (sealed.byteLength < 16) throw new Error('follow');
+        return {
+          alg: 'x25519-hkdf-aes-256-gcm',
+          senderEncryptionPublicKey: senderPublicKey,
+          iv: bytesToBase64(iv),
+          tag: bytesToBase64(sealed.slice(sealed.byteLength - 16)),
+          ciphertext: bytesToBase64(sealed.slice(0, sealed.byteLength - 16)),
+        };
+      });
+    });
+  });
+}
+function sealFollowUp(session, follow) {
+  var now = Date.now();
+  var id = 'prompt:' + session.identity.deviceId + ':' + randomDeviceId();
+  var payload = { kind: 'prompt', sessionId: follow.sessionId, text: follow.text };
+  var actor = { userId: session.userId, deviceId: session.identity.deviceId };
+  var aad = new TextEncoder().encode([id, 'prompt', String(now), actor.userId, actor.deviceId, ''].join('\n'));
+  var plaintext = new TextEncoder().encode(JSON.stringify(payload));
+  return sealBox(session.identity.encryptionPrivateKey, session.identity.encryptionPublicKey, session.desktop.encryptionPublicKey, id, aad, plaintext).then(function (box) {
+    return {
+      protocolVersion: 1,
+      id: id,
+      kind: 'prompt',
+      sentAt: now,
+      actor: actor,
+      ciphertext: 'v1:box:' + bytesToBase64(new TextEncoder().encode(JSON.stringify(box))),
+    };
+  });
+}
+function sendSealed(session, envelope) {
+  if (!session.socket || session.socket.readyState !== 1) return Promise.reject(new Error('follow'));
+  return new Promise(function (resolve, reject) {
+    var timer = setTimeout(function () {
+      session.socket.removeEventListener('message', onMessage);
+      reject(new Error('follow'));
+    }, 5000);
+    function onMessage(event) {
+      if (typeof event.data !== 'string') return;
+      try {
+        var reply = JSON.parse(event.data);
+        if (reply && reply.push) return;
+        clearTimeout(timer);
+        session.socket.removeEventListener('message', onMessage);
+        if (!reply || !reply.delivery || typeof reply.delivery.envelopeId !== 'string') throw new Error('follow');
+        resolve(reply.delivery);
+      } catch (error) {
+        clearTimeout(timer);
+        session.socket.removeEventListener('message', onMessage);
+        reject(new Error('follow'));
+      }
+    }
+    session.socket.addEventListener('message', onMessage);
+    session.socket.send(JSON.stringify({
+      accessToken: session.accessToken,
+      destinationDeviceId: session.desktop.deviceId,
+      envelope: envelope,
+    }));
   });
 }
 function rememberedDesktopId() {
@@ -243,7 +335,8 @@ document.getElementById('pair').addEventListener('submit', function (event) {
       return redeemPairing(origin, pair, identity).then(function (redeemed) {
         return signHandshake(identity, redeemed.userId, Date.now()).then(function (envelope) {
           return dialRelay(origin, redeemed.accessToken, envelope);
-        }).then(function () {
+        }).then(function (socket) {
+          pairedSession = { socket: socket, accessToken: redeemed.accessToken, identity: identity, desktop: redeemed.desktop, userId: redeemed.userId };
           rememberPublicDesktop(redeemed.desktop, identity.deviceId);
           status.textContent = pairingStatus(identity.deviceId);
         });
@@ -264,14 +357,37 @@ document.getElementById('pair').addEventListener('submit', function (event) {
     status.textContent = 'Use HTTPS or loopback HTTP. Do not paste secrets.';
   }
 });
+document.getElementById('follow').addEventListener('submit', function (event) {
+  event.preventDefault();
+  var status = document.getElementById('status');
+  try {
+    if (!pairedSession) {
+      status.textContent = 'Pair a desktop first.';
+      return;
+    }
+    var follow = { sessionId: allowedSession(event.target.elements.session.value), text: allowedFollow(event.target.elements.follow.value) };
+    sealFollowUp(pairedSession, follow).then(function (envelope) {
+      return sendSealed(pairedSession, envelope);
+    }).then(function () {
+      status.textContent = pairingStatus(pairedSession.identity.deviceId) + ' Follow-up sent.';
+    }).catch(function () {
+      status.textContent = 'Could not send follow-up to that desktop.';
+    });
+  } catch (error) {
+    status.textContent = 'Use a live desktop session. Do not paste tokens.';
+  }
+});
 document.getElementById('forget').addEventListener('click', function () {
   if (pairedSocket) {
     try { pairedSocket.close(); } catch (ignored) {}
-    pairedSocket = undefined;
   }
+  pairedSocket = undefined;
+  pairedSession = undefined;
   try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}
   try { sessionStorage.removeItem('wancode-relay-desktop'); } catch (ignored) {}
   document.getElementById('pair').elements.origin.value = '';
   document.getElementById('pair').elements.pair.value = '';
+  document.getElementById('follow').elements.session.value = '';
+  document.getElementById('follow').elements.follow.value = '';
   document.getElementById('status').textContent = 'Forgot this origin. Device identity stays in this browser.';
 });
