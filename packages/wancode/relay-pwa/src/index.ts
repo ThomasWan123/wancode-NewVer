@@ -43,6 +43,7 @@ export {
 export {
   createPwaRelayController,
   openPwaRelayFromOrigin,
+  openPwaRelayFromPairingCode,
   rememberPwaSelectedDesktop,
   loadPwaSelectedDesktop,
   forgetPwaSelectedDesktop,

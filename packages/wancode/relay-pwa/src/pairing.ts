@@ -11,9 +11,11 @@ import {
   listOutboundRelayDevices,
   openWebCryptoSealedRelayPayload,
   publicDeviceIdentity,
+  redeemOutboundRelayPairingGrant,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
   assertOutboundRelayUrl,
+  assertRelayPairingCode,
   httpUrlFromOutboundRelayUrl,
   outboundRelayUrlFromHttpUrl,
   type OutboundRelayDevice,
@@ -46,7 +48,8 @@ import {
 export interface CreatePwaRelayControllerInput {
   readonly httpUrl: string
   readonly url?: string
-  readonly assertion: unknown
+  readonly assertion?: unknown
+  readonly pairingCode?: string
   readonly identity?: StoredDeviceIdentity
   readonly identityStorage?: PwaRelayIdentityStorage
   readonly indexedDB?: PwaRelayIndexedDbFactory
@@ -163,7 +166,7 @@ async function trySelectSolePwaDesktop(controller: PwaRelayController): Promise<
   const desktops = await controller.listDesktops()
   if (desktops.length !== 1) return undefined
   const desktop = desktops[0]
-  if (typeof desktop.encryptionPublicKey !== 'string') return undefined
+  if (desktop === undefined || typeof desktop.encryptionPublicKey !== 'string') return undefined
   controller.selectDesktop({
     deviceId: desktop.deviceId,
     encryptionPublicKey: desktop.encryptionPublicKey,
@@ -275,10 +278,14 @@ export async function createPwaRelayController(
 ): Promise<PwaRelayController> {
   assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa relay pairing')
   const urls = resolvePwaRelayUrls(input)
-  if (input.assertion !== null && typeof input.assertion === 'object' && !Array.isArray(input.assertion)) {
-    assertPwaRelayRecord(input.assertion as Record<string, unknown>, 'pwa relay assertion')
+  const pairingCode = input.pairingCode
+  const assertion = input.assertion
+  if ((typeof pairingCode === 'string') === (assertion !== undefined)) {
+    throw new RelayAuthorizationError('malformed', 'pwa relay assertion or pairing code is required')
   }
-  const userId = assertionUserId(input.assertion)
+  if (assertion !== undefined && assertion !== null && typeof assertion === 'object' && !Array.isArray(assertion)) {
+    assertPwaRelayRecord(assertion as Record<string, unknown>, 'pwa relay assertion')
+  }
   const identity = await resolvePwaRelayIdentity(input)
   const published = publicDeviceIdentity(identity)
   if (input.desktop !== undefined) {
@@ -287,15 +294,43 @@ export async function createPwaRelayController(
     persistPwaSelectedDesktop(input.sessionStorage, input.desktop, published.deviceId)
   }
   const now = input.now ?? Date.now()
-  await registerOutboundRelayDevice({
-    httpUrl: urls.httpUrl,
-    assertion: input.assertion,
-    deviceId: published.deviceId,
-    publicKey: published.publicKey,
-    encryptionPublicKey: published.encryptionPublicKey,
-  })
+  let userId: string
+  let accessToken: string | undefined
   let selected = input.desktop
-  let connection = await openSession({ ...input, ...urls }, identity, published, userId, now)
+  if (typeof pairingCode === 'string') {
+    assertRelayPairingCode(pairingCode)
+    const redeemed = await redeemOutboundRelayPairingGrant({
+      httpUrl: urls.httpUrl,
+      pairingCode,
+      deviceId: published.deviceId,
+      publicKey: published.publicKey,
+      encryptionPublicKey: published.encryptionPublicKey,
+    })
+    userId = redeemed.device.userId
+    accessToken = redeemed.accessToken
+    if (selected === undefined) {
+      selected = {
+        deviceId: redeemed.desktop.deviceId,
+        encryptionPublicKey: redeemed.desktop.encryptionPublicKey,
+      }
+      persistPwaSelectedDesktop(input.sessionStorage, selected, published.deviceId)
+    }
+  } else {
+    userId = assertionUserId(assertion)
+    await registerOutboundRelayDevice({
+      httpUrl: urls.httpUrl,
+      assertion,
+      deviceId: published.deviceId,
+      publicKey: published.publicKey,
+      encryptionPublicKey: published.encryptionPublicKey,
+    })
+  }
+  let connection = await openSession({
+    httpUrl: urls.httpUrl,
+    url: urls.url,
+    ...(assertion === undefined ? {} : { assertion }),
+    ...(accessToken === undefined ? {} : { accessToken }),
+  }, identity, published, userId, now)
   const board = createPwaSessionBoard()
   let closed = false
 
@@ -339,9 +374,12 @@ export async function createPwaRelayController(
     },
     async listDesktops() {
       // Outbound HTTPS; this still works after close() because it does not use the socket.
+      if (assertion === undefined) {
+        throw new RelayAuthorizationError('malformed', 'pwa relay assertion is required')
+      }
       const devices = await listOutboundRelayDevices({
         httpUrl: urls.httpUrl,
-        assertion: input.assertion,
+        assertion,
       })
       return devices.filter(device => isSelectablePwaDesktop(device, published.deviceId))
     },
@@ -443,15 +481,23 @@ export async function createPwaRelayController(
     },
     async reconnect() {
       connection.close()
-      connection = await openSession({ ...input, ...urls }, identity, published, userId, now)
+      connection = await openSession({
+        httpUrl: urls.httpUrl,
+        url: urls.url,
+        ...(assertion === undefined ? {} : { assertion }),
+        ...(accessToken === undefined ? {} : { accessToken }),
+      }, identity, published, userId, now)
       closed = false
     },
     async revoke() {
       closed = true
       connection.close()
+      if (assertion === undefined) {
+        throw new RelayAuthorizationError('malformed', 'pwa relay assertion is required')
+      }
       return revokeOutboundRelayDevice({
         httpUrl: urls.httpUrl,
-        assertion: input.assertion,
+        assertion,
         deviceId: published.deviceId,
       })
     },
@@ -464,17 +510,24 @@ export async function createPwaRelayController(
 }
 
 async function openSession(
-  input: { readonly httpUrl: string, readonly url: string, readonly assertion: unknown },
+  input: {
+    readonly httpUrl: string
+    readonly url: string
+    readonly assertion?: unknown
+    readonly accessToken?: string
+  },
   identity: StoredDeviceIdentity,
   published: { readonly deviceId: string },
   userId: string,
   now: number,
 ) {
-  const token = await issueOutboundRelayToken({
-    httpUrl: input.httpUrl,
-    assertion: input.assertion,
-    deviceId: published.deviceId,
-  })
+  const token = typeof input.accessToken === 'string' && input.accessToken.length > 0
+    ? { accessToken: input.accessToken }
+    : await issueOutboundRelayToken({
+      httpUrl: input.httpUrl,
+      assertion: input.assertion,
+      deviceId: published.deviceId,
+    })
   const nonce = createRelayHandshakeNonce()
   return connectOutboundRelay({
     url: input.url,
@@ -543,6 +596,35 @@ export async function openPwaRelayFromOrigin(input: {
     await trySelectSolePwaDesktop(controller)
   }
   return controller
+}
+
+/**
+ * Remember the pairing origin, load IndexedDB identity, redeem a pairing
+ * code, and dial. No OIDC assertion is sent. Hash fragments stay fail-closed.
+ */
+export async function openPwaRelayFromPairingCode(input: {
+  readonly origin: string
+  readonly pairingCode: string
+  readonly sessionStorage: PwaRelayKeyedStorage
+  readonly indexedDB: PwaRelayIndexedDbFactory
+  readonly desktop?: CreatePwaRelayControllerInput['desktop']
+  readonly now?: number
+}): Promise<PwaRelayController> {
+  assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa relay pairing')
+  const enrolled = await enrollPwaPairingShell({
+    origin: input.origin,
+    sessionStorage: input.sessionStorage,
+    indexedDB: input.indexedDB,
+  })
+  const desktop = input.desktop ?? loadPwaSelectedDesktop(input.sessionStorage, enrolled.deviceId)
+  return createPwaRelayController({
+    httpUrl: enrolled.origin,
+    pairingCode: input.pairingCode,
+    indexedDB: input.indexedDB,
+    sessionStorage: input.sessionStorage,
+    ...(desktop === undefined ? {} : { desktop }),
+    ...(input.now === undefined ? {} : { now: input.now }),
+  })
 }
 
 function persistPwaSelectedDesktop(

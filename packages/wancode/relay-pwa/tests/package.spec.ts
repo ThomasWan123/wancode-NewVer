@@ -41,6 +41,7 @@ describe('relay-pwa package surface', () => {
     expect(pwa).toHaveProperty('MAX_PWA_PROGRESS_DETAIL_CHARS')
     expect(pwa).toHaveProperty('createPwaRelayController')
     expect(pwa).toHaveProperty('openPwaRelayFromOrigin')
+    expect(pwa).toHaveProperty('openPwaRelayFromPairingCode')
     expect(pwa).toHaveProperty('rememberPwaSelectedDesktop')
     expect(pwa).toHaveProperty('loadPwaSelectedDesktop')
     expect(pwa).toHaveProperty('forgetPwaSelectedDesktop')

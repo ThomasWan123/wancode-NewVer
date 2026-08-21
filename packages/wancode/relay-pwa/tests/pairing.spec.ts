@@ -8,12 +8,13 @@ import {
   createStaticOidcIdentityProvider,
   createStoredDeviceIdentity,
   issueOutboundRelayToken,
+  mintOutboundRelayPairingGrant,
   openSealedRelayPayload,
   registerOutboundRelayDevice,
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, unpairPwaRelay, selectSolePwaDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, PWA_RELAY_ORIGIN_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
+import { createPwaRelayController, openPwaRelayFromOrigin, openPwaRelayFromPairingCode, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, unpairPwaRelay, selectSolePwaDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, PWA_RELAY_ORIGIN_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -1047,6 +1048,97 @@ describe('PWA relay pairing', () => {
         encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
       },
     }), 'malformed')
+  })
+
+  it('opens a relay session from a pairing code without an OIDC assertion', async () => {
+    const pwa = createStoredDeviceIdentity()
+    const desktop = createStoredDeviceIdentity()
+    const cloud = await startRelayCloud({
+      store: createMemoryRelayStore(),
+      identity: createStaticOidcIdentityProvider({ issuer: ISSUER, audience: AUDIENCE }),
+      now: NOW,
+    })
+    clouds.push(cloud)
+    await registerOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    const minted = await mintOutboundRelayPairingGrant({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+    })
+    await expectRelayErrorAsync(() => createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      identity: pwa,
+      now: NOW,
+    }), 'malformed')
+    await expectRelayErrorAsync(() => createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      pairingCode: minted.pairingCode,
+      identity: pwa,
+      now: NOW,
+    }), 'malformed')
+    await expectRelayErrorAsync(() => createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      pairingCode: 'aaa.bbb.ccc',
+      identity: pwa,
+      now: NOW,
+    }), 'malformed')
+    const controller = await createPwaRelayController({
+      httpUrl: cloud.httpUrl,
+      pairingCode: minted.pairingCode,
+      identity: pwa,
+      now: NOW,
+    })
+    expect(controller.desktopDeviceId).toBe(desktop.deviceId)
+    expect(await controller.sendFollowUp({
+      id: 'msg-pair',
+      sessionId: 'sess-1',
+      text: 'review the login form',
+    })).toEqual({
+      envelopeId: 'msg-pair',
+      toDeviceId: desktop.deviceId,
+      outcome: 'queued',
+    })
+    await expectRelayErrorAsync(() => controller.listDesktops(), 'malformed')
+    await expectRelayErrorAsync(() => controller.revoke(), 'malformed')
+    expect(JSON.stringify(controller)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    controller.close()
+    const items = new Map<string, string>()
+    const session = {
+      getItem(key: string) {
+        return items.get(key) ?? null
+      },
+      setItem(key: string, value: string) {
+        items.set(key, value)
+      },
+      removeItem(key: string) {
+        items.delete(key)
+      },
+    }
+    const second = await mintOutboundRelayPairingGrant({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      deviceId: desktop.deviceId,
+    })
+    const fromOrigin = await openPwaRelayFromPairingCode({
+      origin: cloud.httpUrl,
+      pairingCode: second.pairingCode,
+      sessionStorage: session,
+      indexedDB: memoryIndexedDb(),
+      now: NOW,
+    })
+    expect(fromOrigin.desktopDeviceId).toBe(desktop.deviceId)
+    expect(loadPwaSelectedDesktop(session, fromOrigin.deviceId)).toEqual({
+      deviceId: desktop.deviceId,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    })
+    fromOrigin.close()
   })
 })
 

@@ -67,7 +67,8 @@ Status: active
   and without calling revoke. `createPwaRelayController` may omit
   the WebSocket URL and derive `/v1` from the pairing origin.
   `openPwaRelayFromOrigin` remembers that origin, loads IndexedDB identity,
-  then registers and dials. `rememberPwaSelectedDesktop` stores only public
+  then registers and dials. `openPwaRelayFromPairingCode` redeems a one-time
+  desktop pairing grant instead of an OIDC assertion. `rememberPwaSelectedDesktop` stores only public
   desktop fields. `selectDesktop` writes that slot when sessionStorage is supplied.
   `openPwaRelayFromOrigin` selects the only listed desktop when none was
   supplied or remembered. `selectSolePwaDesktop` picks the only listed

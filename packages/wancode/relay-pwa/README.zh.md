@@ -22,6 +22,7 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
 - `createPwaRelayController` 会注册 PWA 设备、签发短期令牌并拨 Relay。省略 `url`
   时从 `httpUrl` 推导。HTTP 与 WebSocket origin 不一致则失败关闭。
   `openPwaRelayFromOrigin` 记住 origin、加载 IndexedDB 身份，然后注册并拨号。
+  `openPwaRelayFromPairingCode` 兑换桌面签发的一次性配对码，不发送 OIDC assertion。
   `rememberPwaSelectedDesktop` 只保存公开的桌面 id 与加密公钥。
   配对若提供 `sessionStorage`，`selectDesktop` 会写入该槽。
   `forgetPwaSelectedDesktop` 清除该槽，不动 IndexedDB 身份。

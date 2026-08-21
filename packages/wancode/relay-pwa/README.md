@@ -30,6 +30,7 @@ directory links.
   token, and dials the relay. If `url` is omitted, it is derived from `httpUrl`.
   Mismatched HTTP and WebSocket origins fail closed. `openPwaRelayFromOrigin`
   remembers the origin, loads IndexedDB identity, then enrolls and dials.
+  `openPwaRelayFromPairingCode` redeems a one-time desktop grant instead of an OIDC assertion.
   `rememberPwaSelectedDesktop` stores only the public desktop id and encryption key.
   `selectDesktop` writes that slot when pairing supplies `sessionStorage`.
   `forgetPwaSelectedDesktop` clears that slot without touching IndexedDB identity.
