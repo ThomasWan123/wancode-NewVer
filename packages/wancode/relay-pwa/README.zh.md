@@ -65,7 +65,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   生成器一致。`createPwaDeployFiles` 附带 PNG 图标，静态 HTTPS 源可托管可安装
   shell，而本包自己不监听。  首页表单只收集 Relay origin，从不命名 token 字段。
   合法 origin 只可写入 `sessionStorage`；hash fragment 失败关闭，避免粘贴
-  `#access_token=`。提交时 pairing 脚本把 WebCrypto 身份写入 IndexedDB。
+  `#access_token=`。提交时 pairing 脚本把 WebCrypto 身份写入 IndexedDB，并显示
+  `sessionStorage` 里记住的公开桌面 id；被投毒的桌面槽会被清掉。
   首页包含 Apple 与 Android 主屏安装 meta。
   `assertPwaShellOrigin` 要求 HTTPS 或回环 HTTP，带凭据的 URL（含 hash
   fragment）失败关闭。

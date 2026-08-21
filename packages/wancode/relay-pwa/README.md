@@ -82,7 +82,9 @@ directory links.
   accepts a relay origin and never names token fields. A valid origin may be
   remembered in `sessionStorage` only; hash
   fragments fail closed so `#access_token=` cannot be pasted in. The pairing
-  script enrolls a WebCrypto identity into IndexedDB on submit. Apple and Android home-screen metas are present.
+  script enrolls a WebCrypto identity into IndexedDB on submit and shows a
+  remembered public desktop id from `sessionStorage`; poisoned desktop slots
+  are cleared. Apple and Android home-screen metas are present.
   `assertPwaShellOrigin` requires HTTPS or loopback HTTP and refuses
   credentialed URLs, including hash fragments.   `@wancode/relay-pwa/host` may serve that shell on
   127.0.0.1 only; public binds and non-loopback Host, Origin, or Referer

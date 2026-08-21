@@ -84,12 +84,40 @@ function enrollIdentity() {
     });
   });
 }
+function rememberedDesktopId() {
+  try {
+    var raw = sessionStorage.getItem('wancode-relay-desktop');
+    if (raw === null || raw === '') return undefined;
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('desktop');
+    if ('privateKey' in parsed || 'encryptionPrivateKey' in parsed) throw new Error('desktop');
+    var keys = Object.keys(parsed);
+    for (var i = 0; i < keys.length; i++) {
+      if (/token|secret|credential|password|authorization|privateKey/i.test(keys[i])) throw new Error('desktop');
+    }
+    if (keys.length !== 2) throw new Error('desktop');
+    if (typeof parsed.deviceId !== 'string' || parsed.deviceId.length === 0 || /[\r\n]/.test(parsed.deviceId)) throw new Error('desktop');
+    if (typeof parsed.encryptionPublicKey !== 'string' || parsed.encryptionPublicKey.length === 0) throw new Error('desktop');
+    return parsed.deviceId;
+  } catch (error) {
+    try { sessionStorage.removeItem('wancode-relay-desktop'); } catch (ignored) {}
+    return undefined;
+  }
+}
+function pairingStatus(deviceId) {
+  var desktopId = rememberedDesktopId();
+  if (typeof deviceId === 'string' && desktopId) return 'Device ' + deviceId + ' remembered desktop ' + desktopId + '. Desktop keys stay on that machine.';
+  if (typeof deviceId === 'string') return 'Device ' + deviceId + '. Desktop keys stay on that machine.';
+  if (desktopId) return 'Remembered desktop ' + desktopId + '. Desktop keys stay on that machine.';
+  return 'Do not paste API keys or tokens.';
+}
 try {
   var saved = sessionStorage.getItem('wancode-relay-origin');
   if (saved) document.getElementById('pair').elements.origin.value = allowedOrigin(saved);
 } catch (error) {
   try { sessionStorage.removeItem('wancode-relay-origin'); } catch (ignored) {}
 }
+document.getElementById('status').textContent = pairingStatus();
 document.getElementById('pair').addEventListener('submit', function (event) {
   event.preventDefault();
   var status = document.getElementById('status');
@@ -97,7 +125,7 @@ document.getElementById('pair').addEventListener('submit', function (event) {
     var origin = allowedOrigin(event.target.elements.origin.value);
     sessionStorage.setItem('wancode-relay-origin', origin);
     enrollIdentity().then(function (deviceId) {
-      status.textContent = 'Device ' + deviceId + '. Desktop keys stay on that machine.';
+      status.textContent = pairingStatus(deviceId);
     }).catch(function () {
       status.textContent = 'This browser cannot enroll a device identity.';
     });
