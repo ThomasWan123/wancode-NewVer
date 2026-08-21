@@ -89,7 +89,8 @@ Status: active
   adding a required inject. `bindDesktopRelay` returns that handle so connect
   and processMail can run after apply. `openDesktopRelaySession` enrolls the
   stored identity, mints a token, and dials. A missing nonce is minted with
-  WebCrypto. Mail processing repeats that lookup so a late
+  WebCrypto. `openDesktopRelayMailbox` then applies queued PWA mail.
+  Mail processing repeats that lookup so a late
   Host session still applies follow-ups.
   The installable shell includes PNG icons and may be served from
   `@wancode/relay-pwa/host` on 127.0.0.1 only. Non-loopback Host headers fail

@@ -314,6 +314,24 @@ export async function openDesktopRelaySession(input: {
   })
 }
 
+/**
+ * Open an outbound session then apply queued PWA mail. Model credentials stay
+ * on the desktop. This still does not listen.
+ */
+export async function openDesktopRelayMailbox(input: {
+  readonly handle: DesktopRelayHandle
+  readonly identity: Pick<DesktopRelayIdentity, 'deviceId' | 'publicKey' | 'encryptionPublicKey' | 'openSealed'> & {
+    createHandshake(input: DesktopRelayHandshakeInput): Record<string, unknown>
+  }
+  readonly assertion: unknown
+  readonly userId: string
+  readonly nonce?: string
+  readonly now?: number
+}): Promise<{ readonly applied: number, readonly ignored: number }> {
+  await openDesktopRelaySession(input)
+  return input.handle.processMail({ identity: input.identity })
+}
+
 /** Same 8192-character follow-up cap as the PWA sender. */
 export const MAX_DESKTOP_RELAY_FOLLOW_UP_CHARS = 8_192
 
