@@ -157,15 +157,33 @@ export async function issueOutboundRelayToken(
   return { accessToken: json.accessToken, expiresAt: json.expiresAt }
 }
 
+/** Inputs used to list same-account devices over outbound HTTPS. */
+export interface ListOutboundRelayDevicesInput {
+  readonly httpUrl: string
+  readonly assertion?: unknown
+  readonly accessToken?: string
+  readonly fetchImpl?: RelayControlFetch
+}
+
+/** Inputs used to revoke one device over outbound HTTPS. */
+export interface RevokeOutboundRelayDeviceInput {
+  readonly httpUrl: string
+  readonly assertion?: unknown
+  readonly accessToken?: string
+  readonly deviceId: string
+  readonly fetchImpl?: RelayControlFetch
+}
+
 /**
  * POST `/v1/devices/revoke` over HTTPS (or loopback HTTP). The device id
- * cannot be reused after a successful revoke.
+ * cannot be reused after a successful revoke. Present exactly one of an OIDC
+ * assertion or a device-bound access token. A token may only revoke itself.
  */
 export async function revokeOutboundRelayDevice(
-  input: OutboundRelayControlInput,
+  input: RevokeOutboundRelayDeviceInput,
 ): Promise<OutboundRelayRevocation> {
   const json = await postRelayControl(input, '/v1/devices/revoke', {
-    assertion: input.assertion,
+    ...assertionOrAccessTokenBody(input, 'relay device revoke'),
     deviceId: input.deviceId,
   })
   if (typeof json.deviceId !== 'string' || json.deviceId.length === 0) {
@@ -177,25 +195,20 @@ export async function revokeOutboundRelayDevice(
   return { deviceId: json.deviceId, revokedAt: json.revokedAt }
 }
 
-/** Inputs used to list same-account devices over outbound HTTPS. */
-export interface ListOutboundRelayDevicesInput {
-  readonly httpUrl: string
-  readonly assertion: unknown
-  readonly fetchImpl?: RelayControlFetch
-}
-
 /**
  * POST `/v1/devices/list` over HTTPS (or loopback HTTP). Only live devices on
  * the presented account are returned. Private keys are refused. Listed signing
  * and encryption keys must be Ed25519 and X25519. Listed devices must include
- * an X25519 encryption public key.
+ * an X25519 encryption public key. Present exactly one of an OIDC assertion
+ * or a device-bound access token.
  */
 export async function listOutboundRelayDevices(
   input: ListOutboundRelayDevicesInput,
 ): Promise<readonly OutboundRelayDevice[]> {
-  const json = await postRelayControl(input, '/v1/devices/list', {
-    assertion: input.assertion,
-  })
+  const json = await postRelayControl(input, '/v1/devices/list', assertionOrAccessTokenBody(
+    input,
+    'relay device list',
+  ))
   if (!Array.isArray(json.devices)) {
     throw new RelayAuthorizationError('malformed', 'relay control device list is required')
   }
@@ -300,14 +313,24 @@ export async function redeemOutboundRelayPairingGrant(
 }
 
 function pairingGrantBody(input: MintOutboundRelayPairingGrantInput): Record<string, unknown> {
+  return {
+    ...assertionOrAccessTokenBody(input, 'relay pairing grant'),
+    deviceId: input.deviceId,
+  }
+}
+
+function assertionOrAccessTokenBody(
+  input: { readonly assertion?: unknown, readonly accessToken?: string },
+  purpose: string,
+): Record<string, unknown> {
   const hasAssertion = input.assertion !== undefined
   const hasToken = typeof input.accessToken === 'string' && input.accessToken.length > 0
   if (hasAssertion === hasToken) {
-    throw new RelayAuthorizationError('malformed', 'relay pairing grant requires an assertion or access token')
+    throw new RelayAuthorizationError('malformed', `${purpose} requires an assertion or access token`)
   }
   return hasToken
-    ? { accessToken: input.accessToken, deviceId: input.deviceId }
-    : { assertion: input.assertion, deviceId: input.deviceId }
+    ? { accessToken: input.accessToken }
+    : { assertion: input.assertion }
 }
 
 async function postRelayControl(

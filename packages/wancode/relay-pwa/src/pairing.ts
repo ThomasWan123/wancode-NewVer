@@ -374,12 +374,9 @@ export async function createPwaRelayController(
     },
     async listDesktops() {
       // Outbound HTTPS; this still works after close() because it does not use the socket.
-      if (assertion === undefined) {
-        throw new RelayAuthorizationError('malformed', 'pwa relay assertion is required')
-      }
       const devices = await listOutboundRelayDevices({
         httpUrl: urls.httpUrl,
-        assertion,
+        ...pwaRelayControlProof({ assertion, accessToken }),
       })
       return devices.filter(device => isSelectablePwaDesktop(device, published.deviceId))
     },
@@ -492,13 +489,10 @@ export async function createPwaRelayController(
     async revoke() {
       closed = true
       connection.close()
-      if (assertion === undefined) {
-        throw new RelayAuthorizationError('malformed', 'pwa relay assertion is required')
-      }
       return revokeOutboundRelayDevice({
         httpUrl: urls.httpUrl,
-        assertion,
         deviceId: published.deviceId,
+        ...pwaRelayControlProof({ assertion, accessToken }),
       })
     },
     project: projectRelaySessionView,
@@ -637,6 +631,20 @@ function persistPwaSelectedDesktop(
 ): void {
   if (storage === undefined) return
   rememberPwaSelectedDesktop(storage, desktop, selfDeviceId)
+}
+
+function pwaRelayControlProof(input: {
+  readonly assertion: unknown
+  readonly accessToken: string | undefined
+}): { readonly assertion: unknown } | { readonly accessToken: string } {
+  const hasAssertion = input.assertion !== undefined
+  const hasToken = typeof input.accessToken === 'string' && input.accessToken.length > 0
+  if (hasAssertion === hasToken) {
+    throw new RelayAuthorizationError('malformed', 'pwa relay assertion or access token is required')
+  }
+  return hasToken
+    ? { accessToken: input.accessToken as string }
+    : { assertion: input.assertion }
 }
 
 function assertionUserId(assertion: unknown): string {

@@ -47,8 +47,9 @@ Wan Code Cloud Relay（M2）的 fail-closed 远程控制契约和仅出站 WebSo
 桌面用 `connectOutboundRelay` 主动发起云连接。握手之前，同一默认导出可通过
 HTTPS（或回环 HTTP）调用 `registerOutboundRelayDevice`、
 `issueOutboundRelayToken`、`listOutboundRelayDevices` 和
-`revokeOutboundRelayDevice`。设备列表走 POST `/v1/devices/list`，断言放在请求
-体里，从不放在查询字符串。只返回当前账号下未撤销的设备，不含私钥。列出的签名
+`revokeOutboundRelayDevice`。设备列表走 POST `/v1/devices/list`，请求体只出示
+OIDC assertion 或设备绑定访问令牌其中之一，从不放在查询字符串。撤销使用同一证明；
+访问令牌只能撤销自身。只返回当前账号下未撤销的设备，不含私钥。列出的签名
 与加密公钥必须是 Ed25519 与 X25519。账号列表会省略密钥不合法或缺少加密公钥的行。重定向会
 再次按同一 URL 策略检查，请求从不携带凭据，私钥一律拒绝。本包不是入站 Host surface。
 `@wancode/relay-protocol/loopback` 只用于 `127.0.0.1` 测试接收端。

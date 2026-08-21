@@ -1105,8 +1105,16 @@ describe('PWA relay pairing', () => {
       toDeviceId: desktop.deviceId,
       outcome: 'queued',
     })
-    await expectRelayErrorAsync(() => controller.listDesktops(), 'malformed')
-    await expectRelayErrorAsync(() => controller.revoke(), 'malformed')
+    expect(await controller.listDesktops()).toEqual([{
+      deviceId: desktop.deviceId,
+      userId: 'user-a',
+      publicKey: desktop.keyPair.publicKey,
+      encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
+    }])
+    await expect(controller.revoke()).resolves.toEqual({
+      deviceId: pwa.deviceId,
+      revokedAt: NOW,
+    })
     expect(JSON.stringify(controller)).not.toMatch(/privateKey|encryptionPrivateKey/)
     controller.close()
     const items = new Map<string, string>()

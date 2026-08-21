@@ -312,6 +312,26 @@ describe('outbound relay control client', () => {
     expect(redeemed.desktop.deviceId).toBe('desktop-a')
     expect(redeemed.accessToken.length).toBeGreaterThan(0)
     expect(JSON.stringify(redeemed)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    const listed = await listOutboundRelayDevices({
+      httpUrl: cloud.httpUrl,
+      accessToken: redeemed.accessToken,
+    })
+    expect(listed.map(device => device.deviceId).sort()).toEqual(['desktop-a', 'pwa-a'])
+    await expectRelayErrorAsync(() => listOutboundRelayDevices({
+      httpUrl: cloud.httpUrl,
+      assertion: assertion(),
+      accessToken: redeemed.accessToken,
+    }), 'malformed')
+    await expectRelayErrorAsync(() => revokeOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      accessToken: redeemed.accessToken,
+      deviceId: 'desktop-a',
+    }), 'cross-account')
+    await expect(revokeOutboundRelayDevice({
+      httpUrl: cloud.httpUrl,
+      accessToken: redeemed.accessToken,
+      deviceId: 'pwa-a',
+    })).resolves.toEqual({ deviceId: 'pwa-a', revokedAt: NOW })
     const token = await issueOutboundRelayToken({
       httpUrl: cloud.httpUrl,
       assertion: assertion(),

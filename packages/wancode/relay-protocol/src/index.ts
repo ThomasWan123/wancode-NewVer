@@ -120,6 +120,8 @@ export {
   type OutboundRelayRevocation,
   type RedeemOutboundRelayPairingGrantInput,
   type RegisterOutboundRelayDeviceInput,
+  type ListOutboundRelayDevicesInput,
+  type RevokeOutboundRelayDeviceInput,
   type RelayControlFetch,
 } from './control-client.ts'
 export {

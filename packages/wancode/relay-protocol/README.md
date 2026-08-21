@@ -63,8 +63,9 @@ Desktop initiates the cloud connection with `connectOutboundRelay`. Before
 that handshake, the same default export can `registerOutboundRelayDevice`,
 `issueOutboundRelayToken`, `listOutboundRelayDevices`, and
 `revokeOutboundRelayDevice` over HTTPS (or loopback HTTP). Device list uses
-POST `/v1/devices/list` with the assertion in the body, never on the query
-string. Listed signing and encryption keys must be Ed25519 and X25519.
+POST `/v1/devices/list` with exactly one of an OIDC assertion or a device-bound
+access token in the body, never on the query string. Device revoke uses the same
+proof; a token may only revoke itself. Listed signing and encryption keys must be Ed25519 and X25519.
 The account list omits rows whose keys fail that check, including rows that
 omit an encryption public key. Only live devices on the presented account are returned; private
 keys are omitted. Redirects are re-checked, credentials never appear on the

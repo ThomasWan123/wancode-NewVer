@@ -27,7 +27,8 @@ follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折
   配对若提供 `sessionStorage`，`selectDesktop` 会写入该槽。
   `forgetPwaSelectedDesktop` 清除该槽，不动 IndexedDB 身份。
   `forgetPwaPairingOrigin` 清除 origin 槽。`unpairPwaRelay` 立即撤销 PWA 设备
-  并忘掉所选桌面和 origin。
+  并忘掉所选桌面和 origin。配对码会话用兑换得到的访问令牌列出并撤销设备；该令牌
+  只能撤销自身。
   公网 HTTP origin 会在注册前失败关闭。桌面可
   稍后通过 `listDesktops` / `selectDesktop` 选择。`openPwaRelayFromOrigin` 在未
   传入也未记住桌面时，会选中唯一列出的那一台。`selectSolePwaDesktop` 在只

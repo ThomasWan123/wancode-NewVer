@@ -191,10 +191,10 @@ async function handleCloudHttp(
     }
     const body = await readJsonBody(request)
     if (path === '/v1/devices/list') {
-      const identity = context.identity.verify(body.assertion, context.now)
+      const account = resolveAssertionOrAccessToken(body, context, 'relay device list')
       writeJson(response, 200, {
         devices: listRelayAccountDevices({
-          userId: identity.userId,
+          userId: account.userId,
           now: context.now,
           store: context.store,
         }).map(publicDevice),
@@ -293,41 +293,63 @@ function issueCloudToken(
   return { accessToken: issued.accessToken, expiresAt: issued.record.expiresAt }
 }
 
-function resolvePairingGrantIdentity(
+function resolveAssertionOrAccessToken(
   body: Record<string, unknown>,
   context: CloudHttpContext,
-): RelayIdentityClaims {
+  purpose: string,
+): {
+  readonly userId: string
+  readonly expiresAt: number
+  readonly tokenDeviceId?: string
+  readonly identity?: RelayIdentityClaims
+} {
   const hasAssertion = body.assertion !== undefined
   const accessToken = body.accessToken
   const hasToken = typeof accessToken === 'string' && accessToken.length > 0
-  if (hasAssertion && hasToken) {
-    throw new RelayAuthorizationError('malformed', 'relay pairing grant requires an assertion or access token')
+  if (hasAssertion === hasToken) {
+    throw new RelayAuthorizationError('malformed', `${purpose} requires an assertion or access token`)
   }
-  if (hasAssertion) return context.identity.verify(body.assertion, context.now)
+  if (hasAssertion) {
+    const identity = context.identity.verify(body.assertion, context.now)
+    return { userId: identity.userId, expiresAt: identity.expiresAt, identity }
+  }
   if (typeof accessToken !== 'string' || accessToken.length === 0) {
-    throw new RelayAuthorizationError('malformed', 'relay pairing grant requires an assertion or access token')
+    throw new RelayAuthorizationError('malformed', `${purpose} requires an assertion or access token`)
   }
   const token = context.store.getAccessToken(accessToken)
   if (token === undefined || token.expiresAt <= context.now) {
     throw new RelayAuthorizationError('expired-token', 'relay access token is unknown or expired')
   }
+  return { userId: token.userId, expiresAt: token.expiresAt, tokenDeviceId: token.deviceId }
+}
+
+function resolvePairingGrantIdentity(
+  body: Record<string, unknown>,
+  context: CloudHttpContext,
+): RelayIdentityClaims {
+  const account = resolveAssertionOrAccessToken(body, context, 'relay pairing grant')
+  if (account.identity !== undefined) return account.identity
   const deviceId = requiredText(body.deviceId, 'deviceId')
-  if (token.deviceId !== deviceId) {
+  if (account.tokenDeviceId !== deviceId) {
     throw new RelayAuthorizationError('cross-account', 'relay pairing desktop does not match the presented token')
   }
   return {
     issuer: 'relay-session',
     audience: 'wancode-relay',
-    userId: token.userId,
-    expiresAt: token.expiresAt,
+    userId: account.userId,
+    expiresAt: account.expiresAt,
   }
 }
 
 function revokeCloudDevice(body: Record<string, unknown>, context: CloudHttpContext): RelayDevice {
-  const identity = context.identity.verify(body.assertion, context.now)
+  const account = resolveAssertionOrAccessToken(body, context, 'relay device revoke')
+  const deviceId = requiredText(body.deviceId, 'deviceId')
+  if (account.tokenDeviceId !== undefined && account.tokenDeviceId !== deviceId) {
+    throw new RelayAuthorizationError('cross-account', 'relay revoke device does not match the presented token')
+  }
   return revokeRelayDevice({
-    userId: identity.userId,
-    deviceId: requiredText(body.deviceId, 'deviceId'),
+    userId: account.userId,
+    deviceId,
     now: context.now,
     store: context.store,
   })
