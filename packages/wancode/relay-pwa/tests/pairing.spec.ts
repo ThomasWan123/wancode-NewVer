@@ -13,7 +13,7 @@ import {
   revokeOutboundRelayDevice,
 } from '../../relay-protocol/src/index.ts'
 import { startRelayCloud, type RelayCloud } from '../../relay-protocol/src/cloud.ts'
-import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, unpairPwaRelay, selectSolePwaDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
+import { createPwaRelayController, openPwaRelayFromOrigin, rememberPwaSelectedDesktop, loadPwaSelectedDesktop, forgetPwaSelectedDesktop, unpairPwaRelay, selectSolePwaDesktop, PWA_RELAY_DESKTOP_STORAGE_KEY, PWA_RELAY_ORIGIN_STORAGE_KEY, assertPwaDesktopSelection, isSelectablePwaDesktop, type PwaRelayIdentityStorage, type PwaRelayIndexedDbFactory } from '../src/index.ts'
 
 const NOW = 1_700_000_000_000
 const ISSUER = 'https://idp.wancode.example/realms/wancode'
@@ -448,6 +448,7 @@ describe('PWA relay pairing', () => {
       deviceId: desktop.deviceId,
       encryptionPublicKey: desktop.keyPair.encryptionPublicKey,
     }, pwa.deviceId)
+    session.setItem(PWA_RELAY_ORIGIN_STORAGE_KEY, new URL(cloud.httpUrl).origin)
     const controller = await createPwaRelayController({
       httpUrl: cloud.httpUrl,
       url: cloud.url,
@@ -464,6 +465,7 @@ describe('PWA relay pairing', () => {
       revokedAt: NOW,
     })
     expect(loadPwaSelectedDesktop(session, pwa.deviceId)).toBeUndefined()
+    expect(session.getItem(PWA_RELAY_ORIGIN_STORAGE_KEY)).toBeNull()
     await expectRelayErrorAsync(() => controller.reconnect(), 'revoked-device')
   })
 

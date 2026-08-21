@@ -33,7 +33,8 @@ directory links.
   `rememberPwaSelectedDesktop` stores only the public desktop id and encryption key.
   `selectDesktop` writes that slot when pairing supplies `sessionStorage`.
   `forgetPwaSelectedDesktop` clears that slot without touching IndexedDB identity.
-  `unpairPwaRelay` revokes the PWA device immediately and forgets the desktop.
+  `forgetPwaPairingOrigin` clears the origin slot. `unpairPwaRelay` revokes the
+  PWA device immediately and forgets the desktop and origin.
   Public HTTP origins fail closed before enroll. The desktop may be selected later via
   `listDesktops` / `selectDesktop`. `openPwaRelayFromOrigin` selects the only
   listed desktop when none was supplied or remembered. `selectSolePwaDesktop`

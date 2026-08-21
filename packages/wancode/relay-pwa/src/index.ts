@@ -67,6 +67,7 @@ export {
   peekPwaRelayPublicIdentity,
   resolvePwaRelayIdentity,
   enrollPwaPairingShell,
+  forgetPwaPairingOrigin,
   type PwaRelayAsyncKv,
   type PwaRelayIdentityStorage,
   type PwaRelayIndexedDbFactory,

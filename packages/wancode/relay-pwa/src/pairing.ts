@@ -36,6 +36,7 @@ import { createPwaSessionBoard, type PwaSessionSnapshot } from './session-board.
 import {
   resolvePwaRelayIdentity,
   enrollPwaPairingShell,
+  forgetPwaPairingOrigin,
   type PwaRelayIdentityStorage,
   type PwaRelayIndexedDbFactory,
   type PwaRelayKeyedStorage,
@@ -208,8 +209,9 @@ export function forgetPwaSelectedDesktop(storage: PwaRelayKeyedStorage): void {
 }
 
 /**
- * Revoke the PWA device immediately and forget the public desktop selection.
- * IndexedDB identity is left in place so a later enroll can mint a new registration.
+ * Revoke the PWA device immediately and forget the public desktop selection
+ * and pairing origin. IndexedDB identity is left in place so a later enroll
+ * can mint a new registration.
  */
 export async function unpairPwaRelay(input: {
   readonly controller: PwaRelayController
@@ -221,6 +223,7 @@ export async function unpairPwaRelay(input: {
   assertPwaRelayRecord(input as unknown as Record<string, unknown>, 'pwa relay pairing')
   const revoked = await input.controller.revoke()
   forgetPwaSelectedDesktop(input.sessionStorage)
+  forgetPwaPairingOrigin(input.sessionStorage)
   return revoked
 }
 

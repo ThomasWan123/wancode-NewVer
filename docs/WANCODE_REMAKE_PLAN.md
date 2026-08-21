@@ -67,7 +67,7 @@ Status: active
   `openPwaRelayFromOrigin` selects the only listed desktop when none was
   supplied or remembered. `selectSolePwaDesktop` picks the only listed
   desktop; zero or multiple candidates fail closed. `forgetPwaSelectedDesktop` clears that slot.
-  `unpairPwaRelay` revokes the PWA immediately and forgets the desktop.
+  `unpairPwaRelay` revokes the PWA immediately and forgets the desktop and origin.
   Mismatched HTTP and WebSocket origins fail closed.
   `PWA_SHELL_CSP` forbids `unsafe-inline`, frames, and plugins.   The PWA can also send sealed presence and revoke itself
   immediately. Presence state must be online or offline. Follow-up text is required and capped. Checked-in `public/`

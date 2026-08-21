@@ -211,6 +211,11 @@ export interface PwaPairingEnrollment {
   readonly encryptionPublicKey: string
 }
 
+/** Drop a remembered pairing origin. IndexedDB identity is untouched. */
+export function forgetPwaPairingOrigin(storage: PwaRelayKeyedStorage): void {
+  storage.removeItem(PWA_RELAY_ORIGIN_STORAGE_KEY)
+}
+
 /**
  * Remember a fail-closed relay origin in sessionStorage and mint or reload
  * the PWA identity from IndexedDB. Identity never uses the origin key.

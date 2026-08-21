@@ -16,6 +16,7 @@ import {
   peekPwaRelayPublicIdentity,
   resolvePwaRelayIdentity,
   enrollPwaPairingShell,
+  forgetPwaPairingOrigin,
   type PwaRelayIdentityStorage,
   type PwaRelayIndexedDbFactory,
 } from '../src/index.ts'
@@ -231,6 +232,8 @@ describe('PWA device identity store', () => {
     expect(items.get(PWA_RELAY_ORIGIN_STORAGE_KEY)).toBe(first.origin)
     expect(items.has(PWA_RELAY_IDENTITY_STORAGE_KEY)).toBe(false)
     expect(JSON.stringify(first)).not.toMatch(/privateKey|encryptionPrivateKey/)
+    forgetPwaPairingOrigin(session)
+    expect(items.has(PWA_RELAY_ORIGIN_STORAGE_KEY)).toBe(false)
     const second = await enrollPwaPairingShell({
       origin: 'https://pwa.wancode.example/',
       sessionStorage: session,
