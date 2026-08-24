@@ -7,6 +7,9 @@ export default defineConfig({
       '@wancode/relay-protocol': fileURLToPath(
         new URL('../packages/wancode/relay-protocol/src/index.ts', import.meta.url),
       ),
+      '@wancode/harness-kernel': fileURLToPath(
+        new URL('../packages/wancode/harness-kernel/src/index.ts', import.meta.url),
+      ),
     },
   },
   test: {

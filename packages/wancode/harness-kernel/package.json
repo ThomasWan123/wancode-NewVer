@@ -2,7 +2,7 @@
   "name": "@wancode/harness-kernel",
   "version": "0.0.1-dev.0",
   "private": true,
-  "description": "TypeScript type stubs for the WanCode harness-kernel provider, lease, and ledger contracts",
+  "description": "WanCode harness-kernel provider, lease, and ledger contracts with fail-closed validation",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -23,10 +23,13 @@
     "directory": "packages/wancode/harness-kernel"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "check": "yarn run typecheck && yarn run test"
   },
   "devDependencies": {
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "4.1.8"
   },
   "keywords": [
     "wancode",
