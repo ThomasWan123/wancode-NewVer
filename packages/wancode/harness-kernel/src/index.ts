@@ -1,5 +1,22 @@
 export type { ProviderProfile } from './provider-profile.js'
 export type {
+  ApprovalPolicyMode,
+  ApprovalResourceKind,
+  ApprovalRequest,
+  ApprovalDecisionOutcome,
+  ApprovalDecision,
+  ApprovalPolicyRule,
+  ApprovalPolicy,
+} from './approval.js'
+export {
+  evaluateApproval,
+  createApprovalPolicy,
+  ApprovalPolicyError,
+  PROMPT_ALL_POLICY,
+  AUTO_APPROVE_ALL_POLICY,
+  DENY_ALL_POLICY,
+} from './approval.js'
+export type {
   Lease,
   LeaseState,
   LeaseResourceKind,
