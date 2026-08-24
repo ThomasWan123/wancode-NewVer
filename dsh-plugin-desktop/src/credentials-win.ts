@@ -7,6 +7,10 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import {
   CredentialProvider,
   type CredentialInfo,
+  type CredentialKey,
+  type CredentialRecord,
+  type CredentialRecordEntry,
+  type CredentialRecordInfo,
   type CredentialRef,
   type ResolvedCredential,
 } from '@deepseek-ai/dsh-credentials'
@@ -140,12 +144,12 @@ export async function migrateLegacyCredentials(
     if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return 0
     throw cause
   }
-  const entries = parseCredentialsDocument(text, filename)
-  for (const [rawRef, value] of entries) {
+  const document = parseCredentialsDocument(text, filename)
+  for (const [rawRef, value] of document.refs) {
     store.set(credentialTarget(home, rawRef as CredentialRef), value)
   }
   await unlink(filename)
-  return entries.size
+  return document.refs.size
 }
 
 /** Create the production Windows Credential Manager adapter. */
@@ -301,6 +305,48 @@ export class WindowsCredentialProvider extends CredentialProvider {
 
   override unset(ref: CredentialRef): Promise<void> {
     return this.vault.unset(ref)
+  }
+
+  override async readRecord(key: CredentialKey): Promise<CredentialRecord | undefined> {
+    const target = this.recordTarget(key)
+    const raw = this.store.get(target)
+    if (raw === undefined) return undefined
+    return JSON.parse(raw) as CredentialRecord
+  }
+
+  override async describeRecord(key: CredentialKey): Promise<CredentialRecordInfo> {
+    const target = this.recordTarget(key)
+    const raw = this.store.get(target)
+    if (raw === undefined) return { configured: false, writable: true }
+    const record = JSON.parse(raw) as CredentialRecord
+    return { configured: true, kind: record.kind, writable: true }
+  }
+
+  override async listRecords(): Promise<readonly CredentialRecordEntry[]> {
+    return []
+  }
+
+  override async modifyRecord(
+    key: CredentialKey,
+    mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+  ): Promise<CredentialRecord | undefined> {
+    const target = this.recordTarget(key)
+    const raw = this.store.get(target)
+    const current = raw !== undefined ? JSON.parse(raw) as CredentialRecord : undefined
+    const next = await mutate(current)
+    if (next === undefined) return current
+    this.store.set(target, JSON.stringify(next))
+    return next
+  }
+
+  override async deleteRecord(key: CredentialKey): Promise<void> {
+    const target = this.recordTarget(key)
+    this.store.delete(target)
+  }
+
+  private recordTarget(key: CredentialKey): string {
+    const homeId = createHash('sha256').update(resolve(this.config.dshHome).toLowerCase()).digest('hex').slice(0, 24)
+    return `WanCodeNewVer/${homeId}/record/${key as string}`
   }
 
   private inherited(ref: CredentialRef): string | undefined {

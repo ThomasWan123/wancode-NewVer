@@ -126,7 +126,7 @@ if (run('git', ['rev-parse', 'HEAD'], upstreamDir) !== upstream.commit) {
 if (run('git', ['status', '--porcelain'], upstreamDir) !== '') {
   fail('deepseek-harness contains local changes')
 }
-if (run('git', ['remote', 'get-url', 'origin'], upstreamDir) !== upstream.repository) {
+if (run('git', ['config', '--get', 'remote.origin.url'], upstreamDir) !== upstream.repository) {
   fail('deepseek-harness origin differs from upstream.json')
 }
 if (upstreamPackage.version !== upstream.sourceVersion) {

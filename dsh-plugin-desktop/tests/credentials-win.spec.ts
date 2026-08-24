@@ -93,7 +93,7 @@ describe('Windows credential vault', () => {
     const root = await mkdtemp(join(tmpdir(), 'wancode-credentials-'))
     temporaryRoots.push(root)
     const filename = join(root, '.credentials.yaml')
-    await writeFile(filename, 'DEEPSEEK_API_KEY: secret-one\nOTHER_KEY: secret-two\n')
+    await writeFile(filename, 'version: 1\nrefs:\n  DEEPSEEK_API_KEY: secret-one\n  OTHER_KEY: secret-two\n')
     const store = new MemoryStore()
 
     await expect(migrateLegacyCredentials(root, store)).resolves.toBe(2)

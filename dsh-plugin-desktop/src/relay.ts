@@ -159,7 +159,7 @@ export interface DesktopRelayHandle {
     readonly expiresAt: number
     readonly desktopDeviceId: string
   }>
-  readonly connectedDeviceId?: string
+  readonly connectedDeviceId?: string | undefined
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
   processMail(input: Pick<ProcessDesktopRelayMailInput, 'identity'> & Partial<DesktopRelayApplySinks>): Promise<{
     readonly applied: number
@@ -311,10 +311,10 @@ export function prepareDesktopRelay(
         },
         ...(input.approval === undefined && defaults?.approval === undefined
           ? {}
-          : { approval: input.approval ?? defaults?.approval }),
+          : { approval: (input.approval ?? defaults?.approval)! }),
         ...(input.cancel === undefined && defaults?.cancel === undefined
           ? {}
-          : { cancel: input.cancel ?? defaults?.cancel }),
+          : { cancel: (input.cancel ?? defaults?.cancel)! }),
       })
     },
     async sendProgress(input) {
@@ -1112,7 +1112,7 @@ export async function copyDesktopRelayPairingGrant(
   return presentDesktopRelayPairingGrant({
     pairingCode: minted.pairingCode,
     copyText: presentation.copyText,
-    notify: presentation.notify,
+    ...(presentation.notify !== undefined ? { notify: presentation.notify } : {}),
   })
 }
 
@@ -1238,7 +1238,7 @@ function asRelayPairingPresentation(value: unknown): {
   return {
     registerTrayItem: record.registerTrayItem.bind(value),
     copyText: record.copyText.bind(value),
-    notify,
+    ...(notify !== undefined ? { notify } : {}),
   }
 }
 
