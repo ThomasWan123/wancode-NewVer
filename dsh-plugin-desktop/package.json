@@ -67,6 +67,10 @@
       "types": "./lib/types/lease-adapter.d.ts",
       "default": "./lib/lease-adapter.js"
     },
+    "./approval-adapter": {
+      "types": "./lib/types/approval-adapter.d.ts",
+      "default": "./lib/approval-adapter.js"
+    },
     "./updates": {
       "types": "./lib/types/updates.d.ts",
       "default": "./lib/updates.js"
