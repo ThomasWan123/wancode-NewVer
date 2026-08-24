@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { resolve as win32Resolve } from 'node:path/win32'
 import { fileURLToPath } from 'node:url'
 import { extractFile } from '@electron/asar'
 import { compareSemVerVersions, parseSemVer } from '../src/update-checker.ts'
@@ -100,11 +101,12 @@ export function assertWindowsLifecycleReady(
   if (parsedVersion === null || parsedVersion.version !== version) {
     throw new Error('WANCODE_PREVIOUS_WINDOWS_VERSION must be canonical Semantic Versioning')
   }
+  const resolvePath = platform === 'win32' ? win32Resolve : resolve
   return {
     expectedPublisher,
     trustedThumbprints: [...new Set(thumbprints)],
     previous: {
-      installerPath: resolve(installerPath),
+      installerPath: resolvePath(installerPath),
       version,
     },
   }

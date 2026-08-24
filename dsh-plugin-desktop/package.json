@@ -265,6 +265,7 @@
     "sharp": "0.35.3",
     "tsdown": "0.22.2",
     "typescript": "6.0.3",
+    "unrun": "^0.3.1",
     "vitest": "4.1.8"
   },
   "build": {
