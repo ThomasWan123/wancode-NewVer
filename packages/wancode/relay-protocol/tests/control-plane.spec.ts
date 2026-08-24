@@ -56,7 +56,7 @@ function expectRelayError(run: () => unknown, code: string): void {
   }
 }
 
-describe('Wan Code relay protocol', () => {
+describe('WanCodeNewVer relay protocol', () => {
   it('accepts a versioned handshake from a live token and registered device', () => {
     const { dispatch } = harness()
     expect(dispatch(validEnvelope())).toEqual({ id: 'msg-1', outcome: 'accepted' })

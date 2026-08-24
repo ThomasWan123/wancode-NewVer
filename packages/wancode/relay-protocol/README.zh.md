@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-Wan Code Cloud Relay（M2）的 fail-closed 远程控制契约和仅出站 WebSocket
+WanCodeNewVer Cloud Relay（M2）的 fail-closed 远程控制契约和仅出站 WebSocket
 客户端。本包用短期令牌和已注册设备授权版本化 envelope，只接受桌面签名的
 **出站**握手来打开会话，并由桌面主动拨 Relay。它不在公网接口上监听、不保存
 明文 prompt，也不声明 DeepSeek Harness 插件入口。

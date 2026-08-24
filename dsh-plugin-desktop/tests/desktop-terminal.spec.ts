@@ -159,14 +159,14 @@ describe('desktop terminal environment', () => {
     expect(welcome).toContain('unset ELECTRON_RUN_AS_NODE')
     expect(welcome).not.toContain('ELECTRON_RUN_AS_NODE=1')
     expect(welcome).toContain("printf '\\033[2J\\033[3J\\033[H'")
-    expect(welcome).toContain('Wan Code 2.0.0 terminal')
+    expect(welcome).toContain('WanCodeNewVer 2.0.0 terminal')
     expect(welcome).toContain('Profile: desktop')
     expect(welcome).toContain('Plugin commands without --profile modify the desktop profile.')
     expect(welcome).toContain('dsh --dump-config')
     expect(welcome).toContain('dsh plugin add <third-party-plugin>')
     expect(welcome).toContain('dsh plugin remove <third-party-plugin>')
     expect(welcome).toContain('dsh plugin update')
-    expect(welcome).toContain('Restart Wan Code after plugin changes.')
+    expect(welcome).toContain('Restart WanCodeNewVer after plugin changes.')
     expect(welcome).not.toContain(' -l')
     expect(welcome).toContain("DSH O'\"'\"'Brien")
     expect(welcome).toContain('exec "${SHELL}" --noprofile --rcfile')
@@ -239,17 +239,17 @@ describe('desktop terminal environment', () => {
     const welcome = readFileSync(launch.welcomePath, 'utf8')
     expect(welcome).toContain('Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue')
     expect(welcome).toContain('Set-Location -LiteralPath $env:DSH_DESKTOP_PROFILE_DIRECTORY')
-    expect(welcome).toContain('"Wan Code {0} terminal" -f $env:DSH_DESKTOP_PRODUCT_VERSION')
+    expect(welcome).toContain('"WanCodeNewVer {0} terminal" -f $env:DSH_DESKTOP_PRODUCT_VERSION')
     expect(welcome).toContain('"Plugin commands without --profile modify the {0} profile."')
     expect(welcome).toContain('dsh --dump-config')
     expect(welcome).toContain('dsh plugin add <third-party-plugin>')
     expect(welcome).toContain('dsh plugin remove <third-party-plugin>')
     expect(welcome).toContain('dsh plugin update')
-    expect(welcome).toContain('Restart Wan Code after plugin changes.')
+    expect(welcome).toContain('Restart WanCodeNewVer after plugin changes.')
 
     expect(launch.windowsLauncherPath).toBe(join(stateDir, 'launch.cmd'))
     const launcher = readFileSync(launch.windowsLauncherPath!, 'utf8')
-    expect(launcher).toContain('start "Wan Code" /D "!DSH_DESKTOP_PROFILE_DIRECTORY!"')
+    expect(launcher).toContain('start "WanCodeNewVer" /D "!DSH_DESKTOP_PROFILE_DIRECTORY!"')
     expect(launcher).toContain('"!DSH_DESKTOP_SHELL_EXECUTABLE!" -NoLogo -NoExit')
     expect(launcher).toContain('-File "!DSH_DESKTOP_POWERSHELL_WELCOME!"')
 
@@ -308,7 +308,7 @@ describe('desktop terminal environment', () => {
       'new',
       'new-tab',
       '--title',
-      'Wan Code',
+      'WanCodeNewVer',
       '--startingDirectory',
       options.profileDir,
       'C:\\Program Files\\PowerShell\\7\\pwsh.exe',

@@ -207,9 +207,9 @@ export function createNativeWindowsLifecycleHost(
     }
   }
   const paths = (installDirectory: string) => ({
-    application: join(installDirectory, 'Wan Code.exe'),
+    application: join(installDirectory, 'WanCodeNewVer.exe'),
     archive: join(installDirectory, 'resources', 'app.asar'),
-    uninstaller: join(installDirectory, 'Uninstall Wan Code.exe'),
+    uninstaller: join(installDirectory, 'Uninstall WanCodeNewVer.exe'),
   })
   const registryExecutable = join(
     options.environment.SystemRoot ?? options.environment.WINDIR ?? 'C:\\Windows',
@@ -233,14 +233,14 @@ export function createNativeWindowsLifecycleHost(
       const installed = paths(installDirectory)
       if (!existsSync(installed.application)) return undefined
       if (!existsSync(installed.archive)) {
-        throw new Error(`Installed Wan Code archive is missing: ${installed.archive}`)
+        throw new Error(`Installed WanCodeNewVer archive is missing: ${installed.archive}`)
       }
       await assertTrustedPublisher(installed.application)
       const manifest = JSON.parse(
         extractFile(installed.archive, 'package.json').toString('utf8'),
       ) as { version?: unknown }
       if (typeof manifest.version !== 'string' || manifest.version.length === 0) {
-        throw new Error(`Installed Wan Code archive has no valid version: ${installed.archive}`)
+        throw new Error(`Installed WanCodeNewVer archive has no valid version: ${installed.archive}`)
       }
       return manifest.version
     },
@@ -274,7 +274,7 @@ export function createNativeWindowsLifecycleHost(
         .split(/\r?\n/u)
         .map(value => value.trim())
         .filter(value => value.length > 0)
-        .map(folder => join(folder, 'Wan Code.lnk'))
+        .map(folder => join(folder, 'WanCodeNewVer.lnk'))
       const registryRoots = ['HKCU\\Software', 'HKLM\\Software']
       const deadline = Date.now() + 15_000
       let remainingShortcut: string | undefined
@@ -312,13 +312,13 @@ export function createNativeWindowsLifecycleHost(
       } while (Date.now() < deadline)
 
       if (existsSync(installDirectory)) {
-        throw new Error(`Wan Code install directory remains after uninstall: ${installDirectory}`)
+        throw new Error(`WanCodeNewVer install directory remains after uninstall: ${installDirectory}`)
       }
       if (remainingShortcut !== undefined) {
-        throw new Error(`Wan Code shortcut remains after uninstall: ${remainingShortcut}`)
+        throw new Error(`WanCodeNewVer shortcut remains after uninstall: ${remainingShortcut}`)
       }
       if (remainingRegistryRoot !== undefined) {
-        throw new Error(`Wan Code installer registry state remains under ${remainingRegistryRoot}`)
+        throw new Error(`WanCodeNewVer installer registry state remains under ${remainingRegistryRoot}`)
       }
     },
   }
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
     const artifacts = verifyWindowsInstaller({ desktopRoot, version })
     const result = await verifyWindowsInstallerLifecycle({
       platform: process.platform,
-      installDirectory: join(root, 'Wan Code'),
+      installDirectory: join(root, 'WanCodeNewVer'),
       current: {
         version,
         installerPath: artifacts.installerPath,

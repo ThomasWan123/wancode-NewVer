@@ -130,7 +130,7 @@ function openStartupStatusWindow(): BrowserWindow {
   })
   if (process.platform === 'win32') window.removeMenu()
   void window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(
-    '<!doctype html><html><body style="margin:0;height:100%;display:flex;align-items:center;justify-content:center;font:14px Segoe UI,sans-serif;background:#f4f4f5;color:#18181b"><p>Starting Wan Code…</p></body></html>',
+    '<!doctype html><html><body style="margin:0;height:100%;display:flex;align-items:center;justify-content:center;font:14px Segoe UI,sans-serif;background:#f4f4f5;color:#18181b"><p>Starting WanCodeNewVer…</p></body></html>',
   )}`)
   return window
 }
@@ -147,7 +147,7 @@ async function start(): Promise<void> {
   if (!app.requestSingleInstanceLock()) {
     appendDesktopLog(
       userDataPath,
-      `${BIN_NAME}: another Wan Code process already holds the single-instance lock\n`,
+      `${BIN_NAME}: another WanCodeNewVer process already holds the single-instance lock\n`,
     )
     app.quit()
     return
@@ -280,7 +280,7 @@ async function start(): Promise<void> {
     try {
       runtime.updates.notify({
         title: 'Unable to Import Data',
-        body: 'Wan Code could not copy ~/.dsh and will start with a private data directory.',
+        body: 'WanCodeNewVer could not copy ~/.dsh and will start with a private data directory.',
       })
     } catch (notifyCause) {
       process.stderr.write(

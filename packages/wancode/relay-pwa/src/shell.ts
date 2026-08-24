@@ -40,10 +40,10 @@ export const PWA_SHELL_CSP = [
 
 const SHELL_PATHS = new Set<string>(PWA_SHELL_PATHS)
 
-/** Web App Manifest used to install Wan Code on a phone home screen. */
+/** Web App Manifest used to install WanCodeNewVer on a phone home screen. */
 export interface PwaWebManifest {
-  readonly name: 'Wan Code'
-  readonly short_name: 'Wan Code'
+  readonly name: 'WanCodeNewVer'
+  readonly short_name: 'WanCodeNewVer'
   readonly id: './'
   readonly lang: 'en'
   readonly start_url: './'
@@ -80,8 +80,8 @@ export function createPwaWebManifest(
 ): PwaWebManifest {
   assertPwaRelayRecord(extras, 'pwa web manifest')
   return {
-    name: 'Wan Code',
-    short_name: 'Wan Code',
+    name: 'WanCodeNewVer',
+    short_name: 'WanCodeNewVer',
     id: './',
     lang: 'en',
     start_url: './',
@@ -191,7 +191,7 @@ function assertPwaTransportUrl(parsed: URL, label: string): URL {
  */
 export function createPwaServiceWorkerSource(): string {
   return [
-    '/* Wan Code PWA shell. Never listen. Never cache credentials. */',
+    '/* WanCodeNewVer PWA shell. Never listen. Never cache credentials. */',
     `'use strict';`,
     `const CACHE = ${JSON.stringify(PWA_SHELL_CACHE)};`,
     `const SHELL = ${JSON.stringify([...PWA_SHELL_PATHS])};`,
@@ -223,7 +223,7 @@ export function createPwaServiceWorkerSource(): string {
  */
 export function createPwaPairingScriptSource(): string {
   return [
-    '/* Wan Code PWA pairing shell. Never listen. Never store credentials. */',
+    '/* WanCodeNewVer PWA pairing shell. Never listen. Never store credentials. */',
     "'use strict';",
     "if ('serviceWorker' in navigator) {",
     "  navigator.serviceWorker.register('./sw.js');",
@@ -665,14 +665,14 @@ export function createPwaIndexHtml(): string {
     '  <meta name="mobile-web-app-capable" content="yes">',
     '  <meta name="apple-mobile-web-app-capable" content="yes">',
     '  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
-    '  <meta name="apple-mobile-web-app-title" content="Wan Code">',
+    '  <meta name="apple-mobile-web-app-title" content="WanCodeNewVer">',
     '  <link rel="manifest" href="./manifest.webmanifest">',
     '  <link rel="apple-touch-icon" href="./icons/wancode-192.png">',
-    '  <title>Wan Code</title>',
+    '  <title>WanCodeNewVer</title>',
     '</head>',
     '<body>',
     '  <main>',
-    '    <h1>Wan Code</h1>',
+    '    <h1>WanCodeNewVer</h1>',
     '    <p>Pair a desktop. Model keys stay on that machine.</p>',
     '    <form id="pair" method="post" action="#">',
     '      <label>Relay origin <input name="origin" type="url" required></label>',

@@ -2,7 +2,7 @@
   "name": "@wancode/relay-protocol",
   "version": "0.1.0-dev.0",
   "private": true,
-  "description": "Fail-closed Wan Code cloud-relay protocol and outbound-only WebSocket client",
+  "description": "Fail-closed WanCodeNewVer cloud-relay protocol and outbound-only WebSocket client",
   "license": "MIT",
   "type": "module",
   "exports": {

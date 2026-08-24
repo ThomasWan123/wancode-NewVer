@@ -1,5 +1,12 @@
 # Upstream policy
 
+## Product name
+
+The user-facing product name is **WanCodeNewVer**. The GitHub repository
+slug is `wancode-NewVer` (may be renamed to `WanCodeNewVer` by the owner).
+The `appId` remains `com.wancode.desktop` to preserve update continuity
+and existing installer registrations on Windows.
+
 ## Sources
 
 - Product baseline: `https://github.com/anywhere-labs/deepseek-harness-desktop`

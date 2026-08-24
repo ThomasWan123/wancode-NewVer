@@ -1,8 +1,8 @@
-# Wan Code desktop package
+# WanCodeNewVer desktop package
 
 English | [中文](README.zh.md)
 
-`dsh-plugin-desktop` runs the pinned Harness runtime in Electron while remaining part of the ordinary Cordis composition. The installed product is **Wan Code**. The package and compatibility command names retain `dsh-plugin-desktop` and `dsh-desktop` because they are runtime-facing technical identifiers, not the product brand.
+`dsh-plugin-desktop` runs the pinned Harness runtime in Electron while remaining part of the ordinary Cordis composition. The installed product is **WanCodeNewVer**. The package and compatibility command names retain `dsh-plugin-desktop` and `dsh-desktop` because they are runtime-facing technical identifiers, not the product brand.
 
 ## Architecture
 
@@ -10,13 +10,13 @@ The Electron executable is minimal bootstrap code. It acquires the single-instan
 
 Both presentation modes reuse the existing loopback Web carrier. The profile mounts the ordinary `dsh-base` and `dsh-web-app` bundles, the Host binds its HTTP and WebSocket surface to `127.0.0.1` on an ephemeral port, and Electron loads that same-origin page in a sandboxed renderer. There is no Electron-owned plugin roster, preload bridge, or raw Electron API in the renderer.
 
-The desktop package has normal Host and Web Client faces. Its Client face validates the Host-supplied mode and platform markers in both modes. Compatibility then restyles the upstream whale wordmark, empty-session hero mark, and visible DeepSeek product copy to Wan Code, without registering services, slots, or layout presentation; advanced mode installs the desktop layout service and root presentation described below. API hostnames, package names, and lowercase model ids stay unchanged. Third-party Web clients continue to use the ordinary DSH module graph in both modes.
+The desktop package has normal Host and Web Client faces. Its Client face validates the Host-supplied mode and platform markers in both modes. Compatibility then restyles the upstream whale wordmark, empty-session hero mark, and visible DeepSeek product copy to WanCodeNewVer, without registering services, slots, or layout presentation; advanced mode installs the desktop layout service and root presentation described below. API hostnames, package names, and lowercase model ids stay unchanged. Third-party Web clients continue to use the ordinary DSH module graph in both modes.
 
 The tray profile selector lists existing profiles and the lazily available `desktop` and `web` defaults. A selectable profile directly composes `dsh-base` before `dsh-web-app`; headless, malformed, or already desktop-embedded profiles remain visible but disabled. `desktop` is the only launcher-managed profile: its installation-owned prefix is repaired while third-party bundle order is preserved. Every other selected profile keeps its manifest, user patch, and dependencies unchanged. The launcher inserts its own desktop layer after `dsh-web-app` for the active generation and never persists that layer in the selected bundle list.
 
 Profile selection is desktop-owned state under Electron user data, not another field inside a selected profile. A switch is recorded as pending and takes effect through an orderly restart. The new profile becomes last-known-good only after the Cordis tree and native window mount successfully; the tray is created after the Web surface loads, and that state commit completes synchronously before tray commands can run. A failed pending generation is rolled back and relaunched once. Official profiles use the same DSH home for sessions, settings, and storage by default, so switching does not copy or migrate records. A custom profile patch may deliberately redirect one of those persistence roots.
 
-The first launch of an empty isolated Wan Code home can import an existing `~/.dsh` tree after a native confirmation. The copy preserves settings, sessions, credentials, and profile manifests, omits plugin `node_modules`, leaves the original install unchanged, and refuses a symlink that escapes the source home. Declining starts with a private directory and is remembered. An explicit `DSH_HOME` override is treated as a shared home and is not rewritten.
+The first launch of an empty isolated WanCodeNewVer home can import an existing `~/.dsh` tree after a native confirmation. The copy preserves settings, sessions, credentials, and profile manifests, omits plugin `node_modules`, leaves the original install unchanged, and refuses a symlink that escapes the source home. Declining starts with a private directory and is remembered. An explicit `DSH_HOME` override is treated as a shared home and is not rewritten.
 
 Before Loader entries mount, the launcher registers the generation-scoped `ctx.desktopProfiles` service. Its immutable `current` value contains the active profile's `name` and absolute `dir`; `list()` performs read-only discovery, while `select(name)` serializes persistence-before-restart switching without changing the live generation in place. The service is a Desktop Host capability, not a renderer bridge or an active-profile API supplied by current upstream DSH.
 
@@ -48,9 +48,9 @@ Linux supports compatibility mode only. Its tray mode command is disabled, and a
 
 ## Compatibility mode
 
-`dsh-desktop.mode` defaults to `compatibility`. This mode creates a normal operating-system window with its native frame and loads the official Web surface from the active DSH profile. macOS suppresses the visible page title. Windows retains the native caption icon and displays `Wan Code`, but removes the window menu bar. The operating system owns native title-bar color and appearance.
+`dsh-desktop.mode` defaults to `compatibility`. This mode creates a normal operating-system window with its native frame and loads the official Web surface from the active DSH profile. macOS suppresses the visible page title. Windows retains the native caption icon and displays `WanCodeNewVer`, but removes the window menu bar. The operating system owns native title-bar color and appearance.
 
-The desktop Client module validates the mode and platform markers, then restyles the upstream whale wordmark, empty-session hero mark, and visible DeepSeek product copy to the boxed-W Wan Code brand. It does not provide or replace the `layout` service, register a `root` or `sidebar` occupant, or change the conversation surface composition. Compatibility mode preserves the selected profile's own layout, sidebar, and conversation rows; the ordinary `desktop` and `web` profiles therefore keep the official Loader rows unchanged.
+The desktop Client module validates the mode and platform markers, then restyles the upstream whale wordmark, empty-session hero mark, and visible DeepSeek product copy to the boxed-W WanCodeNewVer brand. It does not provide or replace the `layout` service, register a `root` or `sidebar` occupant, or change the conversation surface composition. Compatibility mode preserves the selected profile's own layout, sidebar, and conversation rows; the ordinary `desktop` and `web` profiles therefore keep the official Loader rows unchanged.
 
 The Cordis row registers native window values during profile activation. The launcher creates the window only after `app-boot` settles and audits the complete profile, so the first renderer manifest includes the active official, desktop, and third-party client plugins without a Loader-wide wait inside the plugin itself.
 
@@ -165,7 +165,7 @@ Closing the window hides it while the Host Cordis tree continues running. The tr
 
 ## Packaging
 
-`yarn package:dir` creates an unpacked directory for the current host platform. The packaged-runtime gate rejects an application archive that omits the desktop update and terminal modules, the DSH CLI bootstrap, the bundled pnpm entry, or the physical deployment package. Electron Builder emits the root manifest, desktop runtime, and complete dependency tree under `app.asar.unpacked`; both Host profile boot and the CLI bootstrap use this physical tree so DSH profile-fallback symlinks never target a virtual ASAR directory. `build/app-icon.svg` is the boxed-W mark. The build rasterizes it to `build/app-icon.png` for Windows and Linux, then runs `scripts/generate-mac-app-icon.mjs` to center that artwork at 824 by 824 pixels on a transparent 1024 by 1024 canvas; macOS packaging and the live Dock both use the generated `build/app-icon-mac.png`. `build/tray-icon.svg` is the same boxed-W mark in brand blue: the build derives a macOS template image that the system colors automatically and fixed brand-blue Windows and Linux tray images. The advanced sidebar replaces the upstream whale wordmark with the boxed W and the Wan Code name.
+`yarn package:dir` creates an unpacked directory for the current host platform. The packaged-runtime gate rejects an application archive that omits the desktop update and terminal modules, the DSH CLI bootstrap, the bundled pnpm entry, or the physical deployment package. Electron Builder emits the root manifest, desktop runtime, and complete dependency tree under `app.asar.unpacked`; both Host profile boot and the CLI bootstrap use this physical tree so DSH profile-fallback symlinks never target a virtual ASAR directory. `build/app-icon.svg` is the boxed-W mark. The build rasterizes it to `build/app-icon.png` for Windows and Linux, then runs `scripts/generate-mac-app-icon.mjs` to center that artwork at 824 by 824 pixels on a transparent 1024 by 1024 canvas; macOS packaging and the live Dock both use the generated `build/app-icon-mac.png`. `build/tray-icon.svg` is the same boxed-W mark in brand blue: the build derives a macOS template image that the system colors automatically and fixed brand-blue Windows and Linux tray images. The advanced sidebar replaces the upstream whale wordmark with the boxed W and the WanCodeNewVer name.
 
 ### Local Windows x64 installer
 
@@ -179,7 +179,7 @@ corepack.cmd yarn dist:win
 
 Python and Visual Studio C++ Build Tools are not required. The Windows command uses `node-pty`'s bundled x64 Node-API binaries instead of asking Electron Builder to rebuild them from source, and the packaged-runtime gate rejects an installer staging tree that omits those binaries.
 
-`dist:win` refuses non-Windows and non-x64 hosts, runs the Windows-safe gate and runtime-closure verifier, then builds an assisted NSIS test installer. Version `2.0.1` is written to `dsh-plugin-desktop\dist\Wan-Code-2.0.1-x64-Setup.exe`; the unpacked application is `dsh-plugin-desktop\dist\win-unpacked\Wan Code.exe`.
+`dist:win` refuses non-Windows and non-x64 hosts, runs the Windows-safe gate and runtime-closure verifier, then builds an assisted NSIS test installer. Version `2.0.1` is written to `dsh-plugin-desktop\dist\WanCodeNewVer-2.0.1-x64-Setup.exe`; the unpacked application is `dsh-plugin-desktop\dist\win-unpacked\WanCodeNewVer.exe`.
 
 This local command deliberately strips signing variables. Production operators use `dist:win-release`, which requires a certificate and `WANCODE_WINDOWS_PUBLISHER`, then verifies that both PE artifacts are trusted and signed by the same certificate.
 

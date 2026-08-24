@@ -2,7 +2,7 @@
   "name": "@wancode/relay-pwa",
   "version": "0.1.0-dev.0",
   "private": true,
-  "description": "Wan Code mobile PWA pairing and session projections over the outbound relay",
+  "description": "WanCodeNewVer mobile PWA pairing and session projections over the outbound relay",
   "license": "MIT",
   "type": "module",
   "exports": {

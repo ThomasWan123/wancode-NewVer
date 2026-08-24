@@ -310,13 +310,13 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     return this.quitting
   }
 
-  /** Ask whether an existing `~/.dsh` tree may be copied into the Wan Code home. */
+  /** Ask whether an existing `~/.dsh` tree may be copied into the WanCodeNewVer home. */
   async confirmImportLegacyHome(): Promise<boolean> {
     const result = await dialog.showMessageBox({
       type: 'question',
       title: 'Import Existing Data',
-      message: 'Copy data from ~/.dsh into Wan Code?',
-      detail: 'Wan Code keeps a private data directory and will not share ~/.dsh automatically. Importing copies settings, sessions, and credentials. The original install is left unchanged, and plugin node_modules directories are not copied.',
+      message: 'Copy data from ~/.dsh into WanCodeNewVer?',
+      detail: 'WanCodeNewVer keeps a private data directory and will not share ~/.dsh automatically. Importing copies settings, sessions, and credentials. The original install is left unchanged, and plugin node_modules directories are not copied.',
       buttons: ['Import', 'Start Fresh'],
       defaultId: 1,
       cancelId: 1,
@@ -353,9 +353,9 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       const result = await dialog.showMessageBox({
         type: 'error',
         title: 'Display Recovery',
-        message: 'Wan Code stopped drawing the current window.',
-        detail: `The renderer exited (${details.reason}, code ${String(details.exitCode)}). Reload keeps the Host running. Restart relaunches Wan Code. Diagnostics contains the local log file.`,
-        buttons: ['Reload', 'Open Diagnostics Folder', 'Restart Wan Code', 'Dismiss'],
+        message: 'WanCodeNewVer stopped drawing the current window.',
+        detail: `The renderer exited (${details.reason}, code ${String(details.exitCode)}). Reload keeps the Host running. Restart relaunches WanCodeNewVer. Diagnostics contains the local log file.`,
+        buttons: ['Reload', 'Open Diagnostics Folder', 'Restart WanCodeNewVer', 'Dismiss'],
         defaultId: 0,
         cancelId: 3,
         noLink: true,
@@ -388,9 +388,9 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     const result = await dialog.showMessageBox({
       type: 'error',
       title: 'Plugin Recovery',
-      message: 'Wan Code could not load all plugins.',
-      detail: `Failed plugins:\n${plugins}\n\n${error}\n\nOpen Wan Code Terminal to update or remove the failing third-party plugin, then restart Wan Code.`,
-      buttons: ['Open Wan Code Terminal', 'Restart Wan Code', 'Dismiss'],
+      message: 'WanCodeNewVer could not load all plugins.',
+      detail: `Failed plugins:\n${plugins}\n\n${error}\n\nOpen WanCodeNewVer Terminal to update or remove the failing third-party plugin, then restart WanCodeNewVer.`,
+      buttons: ['Open WanCodeNewVer Terminal', 'Restart WanCodeNewVer', 'Dismiss'],
       defaultId: 0,
       cancelId: 2,
       noLink: true,
@@ -449,8 +449,8 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   private async confirmUpdateDownload(version: string): Promise<boolean> {
     const result = await dialog.showMessageBox({
       type: 'info',
-      title: 'Wan Code Update Available',
-      message: `Wan Code ${version} is available.`,
+      title: 'WanCodeNewVer Update Available',
+      message: `WanCodeNewVer ${version} is available.`,
       detail: 'Download this update now?',
       buttons: ['Download', 'Later'],
       defaultId: 1,
@@ -464,9 +464,9 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   private async confirmUpdateRollback(version: string): Promise<boolean> {
     const result = await dialog.showMessageBox({
       type: 'warning',
-      title: 'Roll Back Wan Code',
-      message: `Reinstall Wan Code ${version}?`,
-      detail: 'Rollback replaces the application version but keeps Wan Code user data. Continue only if the current version is not working correctly.',
+      title: 'Roll Back WanCodeNewVer',
+      message: `Reinstall WanCodeNewVer ${version}?`,
+      detail: 'Rollback replaces the application version but keeps WanCodeNewVer user data. Continue only if the current version is not working correctly.',
       buttons: ['Roll Back', 'Keep Current Version'],
       defaultId: 1,
       cancelId: 1,
@@ -481,7 +481,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       await dialog.showMessageBox({
         type: 'warning',
         title: 'Unable to Check for Updates',
-        message: 'Wan Code could not check for updates.',
+        message: 'WanCodeNewVer could not check for updates.',
         detail: 'Please try again later.',
         buttons: ['OK'],
         defaultId: 0,
@@ -493,8 +493,8 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     if (result.status === 'up-to-date') {
       await dialog.showMessageBox({
         type: 'info',
-        title: 'Wan Code Is Up to Date',
-        message: 'No newer version of Wan Code is available.',
+        title: 'WanCodeNewVer Is Up to Date',
+        message: 'No newer version of WanCodeNewVer is available.',
         detail: `Installed version: ${result.currentVersion}`,
         buttons: ['OK'],
         defaultId: 0,
@@ -505,8 +505,8 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
 
     await dialog.showMessageBox({
       type: 'info',
-      title: 'Wan Code Update Available',
-      message: `Wan Code ${result.latestVersion} is available.`,
+      title: 'WanCodeNewVer Update Available',
+      message: `WanCodeNewVer ${result.latestVersion} is available.`,
       detail: 'Installer downloads are unavailable in this build.',
       buttons: ['OK'],
       defaultId: 0,
@@ -538,9 +538,9 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       signal.throwIfAborted()
       await dialog.showMessageBox({
         type: 'info',
-        title: 'Wan Code Update Downloaded',
-        message: `Wan Code ${version} is ready to install.`,
-        detail: 'The disk image has opened. Replace Wan Code in Applications, then reopen it.',
+        title: 'WanCodeNewVer Update Downloaded',
+        message: `WanCodeNewVer ${version} is ready to install.`,
+        detail: 'The disk image has opened. Replace WanCodeNewVer in Applications, then reopen it.',
         buttons: ['OK'],
         defaultId: 0,
         noLink: true,
@@ -551,9 +551,9 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     if (mode === 'interactive') {
       const result = await dialog.showMessageBox({
         type: 'info',
-        title: 'Wan Code Update Downloaded',
-        message: `Wan Code ${version} is ready to install.`,
-        detail: 'Restart Wan Code and run the installer now?',
+        title: 'WanCodeNewVer Update Downloaded',
+        message: `WanCodeNewVer ${version} is ready to install.`,
+        detail: 'Restart WanCodeNewVer and run the installer now?',
         buttons: ['Restart and Install', 'Later'],
         defaultId: 1,
         cancelId: 1,

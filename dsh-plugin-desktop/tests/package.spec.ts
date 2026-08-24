@@ -156,7 +156,7 @@ describe('published package surface', () => {
 
   it('fixes the installed application identity', () => {
     expect(manifest.version).toBe(workspaceManifest.version)
-    expect(manifest.build?.productName).toBe('Wan Code')
+    expect(manifest.build?.productName).toBe('WanCodeNewVer')
     expect(manifest.build?.appId).toBe('com.wancode.desktop')
     expect(manifest.build?.asarUnpack).toEqual([
       'package.json',
@@ -199,9 +199,9 @@ describe('published package surface', () => {
       createDesktopShortcut: true,
       createStartMenuShortcut: true,
       differentialPackage: false,
-      shortcutName: 'Wan Code',
+      shortcutName: 'WanCodeNewVer',
       useZip: true,
-      artifactName: 'Wan-Code-${version}-${arch}-Setup.${ext}',
+      artifactName: 'WanCodeNewVer-${version}-${arch}-Setup.${ext}',
     })
     expect(manifest.build?.linux?.icon).toBe('build/app-icon.png')
   })

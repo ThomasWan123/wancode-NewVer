@@ -1,4 +1,4 @@
-/** Local diagnostics log for packaged Wan Code processes that have no console. */
+/** Local diagnostics log for packaged WanCodeNewVer processes that have no console. */
 
 import {
   appendFileSync,

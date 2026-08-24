@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-Wan Code Cloud Relay（M3）的移动配对与会话投影。本包让 PWA 设备通过仅出站
+WanCodeNewVer Cloud Relay（M3）的移动配对与会话投影。本包让 PWA 设备通过仅出站
 HTTPS 注册、拨出站 WSS、列出同一账号下的桌面，并向选定桌面发送密封
 follow-up、approval 与 cancel。它能 drain 重连邮箱、把流式进度折成会话快照，
 并发布独立 Web App Manifest；缓存策略从不保存令牌。它不在公网接口上监听、

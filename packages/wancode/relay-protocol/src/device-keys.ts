@@ -1,4 +1,4 @@
-/** Ed25519 signing keys and X25519 encryption keys for Wan Code devices. */
+/** Ed25519 signing keys and X25519 encryption keys for WanCodeNewVer devices. */
 
 import {
   createPublicKey,

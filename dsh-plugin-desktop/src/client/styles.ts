@@ -30,7 +30,7 @@ button:has(svg[viewBox="0 0 182 24"])::before {
   mask: ${WANCODE_W_MASK};
 }
 button:has(svg[viewBox="0 0 182 24"])::after {
-  content: "Wan Code"; font-size: 14px; font-weight: 650; letter-spacing: 0.01em; white-space: nowrap;
+  content: "WanCodeNewVer"; font-size: 14px; font-weight: 650; letter-spacing: 0.01em; white-space: nowrap;
 }
 svg[viewBox="0 0 23.16 17.04"] {
   background: currentColor;
@@ -43,7 +43,7 @@ span:has(svg[viewBox="0 0 23.16 17.04"]) + span {
   font-size: 0 !important; letter-spacing: 0 !important;
 }
 span:has(svg[viewBox="0 0 23.16 17.04"]) + span::after {
-  content: "Wan Code"; font-size: 26px; line-height: 32px; font-weight: 500; letter-spacing: 0.01em;
+  content: "WanCodeNewVer"; font-size: 26px; line-height: 32px; font-weight: 500; letter-spacing: 0.01em;
 }
 `
 
@@ -93,7 +93,7 @@ function installStylesheet(css: string, pluginCss: string): () => void {
   return () => { style.remove() }
 }
 
-/** Install and remove the Wan Code product-brand restyle. @returns the style disposer. */
+/** Install and remove the WanCodeNewVer product-brand restyle. @returns the style disposer. */
 export function installBrandStyles(): () => void {
   return installStylesheet(WANCODE_BRAND_STYLES, 'dsh-plugin-desktop/brand')
 }

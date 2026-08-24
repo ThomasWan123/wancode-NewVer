@@ -2,7 +2,7 @@
   "name": "wan-code",
   "version": "2.0.1",
   "private": true,
-  "description": "Wan Code product workspace built on the DeepSeek Harness runtime",
+  "description": "WanCodeNewVer product workspace built on the DeepSeek Harness runtime",
   "license": "MIT",
   "packageManager": "yarn@4.18.0",
   "engines": {

@@ -563,9 +563,9 @@ describe('Electron compatibility runtime', () => {
     expect(electron.dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
       type: 'error',
       title: 'Plugin Recovery',
-      message: 'Wan Code could not load all plugins.',
+      message: 'WanCodeNewVer could not load all plugins.',
       detail: expect.stringContaining('dsh-vision-router'),
-      buttons: ['Open Wan Code Terminal', 'Restart Wan Code', 'Dismiss'],
+      buttons: ['Open WanCodeNewVer Terminal', 'Restart WanCodeNewVer', 'Dismiss'],
     }))
     const recoveryCalls = electron.dialog.showMessageBox.mock.calls as unknown as Array<[{ detail?: string }]>
     expect(recoveryCalls[0]?.[0].detail).toContain('vision_crop')
@@ -699,7 +699,7 @@ describe('Electron compatibility runtime', () => {
       expect(electron.dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
         type: 'error',
         title: 'Display Recovery',
-        buttons: ['Reload', 'Open Diagnostics Folder', 'Restart Wan Code', 'Dismiss'],
+        buttons: ['Reload', 'Open Diagnostics Folder', 'Restart WanCodeNewVer', 'Dismiss'],
       }))
       expect(electron.loadURL).toHaveBeenLastCalledWith(spec.url)
       await release()
@@ -750,7 +750,7 @@ describe('Electron compatibility runtime', () => {
       latestVersion: '2.0.0',
     })
     expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
-      title: 'Wan Code Is Up to Date',
+      title: 'WanCodeNewVer Is Up to Date',
       detail: 'Installed version: 2.0.0',
       buttons: ['OK'],
     }))
@@ -770,8 +770,8 @@ describe('Electron compatibility runtime', () => {
     electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 0, checkboxChecked: false })
     await expect(runtime.updates.confirmRollback('2.0.0')).resolves.toBe(true)
     expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
-      title: 'Roll Back Wan Code',
-      message: 'Reinstall Wan Code 2.0.0?',
+      title: 'Roll Back WanCodeNewVer',
+      message: 'Reinstall WanCodeNewVer 2.0.0?',
       buttons: ['Roll Back', 'Keep Current Version'],
     }))
     const controller = new AbortController()
@@ -785,7 +785,7 @@ describe('Electron compatibility runtime', () => {
     })
     expect(electron.shell.openPath).toHaveBeenCalledWith('/tmp/DSH-Desktop-2.1.0-mac.dmg')
     expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
-      title: 'Wan Code Update Downloaded',
+      title: 'WanCodeNewVer Update Downloaded',
       buttons: ['OK'],
     }))
 
@@ -893,7 +893,7 @@ describe('Electron compatibility runtime', () => {
     expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
   })
 
-  it('asks before copying an existing ~/.dsh tree into the Wan Code home', async () => {
+  it('asks before copying an existing ~/.dsh tree into the WanCodeNewVer home', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
     const runtime = new ElectronDesktopRuntime(async () => {})
@@ -902,7 +902,7 @@ describe('Electron compatibility runtime', () => {
     await expect(runtime.confirmImportLegacyHome()).resolves.toBe(true)
     expect(electron.dialog.showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Import Existing Data',
-      message: 'Copy data from ~/.dsh into Wan Code?',
+      message: 'Copy data from ~/.dsh into WanCodeNewVer?',
       buttons: ['Import', 'Start Fresh'],
     }))
   })

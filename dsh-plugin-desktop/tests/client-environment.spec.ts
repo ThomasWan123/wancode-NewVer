@@ -75,7 +75,7 @@ describe('advanced desktop layout', () => {
       expect(css).toMatch(/\.dshDesktopWindowsCaptionRow \{[^}]*grid-column: 2 \/ -1;[^}]*grid-row: 1;/)
       expect(css).toMatch(new RegExp(`\\.dshDesktopWindowsCaptionRow::before \\{[^}]*inset: 0 ${WINDOWS_CAPTION_CONTROLS_WIDTH}px 0 0;[^}]*-webkit-app-region: drag;`))
       expect(css).not.toMatch(/data-desktop-platform="win32"[^{}]*header[^{}]*\{[^}]*padding-right/)
-      expect(css).not.toContain('content: "Wan Code"')
+      expect(css).not.toContain('content: "WanCodeNewVer"')
       expect(css).not.toContain('dsh-wordmark-whale')
       expect(appendChild).toHaveBeenCalledWith(style)
       dispose()
@@ -86,7 +86,7 @@ describe('advanced desktop layout', () => {
     }
   })
 
-  it('restyles upstream brand marks to Wan Code without the advanced frame', () => {
+  it('restyles upstream brand marks to WanCodeNewVer without the advanced frame', () => {
     let css = ''
     const remove = vi.fn()
     const style = {
@@ -104,7 +104,7 @@ describe('advanced desktop layout', () => {
     try {
       const dispose = installBrandStyles()
       expect(style.dataset.pluginCss).toBe('dsh-plugin-desktop/brand')
-      expect(css).toContain('content: "Wan Code"')
+      expect(css).toContain('content: "WanCodeNewVer"')
       expect(css).toContain('svg[viewBox="0 0 182 24"]')
       expect(css).toContain('svg[viewBox="0 0 23.16 17.04"]')
       expect(css).toContain('button:has(svg[viewBox="0 0 182 24"])::after')
@@ -121,7 +121,7 @@ describe('advanced desktop layout', () => {
     }
   })
 
-  it('installs Wan Code brand styles in compatibility without advanced presentation', () => {
+  it('installs WanCodeNewVer brand styles in compatibility without advanced presentation', () => {
     vi.useFakeTimers()
     let css = ''
     const remove = vi.fn()
@@ -160,11 +160,11 @@ describe('advanced desktop layout', () => {
 
     try {
       apply(ctx)
-      expect(css).toContain('content: "Wan Code"')
+      expect(css).toContain('content: "WanCodeNewVer"')
       expect(css).toContain('svg[viewBox="0 0 182 24"]')
       expect(css).not.toContain('.dshDesktopFrame')
       expect(style.dataset.pluginCss).toBe('dsh-plugin-desktop/brand')
-      expect((document as unknown as { title: string }).title).toBe('Wan Code')
+      expect((document as unknown as { title: string }).title).toBe('WanCodeNewVer')
     }
     finally {
       for (const dispose of disposers) dispose()

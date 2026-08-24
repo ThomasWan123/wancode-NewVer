@@ -39,7 +39,7 @@ describe('Windows credential vault', () => {
     const first = credentialTarget('C:\\Users\\A\\Wancode\\harness', credentialRef('DEEPSEEK_API_KEY'))
     const second = credentialTarget('D:\\Portable\\Wancode\\harness', credentialRef('DEEPSEEK_API_KEY'))
 
-    expect(first).toMatch(/^Wan Code\/[a-f0-9]{24}\/DEEPSEEK_API_KEY$/u)
+    expect(first).toMatch(/^WanCodeNewVer\/[a-f0-9]{24}\/DEEPSEEK_API_KEY$/u)
     expect(second).not.toBe(first)
     expect(first).not.toContain('Users')
   })
@@ -122,7 +122,7 @@ describe('Windows credential persist fallback', () => {
 describe('Windows Credential Manager round-trip', () => {
   it.runIf(process.platform === 'win32')('stores and reads a throwaway generic credential', () => {
     const store = createWindowsCredentialStore()
-    const target = `Wan Code/test-${String(process.pid)}-${String(Date.now())}/ROUND_TRIP`
+    const target = `WanCodeNewVer/test-${String(process.pid)}-${String(Date.now())}/ROUND_TRIP`
     try {
       store.set(target, 'round-trip-value')
       expect(store.get(target)).toBe('round-trip-value')

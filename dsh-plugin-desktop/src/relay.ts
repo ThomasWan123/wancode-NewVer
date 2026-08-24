@@ -1,4 +1,4 @@
-/** Cordis Host plugin for opt-in outbound Wan Code relay dials. It never listens. */
+/** Cordis Host plugin for opt-in outbound WanCodeNewVer relay dials. It never listens. */
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -1087,7 +1087,7 @@ export function presentDesktopRelayPairingGrant(input: {
   const pairingCode = `${normalized.slice(0, 4)}-${normalized.slice(4)}`
   input.copyText(pairingCode)
   input.notify?.({
-    title: 'Wan Code',
+    title: 'WanCodeNewVer',
     body: 'Pairing code copied. It expires in five minutes.',
   })
   return { pairingCode }
@@ -1142,7 +1142,7 @@ export function bindDesktopRelayPairingTray(
           await copyDesktopRelayPairingGrant(handle, runtime)
         } catch {
           runtime.notify?.({
-            title: 'Wan Code',
+            title: 'WanCodeNewVer',
             body: 'Connect the desktop relay before copying a pairing code.',
           })
         }
@@ -1190,12 +1190,12 @@ export function bindDesktopRelayConnectTray(
             ...(options?.enroll === undefined ? {} : { enroll: options.enroll }),
           })
           runtime.notify?.({
-            title: 'Wan Code',
+            title: 'WanCodeNewVer',
             body: 'Desktop relay connected. Copy a pairing code next.',
           })
         } catch {
           runtime.notify?.({
-            title: 'Wan Code',
+            title: 'WanCodeNewVer',
             body: 'Connect a loopback desktop relay after loading the device identity.',
           })
         }

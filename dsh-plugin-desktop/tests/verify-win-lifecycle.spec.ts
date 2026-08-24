@@ -35,17 +35,17 @@ describe('Windows installer lifecycle verification', () => {
   it('requires an explicitly disposable runner and complete rollback inputs', () => {
     const complete = {
       WANCODE_WINDOWS_LIFECYCLE_DISPOSABLE: '1',
-      WANCODE_WINDOWS_PUBLISHER: 'Wan Code Software',
+      WANCODE_WINDOWS_PUBLISHER: 'WanCodeNewVer Software',
       WANCODE_WINDOWS_TRUSTED_THUMBPRINTS: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-      WANCODE_PREVIOUS_WINDOWS_INSTALLER: 'D:\\previous\\Wan-Code-2.0.0-x64-Setup.exe',
+      WANCODE_PREVIOUS_WINDOWS_INSTALLER: 'D:\\previous\\WanCodeNewVer-2.0.0-x64-Setup.exe',
       WANCODE_PREVIOUS_WINDOWS_VERSION: '2.0.0',
     }
 
     expect(assertWindowsLifecycleReady(complete, 'win32')).toEqual({
-      expectedPublisher: 'Wan Code Software',
+      expectedPublisher: 'WanCodeNewVer Software',
       trustedThumbprints: ['AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'],
       previous: {
-        installerPath: 'D:\\previous\\Wan-Code-2.0.0-x64-Setup.exe',
+        installerPath: 'D:\\previous\\WanCodeNewVer-2.0.0-x64-Setup.exe',
         version: '2.0.0',
       },
     })
@@ -69,11 +69,11 @@ describe('Windows installer lifecycle verification', () => {
 
   it('pins every native lifecycle signature to the expected publisher', async () => {
     const verifyAuthenticode = vi.fn(async () => ({
-      subject: 'CN=Wan Code Software',
+      subject: 'CN=WanCodeNewVer Software',
       thumbprint: 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
     }))
     const host = createNativeWindowsLifecycleHost({
-      expectedPublisher: 'Wan Code Software',
+      expectedPublisher: 'WanCodeNewVer Software',
       trustedThumbprints: ['AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'],
       environment: {},
       verifyAuthenticode,
@@ -89,14 +89,14 @@ describe('Windows installer lifecycle verification', () => {
 
     await expect(verifyWindowsInstallerLifecycle({
       platform: 'win32',
-      installDirectory: 'D:\\isolated\\Wan Code',
+      installDirectory: 'D:\\isolated\\WanCodeNewVer',
       current: {
         version: '2.1.0',
-        installerPath: 'D:\\dist\\Wan-Code-2.1.0-x64-Setup.exe',
+        installerPath: 'D:\\dist\\WanCodeNewVer-2.1.0-x64-Setup.exe',
       },
       previous: {
         version: '2.0.0',
-        installerPath: 'D:\\previous\\Wan-Code-2.0.0-x64-Setup.exe',
+        installerPath: 'D:\\previous\\WanCodeNewVer-2.0.0-x64-Setup.exe',
       },
       host,
     })).resolves.toEqual({
@@ -108,8 +108,8 @@ describe('Windows installer lifecycle verification', () => {
     })
 
     expect(host.events).toEqual([
-      'verify:D:\\dist\\Wan-Code-2.1.0-x64-Setup.exe',
-      'verify:D:\\previous\\Wan-Code-2.0.0-x64-Setup.exe',
+      'verify:D:\\dist\\WanCodeNewVer-2.1.0-x64-Setup.exe',
+      'verify:D:\\previous\\WanCodeNewVer-2.0.0-x64-Setup.exe',
       'install:2.0.0',
       'install:2.1.0',
       'install:2.0.0',
@@ -128,14 +128,14 @@ describe('Windows installer lifecycle verification', () => {
 
     await expect(verifyWindowsInstallerLifecycle({
       platform: 'win32',
-      installDirectory: 'D:\\isolated\\Wan Code',
+      installDirectory: 'D:\\isolated\\WanCodeNewVer',
       current: {
         version: '2.1.0',
-        installerPath: 'D:\\dist\\Wan-Code-2.1.0-x64-Setup.exe',
+        installerPath: 'D:\\dist\\WanCodeNewVer-2.1.0-x64-Setup.exe',
       },
       previous: {
         version: '2.0.0',
-        installerPath: 'D:\\previous\\Wan-Code-2.0.0-x64-Setup.exe',
+        installerPath: 'D:\\previous\\WanCodeNewVer-2.0.0-x64-Setup.exe',
       },
       host,
     })).rejects.toThrow('expected 2.1.0 but found unexpected')
@@ -147,14 +147,14 @@ describe('Windows installer lifecycle verification', () => {
     const host = lifecycleHost()
     const base = {
       platform: 'win32' as NodeJS.Platform,
-      installDirectory: 'D:\\isolated\\Wan Code',
+      installDirectory: 'D:\\isolated\\WanCodeNewVer',
       current: {
         version: '2.1.0',
-        installerPath: 'D:\\dist\\Wan-Code-2.1.0-x64-Setup.exe',
+        installerPath: 'D:\\dist\\WanCodeNewVer-2.1.0-x64-Setup.exe',
       },
       previous: {
         version: '2.0.0',
-        installerPath: 'D:\\previous\\Wan-Code-2.0.0-x64-Setup.exe',
+        installerPath: 'D:\\previous\\WanCodeNewVer-2.0.0-x64-Setup.exe',
       },
       host,
     }

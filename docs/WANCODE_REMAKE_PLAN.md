@@ -1,4 +1,4 @@
-# Wan Code delivery plan
+# WanCodeNewVer delivery plan
 
 Status: active
 
@@ -140,7 +140,7 @@ Status: active
 
 ## Goal
 
-Build Wan Code as a Windows-first coding-agent product on the published
+Build WanCodeNewVer as a Windows-first coding-agent product on the published
 DeepSeek Harness runtime. Version 1 includes the desktop core, an encrypted
 cloud relay, an installable mobile PWA, a reviewed plugin marketplace, and
 official IM channel adapters.
@@ -377,7 +377,7 @@ preset unless `DSH_PERMISSION_MODE` names `workspace-write` or
 `danger-full-access`. The in-app Permissions selector still changes later
 sessions through the upstream settings and session pins.
 
-First launch of an empty isolated Wan Code home can copy an existing `~/.dsh`
+First launch of an empty isolated WanCodeNewVer home can copy an existing `~/.dsh`
 tree after a native confirmation. The original install is left in place, plugin
 `node_modules` directories are omitted, and a symlink that escapes the source
 home fails closed. An explicit `DSH_HOME` override remains a shared-home choice
@@ -385,6 +385,6 @@ and is never rewritten by this import.
 
 Packaged launches mirror stdout and stderr into `logs/wancode.log` under Electron
 user data. The tray **Open Diagnostics Folder** command reveals that directory.
-If the sandboxed renderer exits abnormally, Wan Code offers reload, diagnostics,
+If the sandboxed renderer exits abnormally, WanCodeNewVer offers reload, diagnostics,
 or restart without first tearing down the Host. Clean exits and window unmount
 do not open that recovery dialog.

@@ -2,7 +2,7 @@
 
 [中文](README.zh.md)
 
-Mobile pairing and session projections for Wan Code Cloud Relay (M3). This
+Mobile pairing and session projections for WanCodeNewVer Cloud Relay (M3). This
 package lets a PWA device enroll over outbound HTTPS, dial outbound WSS, list
 same-account desktops, and send sealed follow-ups, approvals, and cancels to a
 selected desktop. It can drain reconnect mail, fold streaming progress into

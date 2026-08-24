@@ -1,4 +1,4 @@
-/* Wan Code PWA pairing shell. Never listen. Never store credentials. */
+/* WanCodeNewVer PWA pairing shell. Never listen. Never store credentials. */
 'use strict';
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');

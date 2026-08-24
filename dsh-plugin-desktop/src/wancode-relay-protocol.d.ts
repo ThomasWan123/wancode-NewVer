@@ -1,4 +1,4 @@
-/** Ambient types for the bundled Wan Code relay protocol. Yarn cannot link it on exFAT. */
+/** Ambient types for the bundled WanCodeNewVer relay protocol. Yarn cannot link it on exFAT. */
 
 declare module '@wancode/relay-protocol' {
   export class RelayAuthorizationError extends Error {

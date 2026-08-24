@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 
-/** Stable native identity for the Wancode desktop product. */
-export const WANCODE_PRODUCT_NAME = 'Wan Code'
+/** Stable native identity for the WanCodeNewVer desktop product. */
+export const WANCODE_PRODUCT_NAME = 'WanCodeNewVer'
 
 /** Window title shown by compatibility and advanced presentation modes. */
 export const WANCODE_WINDOW_TITLE = WANCODE_PRODUCT_NAME

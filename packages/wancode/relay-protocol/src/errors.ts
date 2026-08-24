@@ -1,4 +1,4 @@
-/** Fail-closed authorization outcomes for the Wan Code relay protocol. */
+/** Fail-closed authorization outcomes for the WanCodeNewVer relay protocol. */
 
 /** Stable fail-closed authorization outcomes. */
 export const RELAY_ERROR_CODES = [

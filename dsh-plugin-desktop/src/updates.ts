@@ -495,9 +495,9 @@ export function apply(ctx: Context, config: Config): void {
         ? rollbackVersion === undefined
           ? availableVersion === undefined
             ? checking ? 'Checking for Updates…' : 'Check for Updates…'
-            : `Wan Code ${availableVersion} Available`
-          : `Rollback to Wan Code ${rollbackVersion}…`
-        : `Downloading Wan Code ${downloadingVersion}…`,
+            : `WanCodeNewVer ${availableVersion} Available`
+          : `Rollback to WanCodeNewVer ${rollbackVersion}…`
+        : `Downloading WanCodeNewVer ${downloadingVersion}…`,
       invoke: runTrayCommand,
     })
     refreshTray = registration.refresh

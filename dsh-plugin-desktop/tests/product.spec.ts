@@ -10,8 +10,8 @@ import {
 
 describe('Wancode product identity', () => {
   it('uses one stable native identity across the desktop shell', () => {
-      expect(WANCODE_PRODUCT_NAME).toBe('Wan Code')
-      expect(WANCODE_WINDOW_TITLE).toBe('Wan Code')
+      expect(WANCODE_PRODUCT_NAME).toBe('WanCodeNewVer')
+      expect(WANCODE_WINDOW_TITLE).toBe('WanCodeNewVer')
       expect(WANCODE_APP_ID).toBe('com.wancode.desktop')
   })
 
