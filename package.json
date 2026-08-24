@@ -1,6 +1,6 @@
 {
   "name": "wan-code",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
   "description": "WanCodeNewVer product workspace built on the DeepSeek Harness runtime",
   "license": "MIT",

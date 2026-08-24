@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-desktop",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "WanCodeNewVer: an Electron coding-agent shell composed with the DeepSeek Harness runtime",
   "license": "MIT",
   "publishConfig": {
