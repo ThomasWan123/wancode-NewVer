@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import {
   verifySignedWindowsRelease,
   type SignedWindowsReleaseOptions,
 } from '../scripts/verify-win-release.ts'
+
+const PRODUCT_VERSION = (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version
 
 function options(
   verify: SignedWindowsReleaseOptions['verifyAuthenticode'],
@@ -12,7 +15,7 @@ function options(
     platform: 'win32',
     expectedPublisher: publisher,
     artifacts: {
-      installerPath: 'D:\\dist\\WanCodeNewVer-2.0.1-x64-Setup.exe',
+      installerPath: `D:\\dist\\WanCodeNewVer-${PRODUCT_VERSION}-x64-Setup.exe`,
       applicationPath: 'D:\\dist\\win-unpacked\\WanCodeNewVer.exe',
     },
     verifyAuthenticode: verify,

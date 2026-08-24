@@ -2,6 +2,7 @@
   "name": "dsh-plugin-desktop",
   "version": "2.1.0",
   "description": "WanCodeNewVer: an Electron coding-agent shell composed with the DeepSeek Harness runtime",
+  "author": "WanCodeNewVer",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
@@ -271,6 +272,7 @@
   "build": {
     "appId": "com.wancode.desktop",
     "productName": "WanCodeNewVer",
+    "copyright": "Copyright \u00a9 2026 WanCodeNewVer",
     "asar": true,
     "asarUnpack": [
       "package.json",
@@ -309,6 +311,7 @@
       "x64ArchFiles": "**/node_modules/{node-pty/prebuilds/darwin-*/**,node-addon-require-builtin-darwin-*/**,@vscode/ripgrep-darwin-*/**,@img/sharp-darwin-*/**,@img/sharp-libvips-darwin-*/**,@koromix/koffi-darwin-*/**}"
     },
     "win": {
+      "publisherName": "WanCodeNewVer",
       "target": [
         {
           "target": "nsis",

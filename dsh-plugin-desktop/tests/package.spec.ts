@@ -9,6 +9,7 @@ const workspaceRoot = new URL('../', packageRoot)
 const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), 'utf8')) as {
   name?: unknown
   version?: unknown
+  author?: unknown
   bin?: Record<string, unknown>
   exports?: Record<string, unknown>
   files?: unknown
@@ -17,6 +18,7 @@ const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), '
   build?: {
     productName?: unknown
     appId?: unknown
+    copyright?: unknown
     asarUnpack?: unknown
     afterPack?: unknown
     electronFuses?: unknown
@@ -29,7 +31,7 @@ const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), '
       target?: unknown
       x64ArchFiles?: unknown
     }
-    win?: { icon?: unknown; target?: unknown }
+    win?: { icon?: unknown; target?: unknown; publisherName?: unknown }
     nsis?: Record<string, unknown>
     linux?: { icon?: unknown }
   }
@@ -40,6 +42,7 @@ const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), '
 }
 const workspaceManifest = JSON.parse(readFileSync(new URL('package.json', workspaceRoot), 'utf8')) as {
   version?: unknown
+  author?: unknown
   resolutions?: Record<string, unknown>
   scripts?: Record<string, unknown>
 }
@@ -156,8 +159,12 @@ describe('published package surface', () => {
 
   it('fixes the installed application identity', () => {
     expect(manifest.version).toBe(workspaceManifest.version)
+    expect(manifest.author).toBe('WanCodeNewVer')
+    expect(workspaceManifest.author).toBe('WanCodeNewVer')
     expect(manifest.build?.productName).toBe('WanCodeNewVer')
     expect(manifest.build?.appId).toBe('com.wancode.desktop')
+    expect(manifest.build?.copyright).toBe('Copyright \u00a9 2026 WanCodeNewVer')
+    expect(manifest.build?.win?.publisherName).toBe('WanCodeNewVer')
     expect(manifest.build?.asarUnpack).toEqual([
       'package.json',
       'cordis.patch.yml',

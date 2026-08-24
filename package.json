@@ -3,6 +3,7 @@
   "version": "2.1.0",
   "private": true,
   "description": "WanCodeNewVer product workspace built on the DeepSeek Harness runtime",
+  "author": "WanCodeNewVer",
   "license": "MIT",
   "packageManager": "yarn@4.18.0",
   "engines": {

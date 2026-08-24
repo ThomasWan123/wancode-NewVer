@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +7,9 @@ import {
   type MacSmokeVerificationOptions,
 } from '../scripts/verify-mac-smoke.ts'
 import { MACOS_UNIVERSAL_NATIVE_ENTRIES } from '../scripts/mac-universal.ts'
+
+const PRODUCT_VERSION = (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version
+const SMOKE_DMG = `/release/dist/WanCodeNewVer-${PRODUCT_VERSION}.dmg`
 
 const temporaryRoots: string[] = []
 
@@ -47,7 +50,7 @@ function options(overrides: Partial<MacSmokeVerificationOptions> = {}) {
   const value: MacSmokeVerificationOptions = {
     distDir: '/release/dist',
     productName: 'WanCodeNewVer',
-    listDmgs: () => ['/release/dist/WanCodeNewVer-2.0.1.dmg'],
+    listDmgs: () => [SMOKE_DMG],
     makeMountPoint: () => '/private/tmp/dsh-desktop-dmg-smoke-test',
     run: (command, args) => { calls.push({ command, args: [...args] }) },
     removeMountPoint,
@@ -89,14 +92,14 @@ describe('macOS DMG smoke artifact verification', () => {
 
     expect(verifyMacSmoke(harness.value)).toEqual({
       appPath,
-      dmgPath: '/release/dist/WanCodeNewVer-2.0.1.dmg',
+      dmgPath: SMOKE_DMG,
     })
 
     expect(harness.calls).toEqual([
       {
         command: 'hdiutil',
         args: [
-          'attach', '/release/dist/WanCodeNewVer-2.0.1.dmg',
+          'attach', SMOKE_DMG,
           '-mountpoint', value.root, '-nobrowse', '-readonly',
         ],
       },
@@ -132,7 +135,7 @@ describe('macOS DMG smoke artifact verification', () => {
     expect(harness.calls).toEqual([
       {
         command: 'hdiutil',
-        args: ['attach', '/release/dist/WanCodeNewVer-2.0.1.dmg', '-mountpoint', value.root, '-nobrowse', '-readonly'],
+        args: ['attach', SMOKE_DMG, '-mountpoint', value.root, '-nobrowse', '-readonly'],
       },
       { command: 'hdiutil', args: ['detach', value.root] },
     ])
