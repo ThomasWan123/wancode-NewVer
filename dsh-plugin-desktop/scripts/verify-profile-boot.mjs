@@ -51,6 +51,13 @@ try {
       }],
     },
     ...prepared.patches,
+    // The smoke assembles a win32 profile regardless of the host OS so that
+    // composition logic is exercised on every CI runner.  Platform-native
+    // plugins that call Win32 APIs cannot load on non-win32, so disable them
+    // here.  On actual win32 runners they remain active (fail-closed).
+    ...(process.platform !== 'win32'
+      ? [{ id: 'desktop-windows-credentials', disabled: true }]
+      : []),
   ]
   const packageRoot = new URL('../', import.meta.url)
   const pnpmBinPath = fileURLToPath(new URL('node_modules/pnpm/bin/pnpm.mjs', packageRoot))
@@ -100,6 +107,9 @@ try {
     },
     openTerminal() {},
     openDiagnosticsFolder() {},
+    reportRendererBoot() {},
+    reportApplicationHealth: async () => {},
+    registerApplicationHealthHandler: () => () => {},
     setThemeSource(source) { nativeThemeSource = source },
     async requestRestart() {},
     prepareToQuit() {},
