@@ -63,6 +63,10 @@
       "types": "./lib/types/session-ledger.d.ts",
       "default": "./lib/session-ledger.js"
     },
+    "./lease-adapter": {
+      "types": "./lib/types/lease-adapter.d.ts",
+      "default": "./lib/lease-adapter.js"
+    },
     "./updates": {
       "types": "./lib/types/updates.d.ts",
       "default": "./lib/updates.js"

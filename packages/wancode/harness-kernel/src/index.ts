@@ -1,5 +1,16 @@
 export type { ProviderProfile } from './provider-profile.js'
-export type { Lease, LeaseState } from './lease.js'
+export type {
+  Lease,
+  LeaseState,
+  LeaseResourceKind,
+  LeaseAcquireRequest,
+  LeaseAcquireResult,
+  LeaseDenyReason,
+  LeaseReleaseRequest,
+  LeaseReleaseResult,
+  LeaseManager,
+} from './lease.js'
+export { createLeaseManager, LeaseError } from './lease.js'
 export type {
   LedgerEvent,
   LedgerEventKind,
