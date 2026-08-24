@@ -96,7 +96,7 @@ describe('legacy Harness home import', () => {
     expect(confirm).not.toHaveBeenCalled()
   })
 
-  it('does not overwrite a Wan Code home that already has user data', async () => {
+  it('does not overwrite a WanCodeNewVer home that already has user data', async () => {
     const root = await temporaryRoot()
     const sourceHome = join(root, '.dsh')
     const destinationHome = join(root, 'harness')

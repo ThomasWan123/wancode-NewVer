@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="dsh-plugin-desktop/build/app-icon.png" width="96" height="96" alt="Wan Code">
+  <img src="dsh-plugin-desktop/build/app-icon.png" width="96" height="96" alt="WanCodeNewVer">
 </p>
 
-<h1 align="center">Wan Code</h1>
+<h1 align="center">WanCodeNewVer</h1>
 
 <p align="center">
   <strong>Windows 优先、本地优先的 Coding Agent 桌面产品</strong><br>
-  以固定版本的 DeepSeek Harness 作为 Agent 运行时，由 Wan Code 负责桌面体验、安全边界、更新与后续远程控制。
+  以固定版本的 DeepSeek Harness 作为 Agent 运行时，由 WanCodeNewVer 负责桌面体验、安全边界、更新与后续远程控制。
 </p>
 
 <p align="center">
@@ -27,16 +27,16 @@
   <a href="CONTRIBUTING.md">参与贡献</a>
 </p>
 
-> Wan Code 是独立社区产品，不是 DeepSeek 官方应用。DeepSeek Harness 是署名保留的上游开源运行时，不是本产品名称。
+> WanCodeNewVer 是独立社区产品，不是 DeepSeek 官方应用。DeepSeek Harness 是署名保留的上游开源运行时，不是本产品名称。
 
 ## 产品定位
 
-Wan Code 在本机运行 Harness Host，并在沙箱 Electron 窗口中呈现官方 Web 界面。云端不能打开用户机器上的入站端口，也不能直接执行本机工具或读取模型凭据。后续远程控制只允许桌面主动发起的出站连接，敏感载荷使用设备密钥端到端加密。
+WanCodeNewVer 在本机运行 Harness Host，并在沙箱 Electron 窗口中呈现官方 Web 界面。云端不能打开用户机器上的入站端口，也不能直接执行本机工具或读取模型凭据。后续远程控制只允许桌面主动发起的出站连接，敏感载荷使用设备密钥端到端加密。
 
 ```text
-Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / tools
+WanCodeNewVer Desktop ──loopback──> Harness Host ──> Cordis plugins / tools
        │
-       └── outbound encrypted WSS ──> Wan Code Relay <──> Mobile PWA / Channels
+       └── outbound encrypted WSS ──> WanCodeNewVer Relay <──> Mobile PWA / Channels
 ```
 
 ## 当前能力
@@ -70,7 +70,7 @@ Windows 聚焦门禁覆盖 252 项桌面测试，外加完整运行时依赖闭�
 | --- | --- |
 | `deepseek-harness/` | 只读、固定版本的官方上游 Git 子模块 |
 | `dsh-plugin-desktop/` | Electron、Host/Client 插件、Windows 安全与打包 |
-| `packages/wancode/` | Wan Code 自有协议、云模块与移动 PWA 配对面 |
+| `packages/wancode/` | WanCodeNewVer 自有协议、云模块与移动 PWA 配对面 |
 | `dsh-community-fabric/` | 社区互操作规范（文档骨架，不可加载） |
 | `dsh-community-market/` | 审核制插件市场契约（文档骨架，不可加载） |
 
@@ -102,7 +102,7 @@ corepack yarn dist:win
 
 未签名预览安装包也发布为 GitHub prerelease
 [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned)
-（`Wan-Code-2.0.1-x64-Setup.exe`，SHA-256
+（`WanCodeNewVer-2.0.1-x64-Setup.exe`，SHA-256
 `61798CE6E3CC4426C021582A6174A1809F48AAA366AE68292C70A31D07B9BB26`）。
 Windows SmartScreen 会警告。该标签不是 Latest，也不替换已发布的 `v2.0.1`。
 安装包约 197 MB，不提交进 Git。
@@ -112,7 +112,7 @@ Windows SmartScreen 会警告。该标签不是 Latest，也不替换已发布�
 ## 路线图
 
 1. **Windows 桌面核心** — 已作为可独立使用的本地产品交付；签名正式包待证书。
-2. **Wan Code Cloud Relay** — 账号、设备注册、短期令牌、撤销、审计与端到端加密协议。
+2. **WanCodeNewVer Cloud Relay** — 账号、设备注册、短期令牌、撤销、审计与端到端加密协议。
 3. **移动 PWA** — 进行中：会话快照、密封控制、PNG 图标与回环托管；公网安装尚未交付。
 4. **审核制插件市场** — 签名 Manifest、权限声明、兼容性检查、原子安装与回滚。
 5. **消息渠道** — 通过官方 API 接入飞书、Discord、WhatsApp，以及合规可用的微信能力。
@@ -128,4 +128,4 @@ Windows SmartScreen 会警告。该标签不是 Latest，也不替换已发布�
 
 ## 许可证
 
-Wan Code 自有代码遵循 [MIT License](LICENSE)，并保留 DeepSeek Harness、Cordis 及第三方组件的许可证与署名。问题请提交到 [GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues)。
+WanCodeNewVer 自有代码遵循 [MIT License](LICENSE)，并保留 DeepSeek Harness、Cordis 及第三方组件的许可证与署名。问题请提交到 [GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues)。

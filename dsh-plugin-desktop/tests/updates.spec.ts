@@ -205,7 +205,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
       })
     }, persistWait)
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
-    expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+    expect(harness.tray.label()).toBe('Rollback to WanCodeNewVer 2.0.0…')
   })
 
   it('automatically rolls back when the updated renderer misses its health deadline', async () => {
@@ -260,7 +260,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     })
 
     await vi.waitFor(() => {
-      expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+      expect(harness.tray.label()).toBe('Rollback to WanCodeNewVer 2.0.0…')
     })
     const health = Promise.resolve(harness.reportHealth('failed'))
     await vi.waitFor(() => { expect(harness.downloadAndOpen).toHaveBeenCalledOnce() })
@@ -287,7 +287,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     })
 
     await vi.waitFor(() => {
-      expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+      expect(harness.tray.label()).toBe('Rollback to WanCodeNewVer 2.0.0…')
     })
     harness.reportHealth('failed')
     await vi.advanceTimersByTimeAsync(100)
@@ -313,7 +313,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     })
 
     await vi.waitFor(() => {
-      expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+      expect(harness.tray.label()).toBe('Rollback to WanCodeNewVer 2.0.0…')
     })
     await harness.tray.invoke()
 
@@ -346,7 +346,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     })
 
     await vi.waitFor(() => {
-      expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+      expect(harness.tray.label()).toBe('Rollback to WanCodeNewVer 2.0.0…')
     })
     await harness.tray.invoke()
 
@@ -441,7 +441,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     })
 
     await vi.waitFor(() => {
-      expect(harness.tray.label()).toBe('Rollback to Wan Code 2.0.0…')
+      expect(harness.tray.label()).toBe('Rollback to WanCodeNewVer 2.0.0…')
     })
     const pending = harness.tray.invoke()
     await vi.waitFor(() => { expect(harness.confirmRollback).toHaveBeenCalledOnce() })
@@ -515,7 +515,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
       'https://api.github.com/repos/ThomasWan123/wancode-NewVer/releases?per_page=100&page=1',
     ])
     expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0-beta.1')
-    expect(harness.tray.label()).toBe('Wan Code 2.1.0-beta.1 Available')
+    expect(harness.tray.label()).toBe('WanCodeNewVer 2.1.0-beta.1 Available')
   })
 
   it('preserves beta prompt history across restarts', async () => {
@@ -554,7 +554,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
     await vi.waitFor(() => { expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0') })
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
-    expect(harness.tray.label()).toBe('Wan Code 2.1.0 Available')
+    expect(harness.tray.label()).toBe('WanCodeNewVer 2.1.0 Available')
     await vi.waitFor(async () => {
       expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
         version: 2,
@@ -588,7 +588,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     expect(version).toBe('2.1.0')
     expect(signal).toBeInstanceOf(AbortSignal)
     expect(signal.aborted).toBe(false)
-    expect(harness.tray.label()).toBe('Downloading Wan Code 2.1.0…')
+    expect(harness.tray.label()).toBe('Downloading WanCodeNewVer 2.1.0…')
     expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
       version: 4,
       lastPromptedVersion: '2.1.0',
@@ -601,9 +601,9 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     expect(harness.notifications).toEqual([])
 
     resolveDownload()
-    await vi.waitFor(() => { expect(harness.tray.label()).toBe('Wan Code 2.1.0 Available') })
+    await vi.waitFor(() => { expect(harness.tray.label()).toBe('WanCodeNewVer 2.1.0 Available') })
     expect(harness.notifications).toEqual([])
-    expect(harness.tray.label()).toBe('Wan Code 2.1.0 Available')
+    expect(harness.tray.label()).toBe('WanCodeNewVer 2.1.0 Available')
   })
 
   it('treats a manual available-version selection as a fresh confirmation', async () => {
@@ -619,7 +619,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     await harness.tray.invoke()
     expect(confirmDownload).toHaveBeenCalledOnce()
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
-    expect(harness.tray.label()).toBe('Wan Code 2.1.0 Available')
+    expect(harness.tray.label()).toBe('WanCodeNewVer 2.1.0 Available')
 
     await harness.tray.invoke()
     expect(confirmDownload).toHaveBeenCalledTimes(2)
@@ -643,7 +643,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0')
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.showManualCheckResult).not.toHaveBeenCalled()
-    expect(harness.tray.label()).toBe('Wan Code 2.2.0 Available')
+    expect(harness.tray.label()).toBe('WanCodeNewVer 2.2.0 Available')
   })
 
   it.each([
@@ -773,7 +773,7 @@ describe('desktop update Host plugin', { timeout: 15_000 }, () => {
     expect(harness.downloadAndOpen).toHaveBeenCalledOnce()
     expect(harness.notifications).toEqual([])
     expect(harness.warnings).toEqual([])
-    expect(harness.tray.label()).toBe('Wan Code 2.1.0 Available')
+    expect(harness.tray.label()).toBe('WanCodeNewVer 2.1.0 Available')
   })
 
   it('aborts checks and downloads and removes the tray item on effect disposal', async () => {

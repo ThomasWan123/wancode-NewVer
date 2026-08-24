@@ -1,4 +1,4 @@
-/** Wan Code mobile PWA pairing and session projections. This package never listens. */
+/** WanCodeNewVer mobile PWA pairing and session projections. This package never listens. */
 
 export {
   projectRelayNotification,

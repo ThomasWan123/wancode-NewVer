@@ -72,6 +72,7 @@ function createHarness(platform: DesktopRuntime['platform'] = 'darwin'): PluginH
     },
     mountScheduled: async () => {},
     show: () => {},
+    copyText: () => {},
     registerTrayItem: () => ({ refresh: () => {}, dispose: () => {} }),
     openTerminal: () => {},
     openDiagnosticsFolder: () => {},
@@ -195,8 +196,8 @@ describe('desktop Host plugin', () => {
     expect(harness.shell()).toEqual(expect.objectContaining({
       mode: 'compatibility',
       url: 'http://127.0.0.1:43120/?dsh-desktop-mode=compatibility&dsh-desktop-platform=darwin',
-      productName: 'Wan Code',
-      windowTitle: 'Wan Code',
+      productName: 'WanCodeNewVer',
+      windowTitle: 'WanCodeNewVer',
       readThemeSource: expect.any(Function),
     }))
     expect(harness.shell()?.iconPath.endsWith(join('build', 'app-icon-mac.png'))).toBe(true)

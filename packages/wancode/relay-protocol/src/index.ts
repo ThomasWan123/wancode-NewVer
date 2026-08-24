@@ -1,4 +1,4 @@
-/** Fail-closed Wan Code remote-control protocol and outbound-only WebSocket client. */
+/** Fail-closed WanCodeNewVer remote-control protocol and outbound-only WebSocket client. */
 
 export {
   RELAY_ERROR_CODES,

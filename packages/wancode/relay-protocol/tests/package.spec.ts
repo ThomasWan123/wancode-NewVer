@@ -10,7 +10,7 @@ const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.
 }
 
 describe('relay-protocol package surface', () => {
-  it('is an owned Wan Code module without a loadable DSH entry', () => {
+  it('is an owned WanCodeNewVer module without a loadable DSH entry', () => {
     expect(manifest.name).toBe('@wancode/relay-protocol')
     expect(manifest.dsh).toBeUndefined()
     expect(manifest.packageManager).toBeUndefined()

@@ -1164,7 +1164,7 @@ describe('desktop outbound relay Host plugin', () => {
     })).toEqual({ pairingCode: 'ABCD-EFGH' })
     expect(copyText).toHaveBeenCalledWith('ABCD-EFGH')
     expect(notify).toHaveBeenCalledWith({
-      title: 'Wan Code',
+      title: 'WanCodeNewVer',
       body: 'Pairing code copied. It expires in five minutes.',
     })
     expect(JSON.stringify(notify.mock.calls)).not.toMatch(/ABCD-EFGH/i)
@@ -1302,7 +1302,7 @@ describe('desktop outbound relay Host plugin', () => {
     await invoke?.()
     expect(copyText).not.toHaveBeenCalled()
     expect(notify).toHaveBeenCalledWith({
-      title: 'Wan Code',
+      title: 'WanCodeNewVer',
       body: 'Connect the desktop relay before copying a pairing code.',
     })
     expect(JSON.stringify(notify.mock.calls)).not.toMatch(/tok-|accessToken|pairingCode/i)
@@ -1515,7 +1515,7 @@ describe('desktop outbound relay Host plugin', () => {
     expect(enroll).toHaveBeenCalledOnce()
     expect(handle?.connectedDeviceId).toBe('device-a')
     expect(notify).toHaveBeenCalledWith({
-      title: 'Wan Code',
+      title: 'WanCodeNewVer',
       body: 'Desktop relay connected. Copy a pairing code next.',
     })
     expect(JSON.stringify(notify.mock.calls)).not.toMatch(/tok-loop|accessToken/i)

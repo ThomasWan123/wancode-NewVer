@@ -11,12 +11,12 @@ const WANCODE_FAVICON = `data:image/svg+xml,${encodeURIComponent(
 )}`
 
 /**
- * Rewrite visible DeepSeek product copy to Wan Code.
+ * Rewrite visible DeepSeek product copy to WanCodeNewVer.
  * Leaves hostnames, package names, and lowercase model ids unchanged.
  */
 export function rewriteBrandText(value: string): string {
-  if (value === 'HARNESS') return 'Wan Code'
-  return value.replaceAll('DeepSeek Harness', 'Wan Code').replaceAll('DeepSeek', 'Wan Code')
+  if (value === 'HARNESS') return 'WanCodeNewVer'
+  return value.replaceAll('DeepSeek Harness', 'WanCodeNewVer').replaceAll('DeepSeek', 'WanCodeNewVer')
 }
 
 function rewriteAttributes(element: Element): void {
@@ -64,7 +64,7 @@ function installFavicon(doc: Document): () => void {
 }
 
 /**
- * Keep visible DeepSeek product copy on the live document rewritten to Wan Code.
+ * Keep visible DeepSeek product copy on the live document rewritten to WanCodeNewVer.
  * @param doc - document to restyle; defaults to the renderer document.
  * @returns disposer that disconnects the observer and removes the favicon.
  */

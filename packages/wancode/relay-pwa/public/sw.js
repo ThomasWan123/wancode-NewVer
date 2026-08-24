@@ -1,4 +1,4 @@
-/* Wan Code PWA shell. Never listen. Never cache credentials. */
+/* WanCodeNewVer PWA shell. Never listen. Never cache credentials. */
 'use strict';
 const CACHE = "wancode-pwa-shell-v16";
 const SHELL = ["/","/index.html","/manifest.webmanifest","/sw.js","/pair.js","/icons/wancode-192.png","/icons/wancode-512.png"];

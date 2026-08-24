@@ -1,4 +1,4 @@
-/** Cordis Host plugin for opt-in outbound Wan Code relay dials. It never listens. */
+/** Cordis Host plugin for opt-in outbound WanCodeNewVer relay dials. It never listens. */
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -159,7 +159,7 @@ export interface DesktopRelayHandle {
     readonly expiresAt: number
     readonly desktopDeviceId: string
   }>
-  readonly connectedDeviceId?: string
+  readonly connectedDeviceId?: string | undefined
   connect(input: DesktopRelayConnectInput): Promise<DesktopRelayConnection>
   processMail(input: Pick<ProcessDesktopRelayMailInput, 'identity'> & Partial<DesktopRelayApplySinks>): Promise<{
     readonly applied: number
@@ -311,10 +311,10 @@ export function prepareDesktopRelay(
         },
         ...(input.approval === undefined && defaults?.approval === undefined
           ? {}
-          : { approval: input.approval ?? defaults?.approval }),
+          : { approval: (input.approval ?? defaults?.approval)! }),
         ...(input.cancel === undefined && defaults?.cancel === undefined
           ? {}
-          : { cancel: input.cancel ?? defaults?.cancel }),
+          : { cancel: (input.cancel ?? defaults?.cancel)! }),
       })
     },
     async sendProgress(input) {
@@ -1087,7 +1087,7 @@ export function presentDesktopRelayPairingGrant(input: {
   const pairingCode = `${normalized.slice(0, 4)}-${normalized.slice(4)}`
   input.copyText(pairingCode)
   input.notify?.({
-    title: 'Wan Code',
+    title: 'WanCodeNewVer',
     body: 'Pairing code copied. It expires in five minutes.',
   })
   return { pairingCode }
@@ -1112,7 +1112,7 @@ export async function copyDesktopRelayPairingGrant(
   return presentDesktopRelayPairingGrant({
     pairingCode: minted.pairingCode,
     copyText: presentation.copyText,
-    notify: presentation.notify,
+    ...(presentation.notify !== undefined ? { notify: presentation.notify } : {}),
   })
 }
 
@@ -1142,7 +1142,7 @@ export function bindDesktopRelayPairingTray(
           await copyDesktopRelayPairingGrant(handle, runtime)
         } catch {
           runtime.notify?.({
-            title: 'Wan Code',
+            title: 'WanCodeNewVer',
             body: 'Connect the desktop relay before copying a pairing code.',
           })
         }
@@ -1190,12 +1190,12 @@ export function bindDesktopRelayConnectTray(
             ...(options?.enroll === undefined ? {} : { enroll: options.enroll }),
           })
           runtime.notify?.({
-            title: 'Wan Code',
+            title: 'WanCodeNewVer',
             body: 'Desktop relay connected. Copy a pairing code next.',
           })
         } catch {
           runtime.notify?.({
-            title: 'Wan Code',
+            title: 'WanCodeNewVer',
             body: 'Connect a loopback desktop relay after loading the device identity.',
           })
         }
@@ -1238,7 +1238,7 @@ function asRelayPairingPresentation(value: unknown): {
   return {
     registerTrayItem: record.registerTrayItem.bind(value),
     copyText: record.copyText.bind(value),
-    notify,
+    ...(notify !== undefined ? { notify } : {}),
   }
 }
 

@@ -1,4 +1,4 @@
-/** Opt-in copy of an existing `~/.dsh` tree into the isolated Wan Code home. */
+/** Opt-in copy of an existing `~/.dsh` tree into the isolated WanCodeNewVer home. */
 
 import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import { DEFAULT_DSH_HOME_DISPLAY } from '@deepseek-ai/dsh-home-paths'
@@ -30,7 +30,7 @@ export type HomeMigrationStatus = 'skipped' | 'declined' | 'imported'
 export interface HomeMigrationOptions {
   /** Electron user-data directory that stores the import decision. */
   readonly userDataPath: string
-  /** Isolated Wan Code Harness home that will receive the copy. */
+  /** Isolated WanCodeNewVer Harness home that will receive the copy. */
   readonly destinationHome: string
   /** Existing default Harness home, normally `~/.dsh`. */
   readonly sourceHome: string
@@ -46,7 +46,7 @@ interface HomeMigrationStateV1 {
 }
 
 /**
- * Copy `~/.dsh` into the Wan Code home only after an explicit confirmation.
+ * Copy `~/.dsh` into the WanCodeNewVer home only after an explicit confirmation.
  * The original tree is left unchanged. Plugin `node_modules` directories are
  * omitted, and a symlink that escapes the source home fails closed.
  * @param options - source, destination, and confirmation adapter.
@@ -83,7 +83,7 @@ async function importHarnessHome(sourceHome: string, destinationHome: string): P
   try {
     await copyTree(source, source, staging, { bytes: 0 })
     if (await hasUserData(destination)) {
-      throw new Error(`${BIN_NAME}: Wan Code home already contains user data`)
+      throw new Error(`${BIN_NAME}: WanCodeNewVer home already contains user data`)
     }
     await rm(destination, { recursive: true, force: true })
     await rename(staging, destination)

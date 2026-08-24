@@ -2,7 +2,7 @@
 
 [中文](README.zh.md)
 
-Fail-closed remote-control contract and outbound WebSocket client for Wan Code
+Fail-closed remote-control contract and outbound WebSocket client for WanCodeNewVer
 Cloud Relay (M2). This package authorizes versioned envelopes against
 short-lived tokens and registered devices, opens sessions only from a
 desktop-signed **outbound** handshake, and dials the relay. It does not listen

@@ -75,9 +75,9 @@ export function verifyWindowsInstaller(
   const distDir = join(options.desktopRoot, 'dist')
   const installerPath = join(
     distDir,
-    `Wan-Code-${options.version}-x64-Setup.exe`,
+    `WanCodeNewVer-${options.version}-x64-Setup.exe`,
   )
-  const applicationPath = join(distDir, 'win-unpacked', 'Wan Code.exe')
+  const applicationPath = join(distDir, 'win-unpacked', 'WanCodeNewVer.exe')
 
   assertPortableExecutable(installerPath, 'Windows NSIS installer')
   assertPortableExecutable(applicationPath, 'unpacked Windows application')

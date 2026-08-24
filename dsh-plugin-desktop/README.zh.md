@@ -1,8 +1,8 @@
-# Wan Code 桌面包
+# WanCodeNewVer 桌面包
 
 [English](README.md) | 中文
 
-`dsh-plugin-desktop` 在 Electron 中运行固定版本的 Harness Runtime，同时仍参与普通 Cordis 组合。安装后的产品名称是 **Wan Code**。`dsh-plugin-desktop` 与 `dsh-desktop` 作为面向运行时的技术兼容标识保留，不代表产品品牌。
+`dsh-plugin-desktop` 在 Electron 中运行固定版本的 Harness Runtime，同时仍参与普通 Cordis 组合。安装后的产品名称是 **WanCodeNewVer**。`dsh-plugin-desktop` 与 `dsh-desktop` 作为面向运行时的技术兼容标识保留，不代表产品品牌。
 
 ## 架构
 
@@ -10,13 +10,13 @@ Electron 可执行文件只包含最小启动代码。它获取单实例锁、�
 
 两种呈现模式都复用现有 loopback Web carrier。profile 挂载普通 `dsh-base` 与 `dsh-web-app` bundle；Host 把 HTTP 与 WebSocket surface 绑定到 `127.0.0.1` 的临时端口；Electron 在沙箱 renderer 中加载该同源页面。Electron 不维护自有插件 roster，不使用 preload bridge，renderer 也不会获得原始 Electron API。
 
-desktop package 拥有普通 Host 与 Web Client 两个 face。它的 Client face 会在两种模式下校验 Host 提供的模式与平台 marker。兼容模式随后只把上游鲸标、空会话英雄标，以及可见的 DeepSeek 产品文案重绘为 Wan Code，不注册 service、slot 或 layout 呈现；高级模式则安装下文所述的 desktop layout service 与 root 呈现。API 主机名、包名与小写 model id 保持不变。两种模式下，第三方 Web client 都继续使用普通 DSH 模块图。
+desktop package 拥有普通 Host 与 Web Client 两个 face。它的 Client face 会在两种模式下校验 Host 提供的模式与平台 marker。兼容模式随后只把上游鲸标、空会话英雄标，以及可见的 DeepSeek 产品文案重绘为 WanCodeNewVer，不注册 service、slot 或 layout 呈现；高级模式则安装下文所述的 desktop layout service 与 root 呈现。API 主机名、包名与小写 model id 保持不变。两种模式下，第三方 Web client 都继续使用普通 DSH 模块图。
 
 托盘中的 profile 选择器会列出现有 profile，以及可延迟创建的 `desktop` 与 `web` 默认项。可选 profile 必须直接按顺序组合 `dsh-base` 与 `dsh-web-app`；headless、损坏或已经内嵌 desktop bundle 的 profile 仍会显示，但不可选择。只有 `desktop` 是 Launcher 管理的 profile：它会修复安装方拥有的前缀，同时保留第三方 bundle 的相对顺序。其他被选 profile 的 manifest、用户 patch 与依赖均保持不变。Launcher 只会为当前 generation 在 `dsh-web-app` 后插入自有 desktop layer，不会把该 layer 持久化到被选 bundle 列表。
 
 Profile 选择保存在 Electron user data 下的 desktop 自有状态中，而不是被选 profile 内的另一个字段。切换会先记为 pending，再通过有序重启生效。只有 Cordis 树与原生窗口成功挂载后，新 profile 才会成为 last-known-good；托盘会在 Web surface 加载后才创建，而且该状态提交会在托盘命令能够运行前同步完成。Pending generation 启动失败时会回滚并自动重启一次。官方 profile 默认共用同一个 DSH home 中的 sessions、settings 与 storage，因此切换不会复制或迁移记录；自定义 profile patch 仍可主动重定向其中某个持久化根。
 
-隔离的 Wan Code home 首次启动且为空时，可以在原生确认后导入现有 `~/.dsh`。拷贝会保留设置、会话、凭据与 profile manifest，跳过插件 `node_modules`，不改动原安装，并拒绝逃出源目录的符号链接。选择「全新开始」会使用私有目录并记住该决定。显式 `DSH_HOME` 仍视为共享 home，不会被这次导入改写。
+隔离的 WanCodeNewVer home 首次启动且为空时，可以在原生确认后导入现有 `~/.dsh`。拷贝会保留设置、会话、凭据与 profile manifest，跳过插件 `node_modules`，不改动原安装，并拒绝逃出源目录的符号链接。选择「全新开始」会使用私有目录并记住该决定。显式 `DSH_HOME` 仍视为共享 home，不会被这次导入改写。
 
 Launcher 会在 Loader entry 挂载前注册作用于当前 generation 的 `ctx.desktopProfiles` service。其不可变 `current` 值包含激活 profile 的 `name` 与绝对 `dir`；`list()` 只读执行发现，`select(name)` 会串行化“先持久化、再重启”的切换，而不会就地改变当前 generation。该 service 是 Desktop Host capability，不是 renderer bridge，也不是当前上游 DSH 已提供的 active-profile API。
 
@@ -48,9 +48,9 @@ Linux 只支持兼容模式。其托盘模式命令会被禁用，advanced 值�
 
 ## 兼容模式
 
-`dsh-desktop.mode` 默认为 `compatibility`。该模式创建带有操作系统原生边框的普通窗口，并加载当前 DSH profile 中的官方 Web surface。macOS 会隐藏可见的页面标题。Windows 保留原生标题栏图标并显示 `Wan Code`，但会移除窗口菜单栏。
+`dsh-desktop.mode` 默认为 `compatibility`。该模式创建带有操作系统原生边框的普通窗口，并加载当前 DSH profile 中的官方 Web surface。macOS 会隐藏可见的页面标题。Windows 保留原生标题栏图标并显示 `WanCodeNewVer`，但会移除窗口菜单栏。
 
-desktop Client module 会校验模式与平台 marker，随后把上游鲸标、空会话英雄标，以及可见的 DeepSeek 产品文案重绘为带方框 W 的 Wan Code 品牌。它不提供或替换 `layout` service，不注册 `root` 或 `sidebar` occupant，也不改动 conversation surface 的组合。兼容模式会保留被选 profile 自身的 layout、sidebar 与 conversation row；普通 `desktop` 与 `web` profile 因而会原样保留官方 Loader row。
+desktop Client module 会校验模式与平台 marker，随后把上游鲸标、空会话英雄标，以及可见的 DeepSeek 产品文案重绘为带方框 W 的 WanCodeNewVer 品牌。它不提供或替换 `layout` service，不注册 `root` 或 `sidebar` occupant，也不改动 conversation surface 的组合。兼容模式会保留被选 profile 自身的 layout、sidebar 与 conversation row；普通 `desktop` 与 `web` profile 因而会原样保留官方 Loader row。
 
 Cordis row 会在 profile 激活期间登记原生窗口参数。Launcher 只在 `app-boot` 完成并审计整个 profile 后创建窗口，因此首个 renderer manifest 会包含所有已激活的官方、desktop 与第三方 client plugin，同时插件自身不会在 Loader entry 内等待整棵 Loader tree。
 
@@ -165,7 +165,7 @@ Release operator 必须先上传名称完全匹配的 Wancode 产物，再发布
 
 ## 打包
 
-`yarn package:dir` 为当前宿主平台创建未封装目录。如果应用归档缺少 desktop 更新与终端模块、DSH CLI bootstrap、内置 pnpm 入口或物理 deployment package，packaged-runtime gate 会拒绝该产物。Electron Builder 会把根 manifest、desktop runtime 与完整依赖树输出到 `app.asar.unpacked`；Host profile boot 与 CLI bootstrap 都会使用这棵物理树，因此 DSH profile fallback 的符号链接不会指向虚拟 ASAR 目录。`build/app-icon.svg` 是方框 W 标志。构建过程会把它栅格化为 Windows 与 Linux 使用的 `build/app-icon.png`，再运行 `scripts/generate-mac-app-icon.mjs`，把该图缩放为 824 × 824 像素并居中放入透明的 1024 × 1024 画布；macOS 打包与运行中的 Dock 都使用生成的 `build/app-icon-mac.png`。`build/tray-icon.svg` 是同一套品牌蓝方框 W：构建过程会派生由 macOS 系统自动着色的模板图，以及固定品牌蓝的 Windows 与 Linux 托盘图。高级侧栏会把上游鲸标替换为方框 W 和 Wan Code 名称。
+`yarn package:dir` 为当前宿主平台创建未封装目录。如果应用归档缺少 desktop 更新与终端模块、DSH CLI bootstrap、内置 pnpm 入口或物理 deployment package，packaged-runtime gate 会拒绝该产物。Electron Builder 会把根 manifest、desktop runtime 与完整依赖树输出到 `app.asar.unpacked`；Host profile boot 与 CLI bootstrap 都会使用这棵物理树，因此 DSH profile fallback 的符号链接不会指向虚拟 ASAR 目录。`build/app-icon.svg` 是方框 W 标志。构建过程会把它栅格化为 Windows 与 Linux 使用的 `build/app-icon.png`，再运行 `scripts/generate-mac-app-icon.mjs`，把该图缩放为 824 × 824 像素并居中放入透明的 1024 × 1024 画布；macOS 打包与运行中的 Dock 都使用生成的 `build/app-icon-mac.png`。`build/tray-icon.svg` 是同一套品牌蓝方框 W：构建过程会派生由 macOS 系统自动着色的模板图，以及固定品牌蓝的 Windows 与 Linux 托盘图。高级侧栏会把上游鲸标替换为方框 W 和 WanCodeNewVer 名称。
 
 ### Windows x64 本地安装包
 
@@ -179,7 +179,7 @@ corepack.cmd yarn dist:win
 
 该流程不要求 Python 或 Visual Studio C++ Build Tools。Windows 命令会直接使用 `node-pty` 内置的 x64 Node-API 二进制，而不会让 Electron Builder 从源码重新编译；如果安装包 staging tree 缺少这些二进制，packaged-runtime gate 会直接拒绝产物。
 
-`dist:win` 会拒绝非 Windows 或非 x64 宿主，执行 Windows 聚焦 gate 与 runtime-closure verifier，再构建 NSIS 测试安装包。版本 `2.0.1` 输出到 `dsh-plugin-desktop\dist\Wan-Code-2.0.1-x64-Setup.exe`；未封装程序位于 `dsh-plugin-desktop\dist\win-unpacked\Wan Code.exe`。
+`dist:win` 会拒绝非 Windows 或非 x64 宿主，执行 Windows 聚焦 gate 与 runtime-closure verifier，再构建 NSIS 测试安装包。版本 `2.0.1` 输出到 `dsh-plugin-desktop\dist\WanCodeNewVer-2.0.1-x64-Setup.exe`；未封装程序位于 `dsh-plugin-desktop\dist\win-unpacked\WanCodeNewVer.exe`。
 
 该本地命令会主动移除 Windows 证书变量。正式发布使用 `dist:win-release`，要求提供代码签名证书和 `WANCODE_WINDOWS_PUBLISHER`，并验证应用与 NSIS 安装器由同一受信证书签名。
 

@@ -11,7 +11,7 @@ export type DesktopCliAction = 'help' | 'version' | 'launch'
 /** Human-readable launcher help. */
 export const DESKTOP_CLI_HELP = `Usage: dsh-plugin-desktop [options]
 
-Launch Wan Code with the selected Web-capable profile.
+Launch WanCodeNewVer with the selected Web-capable profile.
 
 Options:
   -h, --help     display help
@@ -54,7 +54,7 @@ async function launchElectron(): Promise<number> {
       + '  npm install -g dsh-plugin-desktop\n'
       + 'Or add electron to the profile before launching:\n'
       + '  dsh plugin --profile <name> add electron\n'
-      + 'Or use the packaged Wan Code application.\n',
+      + 'Or use the packaged WanCodeNewVer application.\n',
     )
     return 1
   }

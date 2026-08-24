@@ -12,7 +12,7 @@ const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.
 }
 
 describe('relay-pwa package surface', () => {
-  it('is an owned Wan Code module without a loadable DSH entry or public listener', () => {
+  it('is an owned WanCodeNewVer module without a loadable DSH entry or public listener', () => {
     expect(manifest.name).toBe('@wancode/relay-pwa')
     expect(manifest.dsh).toBeUndefined()
     expect(manifest.packageManager).toBeUndefined()

@@ -22,7 +22,7 @@ describe('desktop npm launcher', () => {
   })
 
   it('names the installed product and selected profile behavior', () => {
-    expect(DESKTOP_CLI_HELP).toContain('Wan Code')
+    expect(DESKTOP_CLI_HELP).toContain('WanCodeNewVer')
     expect(DESKTOP_CLI_HELP).toContain('selected Web-capable profile')
   })
 

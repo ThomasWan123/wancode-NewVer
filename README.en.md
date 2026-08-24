@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="dsh-plugin-desktop/build/app-icon.png" width="96" height="96" alt="Wan Code">
+  <img src="dsh-plugin-desktop/build/app-icon.png" width="96" height="96" alt="WanCodeNewVer">
 </p>
 
-<h1 align="center">Wan Code</h1>
+<h1 align="center">WanCodeNewVer</h1>
 
 <p align="center">
   <strong>A Windows-first, local-first coding-agent desktop</strong><br>
-  Pinned DeepSeek Harness is the agent runtime. Wan Code owns the desktop experience, security boundary, updates, and upcoming remote control.
+  Pinned DeepSeek Harness is the agent runtime. WanCodeNewVer owns the desktop experience, security boundary, updates, and upcoming remote control.
 </p>
 
 <p align="center">
@@ -27,16 +27,16 @@
   <a href="CONTRIBUTING.en.md">Contributing</a>
 </p>
 
-> Wan Code is an independent community product, not an official DeepSeek application. DeepSeek Harness is the attributed upstream runtime; it is not this product's name.
+> WanCodeNewVer is an independent community product, not an official DeepSeek application. DeepSeek Harness is the attributed upstream runtime; it is not this product's name.
 
 ## Positioning
 
-Wan Code runs the Harness Host on the user's machine and presents the official Web surface in a sandboxed Electron window. The cloud never opens an inbound port on that machine, and it cannot execute local tools or read model credentials. Future remote control uses an outbound connection initiated by the desktop. Sensitive payloads are end-to-end encrypted with device keys.
+WanCodeNewVer runs the Harness Host on the user's machine and presents the official Web surface in a sandboxed Electron window. The cloud never opens an inbound port on that machine, and it cannot execute local tools or read model credentials. Future remote control uses an outbound connection initiated by the desktop. Sensitive payloads are end-to-end encrypted with device keys.
 
 ```text
-Wan Code Desktop ──loopback──> Harness Host ──> Cordis plugins / tools
+WanCodeNewVer Desktop ──loopback──> Harness Host ──> Cordis plugins / tools
        │
-       └── outbound encrypted WSS ──> Wan Code Relay <──> Mobile PWA / Channels
+       └── outbound encrypted WSS ──> WanCodeNewVer Relay <──> Mobile PWA / Channels
 ```
 
 ## Current capabilities
@@ -70,7 +70,7 @@ The Windows-focused gate covers 252 desktop tests plus the runtime-closure verif
 | --- | --- |
 | `deepseek-harness/` | Read-only, pinned official upstream Git submodule |
 | `dsh-plugin-desktop/` | Electron, Host/Client plugins, Windows security, and packaging |
-| `packages/wancode/` | Wan Code protocol, cloud modules, and mobile PWA pairing surface |
+| `packages/wancode/` | WanCodeNewVer protocol, cloud modules, and mobile PWA pairing surface |
 | `dsh-community-fabric/` | Community interoperability RFC (documentation scaffold, not loadable) |
 | `dsh-community-market/` | Reviewed marketplace contract (documentation scaffold, not loadable) |
 
@@ -102,7 +102,7 @@ corepack yarn dist:win
 
 The unsigned preview installer is also published as GitHub prerelease
 [v2.0.1-unsigned](https://github.com/ThomasWan123/wancode-NewVer/releases/tag/v2.0.1-unsigned)
-(`Wan-Code-2.0.1-x64-Setup.exe`, SHA-256
+(`WanCodeNewVer-2.0.1-x64-Setup.exe`, SHA-256
 `61798CE6E3CC4426C021582A6174A1809F48AAA366AE68292C70A31D07B9BB26`).
 Windows SmartScreen will warn. That tag is not Latest and does not replace
 published `v2.0.1`. The ~197 MB installer is not committed to Git.
@@ -112,7 +112,7 @@ Production signing uses `dist:win-release` and requires a code-signing certifica
 ## Roadmap
 
 1. **Windows desktop core** — delivered as an independently useful local product; signed production packages wait on the certificate.
-2. **Wan Code Cloud Relay** — accounts, device registration, short-lived tokens, revocation, audit, and an end-to-end encrypted protocol.
+2. **WanCodeNewVer Cloud Relay** — accounts, device registration, short-lived tokens, revocation, audit, and an end-to-end encrypted protocol.
 3. **Mobile PWA** — in progress: session snapshots, sealed control, PNG icons, and a loopback host; public install is not delivered yet.
 4. **Reviewed plugin marketplace** — signed manifests, declared capabilities, compatibility checks, atomic activation, and rollback.
 5. **Messaging channels** — official APIs for Feishu, Discord, WhatsApp, and compliant WeChat where available.
@@ -128,4 +128,4 @@ See [`docs/WANCODE_REMAKE_PLAN.md`](docs/WANCODE_REMAKE_PLAN.md) for milestones 
 
 ## License
 
-Wan Code-owned code is released under the [MIT License](LICENSE). Licenses and attribution for DeepSeek Harness, Cordis, and third-party components are retained. Please file issues at [GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues).
+WanCodeNewVer-owned code is released under the [MIT License](LICENSE). Licenses and attribution for DeepSeek Harness, Cordis, and third-party components are retained. Please file issues at [GitHub Issues](https://github.com/ThomasWan123/wancode-NewVer/issues).
