@@ -59,6 +59,10 @@
       "types": "./lib/types/integrity-gate.d.ts",
       "default": "./lib/integrity-gate.js"
     },
+    "./session-ledger": {
+      "types": "./lib/types/session-ledger.d.ts",
+      "default": "./lib/session-ledger.js"
+    },
     "./updates": {
       "types": "./lib/types/updates.d.ts",
       "default": "./lib/updates.js"

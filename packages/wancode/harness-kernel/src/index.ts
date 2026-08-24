@@ -1,6 +1,19 @@
 export type { ProviderProfile } from './provider-profile.js'
 export type { Lease, LeaseState } from './lease.js'
-export type { LedgerEvent, LedgerEventKind } from './ledger-event.js'
+export type {
+  LedgerEvent,
+  LedgerEventKind,
+  ProbeOutcome,
+  SessionLedger,
+} from './ledger-event.js'
+export {
+  createLedgerEvent,
+  createNotRunEvent,
+  createSessionLedger,
+  scrubSecrets,
+  scrubMetadata,
+  LedgerAppendError,
+} from './ledger-event.js'
 
 export type {
   ValidationViolation,

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (Slice 0 — types; Slice 2 — fail-closed validation)
+Accepted (Slice 0 — types; Slice 2 — fail-closed validation; Slice 3 — session ledger)
 
 ## Context
 
@@ -59,7 +59,9 @@ The package:
 - `dsh-plugin-desktop` can gate untrusted profiles and prompts at its
   host boundary using pure functions from the kernel package.
 - Validated values are frozen to prevent downstream mutation.
+- Slice 3 extends the package with an append-only session ledger,
+  secret scrubbing, and NOT-RUN probe evidence (see ADR-0003).
 - No runtime kernel scheduler ships until an implementation ADR for
-  Slice 3–4 is accepted.
+  Slice 4 is accepted.
 - The package must remain `private` and non-loadable until the kernel
   runtime, a Cordis service face, and a reviewed lease-scheduler exist.
