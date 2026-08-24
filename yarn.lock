@@ -5683,11 +5683,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@wancode/harness-kernel@workspace:packages/wancode/harness-kernel":
+"@wancode/harness-kernel@workspace:*, @wancode/harness-kernel@workspace:packages/wancode/harness-kernel":
   version: 0.0.0-use.local
   resolution: "@wancode/harness-kernel@workspace:packages/wancode/harness-kernel"
   dependencies:
     typescript: "npm:6.0.3"
+    vitest: "npm:4.1.8"
   languageName: unknown
   linkType: soft
 
@@ -6801,6 +6802,7 @@ __metadata:
     "@types/node": "npm:^22.20.0"
     "@types/react": "npm:^18"
     "@types/ws": "npm:8.18.1"
+    "@wancode/harness-kernel": "workspace:*"
     electron: "npm:43.4.0"
     electron-builder: "npm:26.15.3"
     koffi: "npm:3.1.5"
