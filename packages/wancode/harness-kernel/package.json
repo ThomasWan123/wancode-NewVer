@@ -1,0 +1,37 @@
+{
+  "name": "@wancode/harness-kernel",
+  "version": "0.0.1-dev.0",
+  "private": true,
+  "description": "TypeScript type stubs for the WanCode harness-kernel provider, lease, and ledger contracts",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src/**"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThomasWan123/wancode-NewVer.git",
+    "directory": "packages/wancode/harness-kernel"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  },
+  "keywords": [
+    "wancode",
+    "harness",
+    "kernel",
+    "types"
+  ]
+}
