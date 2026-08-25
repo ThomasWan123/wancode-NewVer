@@ -31,7 +31,7 @@ const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), '
       target?: unknown
       x64ArchFiles?: unknown
     }
-    win?: { icon?: unknown; target?: unknown; publisherName?: unknown }
+    win?: { icon?: unknown; target?: unknown }
     nsis?: Record<string, unknown>
     linux?: { icon?: unknown }
   }
@@ -164,7 +164,7 @@ describe('published package surface', () => {
     expect(manifest.build?.productName).toBe('WanCodeNewVer')
     expect(manifest.build?.appId).toBe('com.wancode.desktop')
     expect(manifest.build?.copyright).toBe('Copyright \u00a9 2026 WanCodeNewVer')
-    expect(manifest.build?.win?.publisherName).toBe('WanCodeNewVer')
+    expect(manifest.build?.win).not.toHaveProperty('publisherName')
     expect(manifest.build?.asarUnpack).toEqual([
       'package.json',
       'cordis.patch.yml',
