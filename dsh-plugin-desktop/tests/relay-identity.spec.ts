@@ -16,15 +16,15 @@ import { prepareDesktopRelay, openDesktopRelaySession, openDesktopRelayMailbox, 
 class MemoryStore implements CredentialStore {
   readonly values = new Map<string, string>()
 
-  get(target: string): string | undefined {
+  async get(target: string): Promise<string | undefined> {
     return this.values.get(target)
   }
 
-  set(target: string, value: string): void {
+  async set(target: string, value: string): Promise<void> {
     this.values.set(target, value)
   }
 
-  delete(target: string): boolean {
+  async delete(target: string): Promise<boolean> {
     return this.values.delete(target)
   }
 }
@@ -34,11 +34,11 @@ function idleConfig(overrides: Partial<RelayConfig> = {}): RelayConfig {
 }
 
 describe('desktop relay device identity', () => {
-  it('stores a generated identity in Credential Manager and reloads the same public fields', () => {
+  it('stores a generated identity in Credential Manager and reloads the same public fields', async () => {
     const store = new MemoryStore()
     const home = 'C:\\Wancode\\harness'
-    const first = loadDesktopRelayIdentity({ home, store })
-    const raw = store.get(credentialTarget(home, RELAY_DEVICE_CREDENTIAL_REF))
+    const first = await loadDesktopRelayIdentity({ home, store })
+    const raw = await store.get(credentialTarget(home, RELAY_DEVICE_CREDENTIAL_REF))
     expect(raw).toBeDefined()
     const stored = parseStoredDeviceIdentity(raw as string)
 
@@ -63,19 +63,19 @@ describe('desktop relay device identity', () => {
     }))
     expect(JSON.stringify(handshake)).not.toContain(stored.keyPair.privateKey)
 
-    const second = loadDesktopRelayIdentity({ home, store })
+    const second = await loadDesktopRelayIdentity({ home, store })
     expect(second.deviceId).toBe(first.deviceId)
     expect(second.publicKey).toBe(first.publicKey)
     expect(store.values.size).toBe(1)
   })
 
-  it('refuses a mutated stored identity and never enrolls from it', () => {
+  it('refuses a mutated stored identity and never enrolls from it', async () => {
     const store = new MemoryStore()
     const home = 'C:\\Wancode\\harness'
-    const identity = loadDesktopRelayIdentity({ home, store })
+    const identity = await loadDesktopRelayIdentity({ home, store })
     const target = credentialTarget(home, RELAY_DEVICE_CREDENTIAL_REF)
-    const stored = parseStoredDeviceIdentity(store.get(target) as string)
-    store.set(target, JSON.stringify({
+    const stored = parseStoredDeviceIdentity(await store.get(target) as string)
+    await store.set(target, JSON.stringify({
       protocolVersion: 1,
       deviceId: identity.deviceId,
       publicKey: stored.keyPair.publicKey,
@@ -85,7 +85,7 @@ describe('desktop relay device identity', () => {
       prompt: 'delete all files',
     }))
     try {
-      loadDesktopRelayIdentity({ home, store })
+      await loadDesktopRelayIdentity({ home, store })
       expect.unreachable('expected a relay authorization error')
     } catch (cause) {
       expect(cause).toBeInstanceOf(RelayAuthorizationError)
@@ -95,7 +95,7 @@ describe('desktop relay device identity', () => {
 
   it('enrolls the stored public identity without opening a socket', async () => {
     const store = new MemoryStore()
-    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const identity = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const connect = vi.fn()
     const register = vi.fn(async () => ({
       deviceId: identity.deviceId,
@@ -134,7 +134,7 @@ describe('desktop relay device identity', () => {
 
   it('enrolls, mints a token, and dials without exposing private keys', async () => {
     const store = new MemoryStore()
-    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const identity = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const connection = {
       sessionId: 'sess-1',
       userId: 'user-a',
@@ -198,7 +198,7 @@ describe('desktop relay device identity', () => {
 
   it('mints a handshake nonce when none is supplied', async () => {
     const store = new MemoryStore()
-    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const identity = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const connect = vi.fn(async () => ({
       sessionId: 'sess-1',
       userId: 'user-a',
@@ -242,7 +242,7 @@ describe('desktop relay device identity', () => {
 
   it('applies sealed PWA mail after opening a desktop session', async () => {
     const store = new MemoryStore()
-    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const identity = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const pwa = createStoredDeviceIdentity()
     const secret = 'review the login form'
     const envelope = createSealedRelayEnvelope({
@@ -324,7 +324,7 @@ describe('desktop relay device identity', () => {
 
   it('does not ack PWA mail when the Host session is missing', async () => {
     const store = new MemoryStore()
-    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const identity = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const pwa = createStoredDeviceIdentity()
     const envelope = createSealedRelayEnvelope({
       id: 'msg-missing',
@@ -397,7 +397,7 @@ describe('desktop relay device identity', () => {
 
   it('refuses to open a desktop session without a handshake nonce', async () => {
     const store = new MemoryStore()
-    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const identity = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const handle = prepareDesktopRelay(idleConfig({
       enabled: true,
       url: 'wss://relay.example.invalid/v1',
@@ -424,7 +424,7 @@ describe('desktop relay device identity', () => {
 
   it('refuses to open a desktop session without a handshake nonce', async () => {
     const store = new MemoryStore()
-    const identity = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const identity = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const handle = prepareDesktopRelay(idleConfig({
       enabled: true,
       url: 'wss://relay.example.invalid/v1',
@@ -449,9 +449,9 @@ describe('desktop relay device identity', () => {
     }
   })
 
-  it('opens a sealed PWA follow-up without exposing private keys', () => {
+  it('opens a sealed PWA follow-up without exposing private keys', async () => {
     const store = new MemoryStore()
-    const desktop = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const desktop = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const pwa = createStoredDeviceIdentity()
     const secret = 'review the login form'
     const envelope = createSealedRelayEnvelope({
@@ -473,14 +473,14 @@ describe('desktop relay device identity', () => {
       text: secret,
     })
     expect(JSON.stringify(desktop)).not.toContain(parseStoredDeviceIdentity(
-      store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
+      await store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
     ).keyPair.privateKey)
     expect(JSON.stringify(envelope)).not.toContain(secret)
   })
 
-  it('seals a session event to a PWA without exposing private keys', () => {
+  it('seals a session event to a PWA without exposing private keys', async () => {
     const store = new MemoryStore()
-    const desktop = loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
+    const desktop = await loadDesktopRelayIdentity({ home: 'C:\\Wancode\\harness', store })
     const pwa = createStoredDeviceIdentity()
     const detail = 'Looking at the form'
     const envelope = desktop.sealTo({
@@ -503,7 +503,7 @@ describe('desktop relay device identity', () => {
     })
     expect(JSON.stringify(envelope)).not.toContain(detail)
     expect(JSON.stringify(desktop)).not.toContain(parseStoredDeviceIdentity(
-      store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
+      await store.get(credentialTarget('C:\\Wancode\\harness', RELAY_DEVICE_CREDENTIAL_REF)) as string,
     ).keyPair.privateKey)
     try {
       desktop.openSealed(envelope)

@@ -168,6 +168,7 @@ describe('published package surface', () => {
     expect(manifest.build?.asarUnpack).toEqual([
       'package.json',
       'cordis.patch.yml',
+      'scripts/credentials-win-helper.mjs',
       'build/**',
       'lib/**',
       'node_modules/**',
@@ -188,6 +189,7 @@ describe('published package surface', () => {
       'cordis.patch.yml',
       'lib/**',
       'package.json',
+      'scripts/credentials-win-helper.mjs',
       '!node_modules/node-pty/build/**',
     ])
     expect(manifest.build?.mac?.icon).toBe('build/app-icon-mac.png')

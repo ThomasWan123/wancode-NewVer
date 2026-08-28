@@ -1,13 +1,21 @@
+import { existsSync } from 'node:fs'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import {
+  CREDENTIALS_WIN_HELPER_TIMEOUT_MS,
+  WINDOWS_CREDENTIAL_PERSIST_TRIES,
+  WINDOWS_CREDENTIAL_PERSIST_TRIES_WORKGROUP,
   WindowsCredentialVault,
   credentialTarget,
   createWindowsCredentialStore,
+  credentialsWinHelperPath,
+  isWindowsWorkgroup,
   migrateLegacyCredentials,
+  runCredentialsWinHelper,
+  windowsCredentialPersistLevels,
   writeWindowsCredential,
   type CredentialStore,
 } from '../src/credentials-win.ts'
@@ -15,15 +23,15 @@ import {
 class MemoryStore implements CredentialStore {
   readonly values = new Map<string, string>()
 
-  get(target: string): string | undefined {
+  async get(target: string): Promise<string | undefined> {
     return this.values.get(target)
   }
 
-  set(target: string, value: string): void {
+  async set(target: string, value: string): Promise<void> {
     this.values.set(target, value)
   }
 
-  delete(target: string): boolean {
+  async delete(target: string): Promise<boolean> {
     return this.values.delete(target)
   }
 }
@@ -105,30 +113,103 @@ describe('Windows credential vault', () => {
 })
 
 describe('Windows credential persist fallback', () => {
-  it('tries local-machine, enterprise, then session until a write succeeds', () => {
+  it('tries local-machine, enterprise, then session until a write succeeds', async () => {
     const attempted: number[] = []
-    expect(writeWindowsCredential((persist) => {
+    await expect(writeWindowsCredential((persist) => {
       attempted.push(persist)
       return persist === 1
-    })).toBe(true)
+    }, WINDOWS_CREDENTIAL_PERSIST_TRIES)).resolves.toBe(true)
     expect(attempted).toEqual([2, 3, 1])
   })
 
-  it('reports failure when every persist level is rejected', () => {
-    expect(writeWindowsCredential(() => false)).toBe(false)
+  it('reports failure when every persist level is rejected', async () => {
+    await expect(writeWindowsCredential(() => false, WINDOWS_CREDENTIAL_PERSIST_TRIES)).resolves.toBe(false)
+  })
+
+  it('skips ENTERPRISE persist on a workgroup PC', () => {
+    expect(isWindowsWorkgroup({ USERDOMAIN: 'HMM1560049-IT', COMPUTERNAME: 'HMM1560049-IT' })).toBe(true)
+    expect(isWindowsWorkgroup({ USERDOMAIN: '', COMPUTERNAME: 'PC' })).toBe(true)
+    expect(isWindowsWorkgroup({ USERDOMAIN: 'pc', COMPUTERNAME: 'PC' })).toBe(true)
+    expect(windowsCredentialPersistLevels({
+      USERDOMAIN: 'HMM1560049-IT',
+      COMPUTERNAME: 'HMM1560049-IT',
+    })).toEqual([...WINDOWS_CREDENTIAL_PERSIST_TRIES_WORKGROUP])
+    expect(WINDOWS_CREDENTIAL_PERSIST_TRIES_WORKGROUP).toEqual([2, 1])
+  })
+
+  it('keeps ENTERPRISE persist when domain-joined', () => {
+    expect(isWindowsWorkgroup({ USERDOMAIN: 'CORP', COMPUTERNAME: 'PC' })).toBe(false)
+    expect(windowsCredentialPersistLevels({
+      USERDOMAIN: 'CORP',
+      COMPUTERNAME: 'PC',
+    })).toEqual([...WINDOWS_CREDENTIAL_PERSIST_TRIES])
+  })
+
+  it('tries local-machine then session on a workgroup until a write succeeds', async () => {
+    const attempted: number[] = []
+    await expect(writeWindowsCredential((persist) => {
+      attempted.push(persist)
+      return persist === 1
+    }, windowsCredentialPersistLevels({
+      USERDOMAIN: 'WORKSTATION',
+      COMPUTERNAME: 'WORKSTATION',
+    }))).resolves.toBe(true)
+    expect(attempted).toEqual([2, 1])
+  })
+})
+
+describe('Windows credential helper isolation', () => {
+  it('resolves the helper beside the package scripts directory', () => {
+    const filename = credentialsWinHelperPath()
+    expect(filename).toMatch(/credentials-win-helper\.mjs$/u)
+    expect(existsSync(filename)).toBe(true)
+    expect(CREDENTIALS_WIN_HELPER_TIMEOUT_MS).toBe(3000)
+  })
+
+  it('returns a JS error when the helper times out without taking down the parent', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'wancode-cred-helper-'))
+    temporaryRoots.push(root)
+    const script = join(root, 'hang.mjs')
+    await writeFile(script, 'setInterval(() => {}, 1000)\n')
+    let ticks = 0
+    const timer = setInterval(() => {
+      ticks += 1
+    }, 20)
+    try {
+      await expect(runCredentialsWinHelper(
+        { op: 'get', target: 'WanCodeNewVer/isolation-timeout' },
+        { scriptPath: script, timeoutMs: 150 },
+      )).rejects.toThrow(/timed out/u)
+      expect(ticks).toBeGreaterThan(0)
+      expect(process.pid).toBeGreaterThan(0)
+    } finally {
+      clearInterval(timer)
+    }
+  })
+
+  it('returns a JS error when the helper crashes without taking down the parent', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'wancode-cred-helper-'))
+    temporaryRoots.push(root)
+    const script = join(root, 'crash.mjs')
+    await writeFile(script, 'process.exit(37)\n')
+    await expect(runCredentialsWinHelper(
+      { op: 'set', target: 'WanCodeNewVer/isolation-crash', value: 'unused', persist: 2 },
+      { scriptPath: script, timeoutMs: 2000 },
+    )).rejects.toThrow(/helper exited code 37/u)
+    expect(process.pid).toBeGreaterThan(0)
   })
 })
 
 describe('Windows Credential Manager round-trip', () => {
-  it.runIf(process.platform === 'win32')('stores and reads a throwaway generic credential', () => {
+  it.runIf(process.platform === 'win32')('stores and reads a throwaway generic credential', async () => {
     const store = createWindowsCredentialStore()
     const target = `WanCodeNewVer/test-${String(process.pid)}-${String(Date.now())}/ROUND_TRIP`
     try {
-      store.set(target, 'round-trip-value')
-      expect(store.get(target)).toBe('round-trip-value')
+      await store.set(target, 'round-trip-value')
+      await expect(store.get(target)).resolves.toBe('round-trip-value')
     } finally {
-      store.delete(target)
+      await store.delete(target)
     }
-    expect(store.get(target)).toBeUndefined()
+    await expect(store.get(target)).resolves.toBeUndefined()
   })
 })
