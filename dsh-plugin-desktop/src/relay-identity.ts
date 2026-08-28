@@ -54,13 +54,13 @@ export interface LoadDesktopRelayIdentityInput {
  * Load the local relay identity from Credential Manager, generating one if
  * the store is empty. Private keys never appear on the returned object.
  */
-export function loadDesktopRelayIdentity(
+export async function loadDesktopRelayIdentity(
   input: LoadDesktopRelayIdentityInput,
-): DesktopRelayIdentity {
+): Promise<DesktopRelayIdentity> {
   const target = credentialTarget(input.home, RELAY_DEVICE_CREDENTIAL_REF)
-  const existing = input.store.get(target)
+  const existing = await input.store.get(target)
   const stored = existing === undefined || existing.length === 0
-    ? persistGeneratedIdentity(input.store, target)
+    ? await persistGeneratedIdentity(input.store, target)
     : parseStoredDeviceIdentity(existing)
   const published = publicDeviceIdentity(stored)
   return {
@@ -94,8 +94,8 @@ export function loadDesktopRelayIdentity(
   }
 }
 
-function persistGeneratedIdentity(store: CredentialStore, target: string) {
+async function persistGeneratedIdentity(store: CredentialStore, target: string) {
   const identity = createStoredDeviceIdentity()
-  store.set(target, serializeStoredDeviceIdentity(identity))
+  await store.set(target, serializeStoredDeviceIdentity(identity))
   return identity
 }

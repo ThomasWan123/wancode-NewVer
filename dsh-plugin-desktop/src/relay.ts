@@ -1163,7 +1163,7 @@ export function bindDesktopRelayConnectTray(
   },
   handle: DesktopRelayHandle,
   options?: {
-    readonly loadIdentity?: () => DesktopRelayIdentity | undefined
+    readonly loadIdentity?: () => DesktopRelayIdentity | undefined | Promise<DesktopRelayIdentity | undefined>
     readonly enroll?: typeof enrollOutboundRelayLoopbackDevice
   },
 ): void {
@@ -1180,7 +1180,7 @@ export function bindDesktopRelayConnectTray(
       enabled: () => handle.connectedDeviceId === undefined,
       async invoke() {
         try {
-          const identity = loadIdentity()
+          const identity = await loadIdentity()
           if (identity === undefined) {
             throw new RelayAuthorizationError('malformed', 'desktop relay identity is required')
           }
@@ -1205,11 +1205,11 @@ export function bindDesktopRelayConnectTray(
   }, 'dsh-plugin-desktop: outbound relay connect')
 }
 
-function probeDesktopRelayIdentity(): DesktopRelayIdentity | undefined {
+async function probeDesktopRelayIdentity(): Promise<DesktopRelayIdentity | undefined> {
   const home = process.env.DSH_HOME
   if (typeof home !== 'string' || home.length === 0 || /[\0\r\n]/u.test(home)) return undefined
   try {
-    return loadDesktopRelayIdentity({ home, store: createWindowsCredentialStore() })
+    return await loadDesktopRelayIdentity({ home, store: createWindowsCredentialStore() })
   } catch {
     return undefined
   }
