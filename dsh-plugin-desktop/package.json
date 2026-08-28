@@ -89,6 +89,7 @@
     "build/tray-icon*.png",
     "cordis.patch.yml",
     "docs/**",
+    "scripts/credentials-win-helper.mjs",
     "lib/**/*.js",
     "lib/**/*.map",
     "lib/types/**/*.d.ts",
@@ -277,6 +278,7 @@
     "asarUnpack": [
       "package.json",
       "cordis.patch.yml",
+      "scripts/credentials-win-helper.mjs",
       "build/**",
       "lib/**",
       "node_modules/**"
@@ -297,6 +299,7 @@
       "cordis.patch.yml",
       "lib/**",
       "package.json",
+      "scripts/credentials-win-helper.mjs",
       "!node_modules/node-pty/build/**"
     ],
     "mac": {
